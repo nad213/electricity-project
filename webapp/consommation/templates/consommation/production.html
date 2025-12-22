@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Production - Énergie France{% endblock %}
+{% block title %}Production - DashElec{% endblock %}
 
 {% block page_title %}
     <i class="ti ti-building-factory me-2"></i>
@@ -13,12 +13,17 @@
     <div class="col-12">
         <div class="card">
             <div class="card-body text-center py-5">
-                <div class="empty">
-                    <div class="empty-icon">
-                        <i class="ti ti-building-factory" style="font-size: 4rem; opacity: 0.3;"></i>
+                <div class="text-center">
+                    <div class="mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-success">
+                            <path d="M4 21c1.147 -4.02 1.983 -8.027 2 -12h6c.017 3.973 .853 7.98 2 12"></path>
+                            <path d="M12.5 13h4.5c.025 2.612 .894 5.296 2 8"></path>
+                            <path d="M9 5a2.4 2.4 0 0 1 2 -1a2.4 2.4 0 0 1 2 1a2.4 2.4 0 0 0 2 1a2.4 2.4 0 0 0 2 -1a2.4 2.4 0 0 1 2 -1a2.4 2.4 0 0 1 2 1"></path>
+                            <path d="M3 21l19 0"></path>
+                        </svg>
                     </div>
-                    <p class="empty-title h3">Production Électrique</p>
-                    <p class="empty-subtitle text-muted">
+                    <h3 class="mb-3">Production Électrique</h3>
+                    <p class="text-muted">
                         Cette section affichera les données de production électrique en France par source d'énergie.
                     </p>
                     <p class="text-muted mt-4">

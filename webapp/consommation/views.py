@@ -5,6 +5,13 @@ import plotly.io as pio
 from .services import get_date_range, get_puissance_data, get_annual_data, get_monthly_data
 
 
+def accueil(request):
+    """
+    Home page - welcome page
+    """
+    return render(request, 'consommation/accueil.html')
+
+
 def index(request):
     """
     Main view - displays consumption data with Plotly charts

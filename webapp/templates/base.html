@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Énergie France{% endblock %}</title>
+    <title>{% block title %}DashElec{% endblock %}</title>
 
     <!-- Tabler CSS -->
     <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css" rel="stylesheet"/>
@@ -23,14 +23,22 @@
                 </button>
 
                 <h1 class="navbar-brand navbar-brand-autodark">
-                    <a href="{% url 'index' %}">
+                    <a href="{% url 'accueil' %}">
                         <i class="ti ti-bolt text-yellow icon-lg me-2"></i>
-                        Énergie France
+                        DashElec
                     </a>
                 </h1>
 
                 <div class="collapse navbar-collapse" id="sidebar-menu">
                     <ul class="navbar-nav pt-lg-3">
+                        <li class="nav-item {% if request.resolver_match.url_name == 'accueil' %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'accueil' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="ti ti-home"></i>
+                                </span>
+                                <span class="nav-link-title">Accueil</span>
+                            </a>
+                        </li>
                         <li class="nav-item {% if request.resolver_match.url_name == 'index' %}active{% endif %}">
                             <a class="nav-link" href="{% url 'index' %}">
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
