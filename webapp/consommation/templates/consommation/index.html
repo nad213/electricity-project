@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}Consommation - Énergie France{% endblock %}
+
+{% block content %}
+<h1>Consommation</h1>
+
+<!-- Power Section -->
+<section class="section">
+    <h2>Courbe de Puissance France (MW)</h2>
+    <p class="description">
+        Le graphique ci-dessous affiche la courbe de puissance consommée brute, en MW.
+        Les données affichées sont soit <em>Temps Réel</em> soit <em>Consolidées</em>.
+    </p>
+
+    <!-- Date filters -->
+    <form method="get" class="date-filters">
+        <div class="filter-group">
+            <label for="start_date">Date début</label>
+            <input 
+                type="date" 
+                id="start_date" 
+                name="start_date" 
+                value="{{ start_date|date:'Y-m-d' }}"
+                min="{{ min_date|date:'Y-m-d' }}"
+                max="{{ max_date|date:'Y-m-d' }}"
+            >
+        </div>
+        <div class="filter-group">
+            <label for="end_date">Date fin</label>
+            <input 
+                type="date" 
+                id="end_date" 
+                name="end_date" 
+                value="{{ end_date|date:'Y-m-d' }}"
+                min="{{ min_date|date:'Y-m-d' }}"
+                max="{{ max_date|date:'Y-m-d' }}"
+            >
+        </div>
+        <button type="submit" class="btn">Actualiser</button>
+    </form>
+
+    <!-- Power Chart -->
+    <div class="chart">
+        {{ graph_puissance|safe }}
+    </div>
+    <p class="info">{{ nb_lignes }} points de données</p>
+</section>
+
+<!-- Energy Section -->
+<section class="section">
+    <h2>Énergie Consommée</h2>
+    <p class="description">
+        Données mensuelles et annuelles d'énergie consommée en France.
+    </p>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" onclick="showTab('annuel', this)">Annuel</button>
+        <button class="tab" onclick="showTab('mensuel', this)">Mensuel</button>
+    </div>
+    
+    <div id="annuel" class="tab-content active">
+        <div class="chart">
+            {{ graph_annuel|safe }}
+        </div>
+    </div>
+    
+    <div id="mensuel" class="tab-content">
+        <div class="chart">
+            {{ graph_mensuel|safe }}
+        </div>
+    </div>
+</section>
+
+<script>
+    function showTab(tabName, clickedTab) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabName).classList.add('active');
+        clickedTab.classList.add('active');
+        window.dispatchEvent(new Event('resize'));
+    }
+</script>
+{% endblock %}

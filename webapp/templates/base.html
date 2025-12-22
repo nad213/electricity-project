@@ -1,0 +1,44 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Énergie France{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <div class="layout">
+        <!-- Sidebar navigation -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>⚡ Énergie France</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">
+                        📊 Consommation
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="disabled">
+                        🏭 Production
+                        <span class="badge">Bientôt</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="disabled">
+                        🔄 Échanges
+                        <span class="badge">Bientôt</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main content -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</body>
+</html>
