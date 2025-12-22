@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Production - Énergie France{% endblock %}
+
+{% block page_title %}
+    <i class="ti ti-building-factory me-2"></i>
+    Production Électrique
+{% endblock %}
+
+{% block content %}
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="empty">
+                    <div class="empty-icon">
+                        <i class="ti ti-building-factory" style="font-size: 4rem; opacity: 0.3;"></i>
+                    </div>
+                    <p class="empty-title h3">Production Électrique</p>
+                    <p class="empty-subtitle text-muted">
+                        Cette section affichera les données de production électrique en France par source d'énergie.
+                    </p>
+                    <p class="text-muted mt-4">
+                        <span class="badge bg-blue-lt">En développement</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

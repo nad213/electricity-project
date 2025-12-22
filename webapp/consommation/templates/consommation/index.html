@@ -2,84 +2,122 @@
 
 {% block title %}Consommation - Énergie France{% endblock %}
 
+{% block page_title %}
+    <i class="ti ti-chart-line me-2"></i>
+    Consommation Électrique
+{% endblock %}
+
 {% block content %}
-<h1>Consommation</h1>
 
 <!-- Power Section -->
-<section class="section">
-    <h2>Courbe de Puissance France (MW)</h2>
-    <p class="description">
-        Le graphique ci-dessous affiche la courbe de puissance consommée brute, en MW.
-        Les données affichées sont soit <em>Temps Réel</em> soit <em>Consolidées</em>.
-    </p>
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Courbe de Puissance France (MW)</h3>
+            </div>
+            <div class="card-body">
+                <div class="text-muted mb-3">
+                    Le graphique ci-dessous affiche la courbe de puissance consommée brute, en MW.
+                    Les données affichées sont soit <span class="badge bg-blue-lt">Temps Réel</span> soit <span class="badge bg-green-lt">Consolidées</span>.
+                </div>
 
-    <!-- Date filters -->
-    <form method="get" class="date-filters">
-        <div class="filter-group">
-            <label for="start_date">Date début</label>
-            <input 
-                type="date" 
-                id="start_date" 
-                name="start_date" 
-                value="{{ start_date|date:'Y-m-d' }}"
-                min="{{ min_date|date:'Y-m-d' }}"
-                max="{{ max_date|date:'Y-m-d' }}"
-            >
-        </div>
-        <div class="filter-group">
-            <label for="end_date">Date fin</label>
-            <input 
-                type="date" 
-                id="end_date" 
-                name="end_date" 
-                value="{{ end_date|date:'Y-m-d' }}"
-                min="{{ min_date|date:'Y-m-d' }}"
-                max="{{ max_date|date:'Y-m-d' }}"
-            >
-        </div>
-        <button type="submit" class="btn">Actualiser</button>
-    </form>
+                <!-- Date filters -->
+                <form method="get" class="mb-4">
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label class="form-label">Date début</label>
+                            <input
+                                type="date"
+                                class="form-control"
+                                name="start_date"
+                                value="{{ start_date|date:'Y-m-d' }}"
+                                min="{{ min_date|date:'Y-m-d' }}"
+                                max="{{ max_date|date:'Y-m-d' }}"
+                            >
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Date fin</label>
+                            <input
+                                type="date"
+                                class="form-control"
+                                name="end_date"
+                                value="{{ end_date|date:'Y-m-d' }}"
+                                min="{{ min_date|date:'Y-m-d' }}"
+                                max="{{ max_date|date:'Y-m-d' }}"
+                            >
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label d-none d-md-block">&nbsp;</label>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="ti ti-refresh me-2"></i>
+                                Actualiser
+                            </button>
+                        </div>
+                    </div>
+                </form>
 
-    <!-- Power Chart -->
-    <div class="chart">
-        {{ graph_puissance|safe }}
+                <!-- Power Chart -->
+                <div class="chart-container">
+                    {{ graph_puissance|safe }}
+                </div>
+            </div>
+        </div>
     </div>
-    <p class="info">{{ nb_lignes }} points de données</p>
-</section>
+</div>
 
 <!-- Energy Section -->
-<section class="section">
-    <h2>Énergie Consommée</h2>
-    <p class="description">
-        Données mensuelles et annuelles d'énergie consommée en France.
-    </p>
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Énergie Consommée</h3>
+            </div>
+            <div class="card-body">
+                <div class="text-muted mb-3">
+                    Données mensuelles et annuelles d'énergie consommée en France.
+                </div>
 
-    <!-- Tabs -->
-    <div class="tabs">
-        <button class="tab active" onclick="showTab('annuel', this)">Annuel</button>
-        <button class="tab" onclick="showTab('mensuel', this)">Mensuel</button>
-    </div>
-    
-    <div id="annuel" class="tab-content active">
-        <div class="chart">
-            {{ graph_annuel|safe }}
+                <!-- Tabs -->
+                <ul class="nav nav-tabs mb-3" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="annuel-tab" data-bs-toggle="tab" data-bs-target="#annuel" type="button" role="tab" aria-controls="annuel" aria-selected="true">
+                            <i class="ti ti-calendar-stats me-2"></i>
+                            Annuel
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="mensuel-tab" data-bs-toggle="tab" data-bs-target="#mensuel" type="button" role="tab" aria-controls="mensuel" aria-selected="false">
+                            <i class="ti ti-calendar-month me-2"></i>
+                            Mensuel
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="annuel" role="tabpanel" aria-labelledby="annuel-tab">
+                        <div class="chart-container">
+                            {{ graph_annuel|safe }}
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="mensuel" role="tabpanel" aria-labelledby="mensuel-tab">
+                        <div class="chart-container">
+                            {{ graph_mensuel|safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-    
-    <div id="mensuel" class="tab-content">
-        <div class="chart">
-            {{ graph_mensuel|safe }}
-        </div>
-    </div>
-</section>
+</div>
 
 <script>
-    function showTab(tabName, clickedTab) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-        document.getElementById(tabName).classList.add('active');
-        clickedTab.classList.add('active');
+// Trigger resize event when tab is shown to properly render Plotly charts
+document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(button => {
+    button.addEventListener('shown.bs.tab', function() {
         window.dispatchEvent(new Event('resize'));
-    }
+    });
+});
 </script>
 {% endblock %}

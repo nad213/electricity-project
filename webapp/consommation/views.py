@@ -34,6 +34,11 @@ def index(request):
     df_annuel = get_annual_data()
     df_mensuel = get_monthly_data()
 
+    # Harmonized color palette (Tabler colors)
+    COLOR_PRIMARY = '#206bc4'      # Tabler primary blue
+    COLOR_SECONDARY = '#6366f1'    # Tabler indigo
+    COLOR_SUCCESS = '#10b981'      # Tabler green
+
     # ========== CHART 1: Power curve ==========
     fig1 = px.line(
         df_puissance,
@@ -41,8 +46,8 @@ def index(request):
         y='consommation',
         color='source',
         color_discrete_map={
-            'Données Consolidées': '#8B5CF6',  # purple
-            'Temps Réel': '#3B82F6'  # blue
+            'Données Consolidées': COLOR_PRIMARY,
+            'Temps Réel': COLOR_SECONDARY
         },
     )
     fig1.update_layout(
@@ -61,13 +66,13 @@ def index(request):
     )
     fig1.update_xaxes(gridcolor='#E5E7EB')
     fig1.update_yaxes(gridcolor='#E5E7EB')
-    
+
     # ========== CHART 2: Annual consumption ==========
     fig2 = px.bar(
         df_annuel,
         x='annee',
         y='consommation_annuelle',
-        color_discrete_sequence=['#F59E0B'],  # yellow/orange
+        color_discrete_sequence=[COLOR_PRIMARY],
     )
     fig2.update_layout(
         xaxis_title_text='',
@@ -78,13 +83,13 @@ def index(request):
     )
     fig2.update_xaxes(gridcolor='#E5E7EB')
     fig2.update_yaxes(gridcolor='#E5E7EB')
-    
+
     # ========== CHART 3: Monthly consumption ==========
     fig3 = px.bar(
         df_mensuel,
         x='annee_mois_str',
         y='consommation_mensuelle',
-        color_discrete_sequence=['#F59E0B'],  # yellow/orange
+        color_discrete_sequence=[COLOR_SECONDARY],
     )
     fig3.update_layout(
         xaxis_title_text='',
@@ -112,5 +117,19 @@ def index(request):
         'graph_mensuel': graph_mensuel,
         'nb_lignes': len(df_puissance),
     }
-    
+
     return render(request, 'consommation/index.html', context)
+
+
+def production(request):
+    """
+    Production page - placeholder for future production data
+    """
+    return render(request, 'consommation/production.html')
+
+
+def echanges(request):
+    """
+    Échanges page - placeholder for future exchange data
+    """
+    return render(request, 'consommation/echanges.html')
