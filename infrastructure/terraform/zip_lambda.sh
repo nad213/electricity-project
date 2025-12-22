@@ -10,15 +10,15 @@ fi
 PREFIX="$1"
 BUILD_DIR="build_temp"
 
-# Trouve le dossier correspondant dans lambda/
-LAMBDA_DIR=$(ls lambda/ | grep "^${PREFIX}_" | head -n 1)
+# Trouve le dossier correspondant dans ../lambdas/
+LAMBDA_DIR=$(ls ../lambdas/ | grep "^${PREFIX}_" | head -n 1)
 
 if [ -z "$LAMBDA_DIR" ]; then
-    echo "Erreur : Aucun dossier dans lambda/ ne commence par ${PREFIX}_"
+    echo "Erreur : Aucun dossier dans ../lambdas/ ne commence par ${PREFIX}_"
     exit 1
 fi
 
-LAMBDA_DIR="lambda/$LAMBDA_DIR"
+LAMBDA_DIR="../lambdas/$LAMBDA_DIR"
 
 # Trouve le fichier .py dans le dossier
 PY_FILE=$(ls "$LAMBDA_DIR"/*.py | head -n 1)

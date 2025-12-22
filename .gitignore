@@ -30,6 +30,8 @@ db.sqlite3-journal
 *.tfvars
 .terraform.lock.hcl
 terraform.tfstate.backup
+tfplan
+*.tfplan
 
 # Lambda packages
 *.zip
@@ -53,6 +55,9 @@ Thumbs.db
 *.csv
 *.parquet
 data/
+
+# Migration docs (local only)
+MIGRATION.md
 
 # Logs
 *.log

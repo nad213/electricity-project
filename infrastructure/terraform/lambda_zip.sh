@@ -5,12 +5,12 @@ if [ "$#" -ne 1 ]; then
     exit 1
 fi
 PREFIX="$1"
-LAMBDA_DIR=$(ls lambda/ | grep "^${PREFIX}_" | head -n 1)
+LAMBDA_DIR=$(ls ../lambdas/ | grep "^${PREFIX}_" | head -n 1)
 if [ -z "$LAMBDA_DIR" ]; then
-    echo "Error: No folder in lambda/ starts with ${PREFIX}_"
+    echo "Error: No folder in ../lambdas/ starts with ${PREFIX}_"
     exit 1
 fi
-LAMBDA_DIR="lambda/$LAMBDA_DIR"
+LAMBDA_DIR="../lambdas/$LAMBDA_DIR"
 PY_FILE=$(ls "$LAMBDA_DIR"/*.py | head -n 1)
 if [ -z "$PY_FILE" ]; then
     echo "Error: No .py file found in $LAMBDA_DIR"
