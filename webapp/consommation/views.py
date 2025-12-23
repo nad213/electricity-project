@@ -1,7 +1,9 @@
 from django.shortcuts import render
+from django.http import HttpResponse
 from datetime import datetime, timedelta
 import plotly.express as px
 import plotly.io as pio
+import csv
 from .services import get_date_range, get_puissance_data, get_annual_data, get_monthly_data
 
 
@@ -140,3 +142,79 @@ def echanges(request):
     Échanges page - placeholder for future exchange data
     """
     return render(request, 'consommation/echanges.html')
+
+
+def export_puissance_csv(request):
+    """
+    Export power consumption data to CSV
+    """
+    # Get available min/max dates
+    min_date, max_date = get_date_range()
+
+    # Default dates (last 90 days)
+    default_start = max_date - timedelta(days=90)
+
+    # Get dates from URL query parameters
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+
+    if start_date_str:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    else:
+        start_date = default_start
+
+    if end_date_str:
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    else:
+        end_date = max_date
+
+    # Load data
+    df = get_puissance_data(start_date, end_date)
+
+    # Create CSV response
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="consommation_puissance_{start_date}_{end_date}.csv"'
+
+    writer = csv.writer(response, delimiter=';')
+    writer.writerow(['date_heure', 'consommation', 'source'])
+
+    for _, row in df.iterrows():
+        writer.writerow([row['date_heure'], row['consommation'], row['source']])
+
+    return response
+
+
+def export_annuel_csv(request):
+    """
+    Export annual consumption data to CSV
+    """
+    df = get_annual_data()
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="consommation_annuelle.csv"'
+
+    writer = csv.writer(response, delimiter=';')
+    writer.writerow(['annee', 'consommation_annuelle'])
+
+    for _, row in df.iterrows():
+        writer.writerow([row['annee'], row['consommation_annuelle']])
+
+    return response
+
+
+def export_mensuel_csv(request):
+    """
+    Export monthly consumption data to CSV
+    """
+    df = get_monthly_data()
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="consommation_mensuelle.csv"'
+
+    writer = csv.writer(response, delimiter=';')
+    writer.writerow(['annee_mois_str', 'consommation_mensuelle'])
+
+    for _, row in df.iterrows():
+        writer.writerow([row['annee_mois_str'], row['consommation_mensuelle']])
+
+    return response
