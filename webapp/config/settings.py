@@ -28,6 +28,7 @@ S3_PATHS = {
     'puissance': os.getenv('S3_PATH_PUISSANCE'),
     'annuel': os.getenv('S3_PATH_ANNUEL'),
     'mensuel': os.getenv('S3_PATH_MENSUEL'),
+    'production': os.getenv('S3_PATH_PRODUCTION'),
 }
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.

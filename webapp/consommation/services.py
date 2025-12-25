@@ -113,3 +113,73 @@ def get_monthly_data():
     conn.close()
     df['annee_mois_str'] = df['annee_mois'].astype(str)
     return df
+
+
+def get_production_date_range():
+    """
+    Retrieves the min and max dates from the production dataset
+    """
+    conn = get_duckdb_connection()
+    query = """
+        SELECT MIN(date_heure) as min_date, MAX(date_heure) as max_date
+        FROM read_parquet(?);
+    """
+    result = conn.execute(query, [settings.S3_PATHS['production']]).fetchdf()
+    conn.close()
+
+    min_date = pd.to_datetime(result['min_date'].iloc[0]).date()
+    max_date = pd.to_datetime(result['max_date'].iloc[0]).date()
+
+    return min_date, max_date
+
+
+def get_production_filieres():
+    """
+    Returns the list of available production sectors (filières)
+    """
+    # Based on the parquet structure, these are the main sectors
+    filieres = {
+        'nucleaire': 'Nucléaire',
+        'hydraulique': 'Hydraulique',
+        'eolien': 'Éolien',
+        'solaire': 'Solaire',
+        'gaz': 'Gaz',
+        'charbon': 'Charbon',
+        'fioul': 'Fioul',
+        'bioenergies': 'Bioénergies',
+    }
+    return filieres
+
+
+def get_production_data(start_date, end_date, filiere='nucleaire'):
+    """
+    Loads production data for a date range and specific sector
+    Uses parameterized queries to prevent SQL injection
+    """
+    conn = get_duckdb_connection()
+
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+
+    # Validate filiere to prevent SQL injection
+    valid_filieres = list(get_production_filieres().keys())
+    if filiere not in valid_filieres:
+        conn.close()
+        raise ValueError(f"Filière invalide. Choisissez parmi: {', '.join(valid_filieres)}")
+
+    query = f"""
+        SELECT date_heure, {filiere}, source
+        FROM read_parquet(?)
+        WHERE date_heure BETWEEN ? AND ?
+        ORDER BY date_heure;
+    """
+    result = conn.execute(
+        query,
+        [settings.S3_PATHS['production'], start_str, f"{end_str} 23:59:59"]
+    ).fetchdf()
+    conn.close()
+
+    # Rename the filiere column to 'production' for consistency in templates
+    result = result.rename(columns={filiere: 'production'})
+
+    return result

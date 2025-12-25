@@ -4,7 +4,10 @@ from datetime import datetime, timedelta
 import plotly.express as px
 import plotly.io as pio
 import csv
-from .services import get_date_range, get_puissance_data, get_annual_data, get_monthly_data
+from .services import (
+    get_date_range, get_puissance_data, get_annual_data, get_monthly_data,
+    get_production_date_range, get_production_filieres, get_production_data
+)
 
 
 def validate_date(date_str, param_name):
@@ -30,6 +33,92 @@ def validate_date(date_str, param_name):
         raise
 
 
+def validate_and_get_dates(request, min_date, max_date):
+    """
+    Validates and returns start_date and end_date from request
+    Returns tuple (start_date, end_date) or raises HttpResponseBadRequest
+    """
+    # Default dates (last 90 days)
+    default_start = max_date - timedelta(days=90)
+
+    # Get dates from URL query parameters
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+
+    # Validate dates
+    start_date = validate_date(start_date_str, "Date de début")
+    if start_date is None:
+        start_date = default_start
+
+    end_date = validate_date(end_date_str, "Date de fin")
+    if end_date is None:
+        end_date = max_date
+
+    # Check date range validity
+    if start_date > end_date:
+        raise ValueError("La date de début doit être antérieure à la date de fin")
+
+    # Check if dates are within available range
+    if start_date < min_date or end_date > max_date:
+        raise ValueError(f"Les dates doivent être entre {min_date} et {max_date}")
+
+    return start_date, end_date
+
+
+def create_line_chart(df, x_col, y_col, source_col='source', source_labels=None):
+    """
+    Creates a standardized Plotly line chart
+
+    Args:
+        df: DataFrame with data
+        x_col: Column name for x-axis
+        y_col: Column name for y-axis
+        source_col: Column name for color grouping (default: 'source')
+        source_labels: Dict mapping source values to display labels
+
+    Returns:
+        HTML string of the chart
+    """
+    # Harmonized color palette (Tabler colors)
+    COLOR_PRIMARY = '#206bc4'      # Tabler primary blue
+    COLOR_SECONDARY = '#6366f1'    # Tabler indigo
+
+    # Default source labels mapping
+    if source_labels is None:
+        source_labels = {
+            'Données Consolidées': COLOR_PRIMARY,
+            'Temps Réel': COLOR_SECONDARY,
+            'Consolidated Data': COLOR_PRIMARY,
+            'Real-Time Data': COLOR_SECONDARY
+        }
+
+    fig = px.line(
+        df,
+        x=x_col,
+        y=y_col,
+        color=source_col,
+        color_discrete_map=source_labels,
+    )
+    fig.update_layout(
+        legend_title_text='',
+        legend=dict(
+            orientation="h",
+            x=1.0,
+            y=-0.15,
+            xanchor="right",
+        ),
+        xaxis_title_text='',
+        yaxis_title_text='MW',
+        margin=dict(l=50, r=20, t=20, b=60),
+        height=450,
+        plot_bgcolor='white',
+    )
+    fig.update_xaxes(gridcolor='#E5E7EB')
+    fig.update_yaxes(gridcolor='#E5E7EB')
+
+    return pio.to_html(fig, full_html=False, include_plotlyjs='cdn')
+
+
 def accueil(request):
     """
     Home page - welcome page
@@ -45,35 +134,12 @@ def index(request):
         # Get available min/max dates
         min_date, max_date = get_date_range()
 
-        # Default dates (last 90 days)
-        default_start = max_date - timedelta(days=90)
-
-        # Get dates from URL query parameters (GET)
-        start_date_str = request.GET.get('start_date')
-        end_date_str = request.GET.get('end_date')
-
-        # Validate dates
-        start_date = validate_date(start_date_str, "Date de début")
-        if start_date is None:
-            start_date = default_start
-
-        end_date = validate_date(end_date_str, "Date de fin")
-        if end_date is None:
-            end_date = max_date
-
-        # Check date range validity
-        if start_date > end_date:
-            return HttpResponseBadRequest("La date de début doit être antérieure à la date de fin")
-
-        # Check if dates are within available range
-        if start_date < min_date or end_date > max_date:
-            return HttpResponseBadRequest(
-                f"Les dates doivent être entre {min_date} et {max_date}"
-            )
+        # Validate and get dates from request
+        start_date, end_date = validate_and_get_dates(request, min_date, max_date)
 
     except ValueError as e:
         return HttpResponseBadRequest(str(e))
-    
+
     # Load data
     df_puissance = get_puissance_data(start_date, end_date)
     df_annuel = get_annual_data()
@@ -85,32 +151,15 @@ def index(request):
     COLOR_SUCCESS = '#10b981'      # Tabler green
 
     # ========== CHART 1: Power curve ==========
-    fig1 = px.line(
+    graph_puissance = create_line_chart(
         df_puissance,
-        x='date_heure',
-        y='consommation',
-        color='source',
-        color_discrete_map={
+        x_col='date_heure',
+        y_col='consommation',
+        source_labels={
             'Données Consolidées': COLOR_PRIMARY,
             'Temps Réel': COLOR_SECONDARY
-        },
+        }
     )
-    fig1.update_layout(
-        legend_title_text='',
-        legend=dict(
-            orientation="h",
-            x=1.0,
-            y=-0.15,
-            xanchor="right",
-        ),
-        xaxis_title_text='',
-        yaxis_title_text='MW',
-        margin=dict(l=50, r=20, t=20, b=60),
-        height=450,
-        plot_bgcolor='white',
-    )
-    fig1.update_xaxes(gridcolor='#E5E7EB')
-    fig1.update_yaxes(gridcolor='#E5E7EB')
 
     # ========== CHART 2: Annual consumption ==========
     fig2 = px.bar(
@@ -145,9 +194,8 @@ def index(request):
     )
     fig3.update_xaxes(gridcolor='#E5E7EB', tickangle=45)
     fig3.update_yaxes(gridcolor='#E5E7EB')
-    
-    # Convert charts to HTML
-    graph_puissance = pio.to_html(fig1, full_html=False, include_plotlyjs='cdn')
+
+    # Convert bar charts to HTML
     graph_annuel = pio.to_html(fig2, full_html=False, include_plotlyjs=False)
     graph_mensuel = pio.to_html(fig3, full_html=False, include_plotlyjs=False)
     
@@ -168,9 +216,47 @@ def index(request):
 
 def production(request):
     """
-    Production page - placeholder for future production data
+    Production page - displays production data with load curve by sector
     """
-    return render(request, 'consommation/production.html')
+    try:
+        # Get available min/max dates
+        min_date, max_date = get_production_date_range()
+
+        # Validate filiere
+        filiere = request.GET.get('filiere', 'nucleaire')
+        filieres = get_production_filieres()
+        if filiere not in filieres:
+            return HttpResponseBadRequest(f"Filière invalide. Choisissez parmi: {', '.join(filieres.keys())}")
+
+        # Validate and get dates from request
+        start_date, end_date = validate_and_get_dates(request, min_date, max_date)
+
+    except ValueError as e:
+        return HttpResponseBadRequest(str(e))
+
+    # Load production data
+    df_production = get_production_data(start_date, end_date, filiere)
+
+    # Create production curve chart
+    graph_production = create_line_chart(
+        df_production,
+        x_col='date_heure',
+        y_col='production'
+    )
+
+    context = {
+        'titre': 'Production',
+        'min_date': min_date,
+        'max_date': max_date,
+        'start_date': start_date,
+        'end_date': end_date,
+        'filiere': filiere,
+        'filieres': filieres,
+        'graph_production': graph_production,
+        'nb_lignes': len(df_production),
+    }
+
+    return render(request, 'consommation/production.html', context)
 
 
 def echanges(request):
@@ -188,30 +274,8 @@ def export_puissance_csv(request):
         # Get available min/max dates
         min_date, max_date = get_date_range()
 
-        # Default dates (last 90 days)
-        default_start = max_date - timedelta(days=90)
-
-        # Get dates from URL query parameters
-        start_date_str = request.GET.get('start_date')
-        end_date_str = request.GET.get('end_date')
-
-        # Validate dates
-        start_date = validate_date(start_date_str, "Date de début")
-        if start_date is None:
-            start_date = default_start
-
-        end_date = validate_date(end_date_str, "Date de fin")
-        if end_date is None:
-            end_date = max_date
-
-        # Check date range validity
-        if start_date > end_date:
-            return HttpResponseBadRequest("La date de début doit être antérieure à la date de fin")
-
-        if start_date < min_date or end_date > max_date:
-            return HttpResponseBadRequest(
-                f"Les dates doivent être entre {min_date} et {max_date}"
-            )
+        # Validate and get dates from request
+        start_date, end_date = validate_and_get_dates(request, min_date, max_date)
 
     except ValueError as e:
         return HttpResponseBadRequest(str(e))
@@ -264,5 +328,41 @@ def export_mensuel_csv(request):
 
     for _, row in df.iterrows():
         writer.writerow([row['annee_mois_str'], row['consommation_mensuelle']])
+
+    return response
+
+
+def export_production_csv(request):
+    """
+    Export production data to CSV
+    """
+    try:
+        # Get available min/max dates
+        min_date, max_date = get_production_date_range()
+
+        # Validate filiere
+        filiere = request.GET.get('filiere', 'nucleaire')
+        filieres = get_production_filieres()
+        if filiere not in filieres:
+            return HttpResponseBadRequest(f"Filière invalide. Choisissez parmi: {', '.join(filieres.keys())}")
+
+        # Validate and get dates from request
+        start_date, end_date = validate_and_get_dates(request, min_date, max_date)
+
+    except ValueError as e:
+        return HttpResponseBadRequest(str(e))
+
+    # Load data
+    df = get_production_data(start_date, end_date, filiere)
+
+    # Create CSV response
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="production_{filiere}_{start_date}_{end_date}.csv"'
+
+    writer = csv.writer(response, delimiter=';')
+    writer.writerow(['date_heure', 'production', 'source'])
+
+    for _, row in df.iterrows():
+        writer.writerow([row['date_heure'], row['production'], row['source']])
 
     return response

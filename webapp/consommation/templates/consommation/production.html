@@ -9,30 +9,84 @@
 
 {% block content %}
 
-<div class="row">
+<!-- Production Section -->
+<div class="row mb-4">
     <div class="col-12">
         <div class="card">
-            <div class="card-body text-center py-5">
-                <div class="text-center">
-                    <div class="mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-success">
-                            <path d="M4 21c1.147 -4.02 1.983 -8.027 2 -12h6c.017 3.973 .853 7.98 2 12"></path>
-                            <path d="M12.5 13h4.5c.025 2.612 .894 5.296 2 8"></path>
-                            <path d="M9 5a2.4 2.4 0 0 1 2 -1a2.4 2.4 0 0 1 2 1a2.4 2.4 0 0 0 2 1a2.4 2.4 0 0 0 2 -1a2.4 2.4 0 0 1 2 -1a2.4 2.4 0 0 1 2 1"></path>
-                            <path d="M3 21l19 0"></path>
-                        </svg>
+            <div class="card-header">
+                <h3 class="card-title">Courbe de Production France (MW)</h3>
+            </div>
+            <div class="card-body">
+                <div class="text-muted mb-3">
+                    Le graphique ci-dessous affiche la courbe de production électrique par filière, en MW.
+                    Sélectionnez une filière pour visualiser ses données de production.
+                </div>
+
+                <!-- Filters -->
+                <form method="get" class="mb-4">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label fs-6 mb-1">Filière</label>
+                            <select
+                                class="form-select form-select-sm"
+                                name="filiere"
+                            >
+                                {% for key, label in filieres.items %}
+                                <option value="{{ key }}" {% if filiere == key %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fs-6 mb-1">Date début</label>
+                            <input
+                                type="date"
+                                class="form-control form-control-sm"
+                                name="start_date"
+                                value="{{ start_date|date:'Y-m-d' }}"
+                                min="{{ min_date|date:'Y-m-d' }}"
+                                max="{{ max_date|date:'Y-m-d' }}"
+                            >
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fs-6 mb-1">Date fin</label>
+                            <input
+                                type="date"
+                                class="form-control form-control-sm"
+                                name="end_date"
+                                value="{{ end_date|date:'Y-m-d' }}"
+                                min="{{ min_date|date:'Y-m-d' }}"
+                                max="{{ max_date|date:'Y-m-d' }}"
+                            >
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="ti ti-refresh me-1"></i>
+                                Actualiser
+                            </button>
+                        </div>
                     </div>
-                    <h3 class="mb-3">Production Électrique</h3>
-                    <p class="text-muted">
-                        Cette section affichera les données de production électrique en France par source d'énergie.
-                    </p>
-                    <p class="text-muted mt-4">
-                        <span class="badge bg-blue-lt">En développement</span>
-                    </p>
+                </form>
+
+                <!-- Production Chart -->
+                <div class="chart-container">
+                    {{ graph_production|safe }}
+                </div>
+
+                <!-- Download button -->
+                <div class="mt-3 text-end">
+                    <a href="{% url 'export_production' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&filiere={{ filiere }}" class="btn btn-outline-primary btn-sm">
+                        <i class="ti ti-download me-1"></i>
+                        Télécharger CSV
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<script>
+// No additional scripts needed for now
+</script>
 {% endblock %}
