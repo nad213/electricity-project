@@ -1,10 +1,33 @@
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 from datetime import datetime, timedelta
 import plotly.express as px
 import plotly.io as pio
 import csv
 from .services import get_date_range, get_puissance_data, get_annual_data, get_monthly_data
+
+
+def validate_date(date_str, param_name):
+    """
+    Validates a date string and returns a date object or None
+    Raises ValueError with a user-friendly message if invalid
+    """
+    if not date_str:
+        return None
+
+    try:
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        # Check if date is not in the future
+        if date_obj > datetime.now().date():
+            raise ValueError(f"{param_name} ne peut pas être dans le futur")
+        # Check if date is reasonable (not before 2000)
+        if date_obj.year < 2000:
+            raise ValueError(f"{param_name} doit être après l'année 2000")
+        return date_obj
+    except ValueError as e:
+        if "does not match format" in str(e):
+            raise ValueError(f"{param_name} doit être au format AAAA-MM-JJ")
+        raise
 
 
 def accueil(request):
@@ -18,25 +41,38 @@ def index(request):
     """
     Main view - displays consumption data with Plotly charts
     """
-    # Get available min/max dates
-    min_date, max_date = get_date_range()
+    try:
+        # Get available min/max dates
+        min_date, max_date = get_date_range()
 
-    # Default dates (last 90 days)
-    default_start = max_date - timedelta(days=90)
+        # Default dates (last 90 days)
+        default_start = max_date - timedelta(days=90)
 
-    # Get dates from URL query parameters (GET)
-    start_date_str = request.GET.get('start_date')
-    end_date_str = request.GET.get('end_date')
-    
-    if start_date_str:
-        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-    else:
-        start_date = default_start
-        
-    if end_date_str:
-        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-    else:
-        end_date = max_date
+        # Get dates from URL query parameters (GET)
+        start_date_str = request.GET.get('start_date')
+        end_date_str = request.GET.get('end_date')
+
+        # Validate dates
+        start_date = validate_date(start_date_str, "Date de début")
+        if start_date is None:
+            start_date = default_start
+
+        end_date = validate_date(end_date_str, "Date de fin")
+        if end_date is None:
+            end_date = max_date
+
+        # Check date range validity
+        if start_date > end_date:
+            return HttpResponseBadRequest("La date de début doit être antérieure à la date de fin")
+
+        # Check if dates are within available range
+        if start_date < min_date or end_date > max_date:
+            return HttpResponseBadRequest(
+                f"Les dates doivent être entre {min_date} et {max_date}"
+            )
+
+    except ValueError as e:
+        return HttpResponseBadRequest(str(e))
     
     # Load data
     df_puissance = get_puissance_data(start_date, end_date)
@@ -148,25 +184,37 @@ def export_puissance_csv(request):
     """
     Export power consumption data to CSV
     """
-    # Get available min/max dates
-    min_date, max_date = get_date_range()
+    try:
+        # Get available min/max dates
+        min_date, max_date = get_date_range()
 
-    # Default dates (last 90 days)
-    default_start = max_date - timedelta(days=90)
+        # Default dates (last 90 days)
+        default_start = max_date - timedelta(days=90)
 
-    # Get dates from URL query parameters
-    start_date_str = request.GET.get('start_date')
-    end_date_str = request.GET.get('end_date')
+        # Get dates from URL query parameters
+        start_date_str = request.GET.get('start_date')
+        end_date_str = request.GET.get('end_date')
 
-    if start_date_str:
-        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-    else:
-        start_date = default_start
+        # Validate dates
+        start_date = validate_date(start_date_str, "Date de début")
+        if start_date is None:
+            start_date = default_start
 
-    if end_date_str:
-        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-    else:
-        end_date = max_date
+        end_date = validate_date(end_date_str, "Date de fin")
+        if end_date is None:
+            end_date = max_date
+
+        # Check date range validity
+        if start_date > end_date:
+            return HttpResponseBadRequest("La date de début doit être antérieure à la date de fin")
+
+        if start_date < min_date or end_date > max_date:
+            return HttpResponseBadRequest(
+                f"Les dates doivent être entre {min_date} et {max_date}"
+            )
+
+    except ValueError as e:
+        return HttpResponseBadRequest(str(e))
 
     # Load data
     df = get_puissance_data(start_date, end_date)
