@@ -4,12 +4,47 @@ from datetime import datetime, timedelta
 import plotly.express as px
 import plotly.io as pio
 import csv
+from functools import wraps
 from .services import (
     get_date_range, get_puissance_data, get_annual_data, get_monthly_data,
     get_production_date_range, get_production_filieres, get_production_data
 )
 
 
+# ========== Constants ==========
+class Colors:
+    """Tabler color palette"""
+    PRIMARY = '#206bc4'      # Tabler primary blue
+    SECONDARY = '#6366f1'    # Tabler indigo
+    SUCCESS = '#10b981'      # Tabler green
+
+
+class ChartConfig:
+    """Default configuration for charts"""
+    GRID_COLOR = '#E5E7EB'
+    BACKGROUND_COLOR = 'white'
+    LINE_CHART_HEIGHT = 450
+    BAR_CHART_HEIGHT = 400
+    MARGIN_WITH_LEGEND = dict(l=50, r=20, t=20, b=60)
+    MARGIN_DEFAULT = dict(l=50, r=20, t=20, b=40)
+
+
+# ========== Decorators ==========
+def handle_validation_errors(func):
+    """
+    Decorator to handle validation errors uniformly
+    Catches ValueError exceptions and returns HttpResponseBadRequest
+    """
+    @wraps(func)
+    def wrapper(request, *args, **kwargs):
+        try:
+            return func(request, *args, **kwargs)
+        except ValueError as e:
+            return HttpResponseBadRequest(str(e))
+    return wrapper
+
+
+# ========== Validators ==========
 def validate_date(date_str, param_name):
     """
     Validates a date string and returns a date object or None
@@ -65,6 +100,7 @@ def validate_and_get_dates(request, min_date, max_date):
     return start_date, end_date
 
 
+# ========== Chart Creation ==========
 def create_line_chart(df, x_col, y_col, source_col='source', source_labels=None):
     """
     Creates a standardized Plotly line chart
@@ -79,17 +115,13 @@ def create_line_chart(df, x_col, y_col, source_col='source', source_labels=None)
     Returns:
         HTML string of the chart
     """
-    # Harmonized color palette (Tabler colors)
-    COLOR_PRIMARY = '#206bc4'      # Tabler primary blue
-    COLOR_SECONDARY = '#6366f1'    # Tabler indigo
-
     # Default source labels mapping
     if source_labels is None:
         source_labels = {
-            'Données Consolidées': COLOR_PRIMARY,
-            'Temps Réel': COLOR_SECONDARY,
-            'Consolidated Data': COLOR_PRIMARY,
-            'Real-Time Data': COLOR_SECONDARY
+            'Données Consolidées': Colors.PRIMARY,
+            'Temps Réel': Colors.SECONDARY,
+            'Consolidated Data': Colors.PRIMARY,
+            'Real-Time Data': Colors.SECONDARY
         }
 
     fig = px.line(
@@ -109,14 +141,50 @@ def create_line_chart(df, x_col, y_col, source_col='source', source_labels=None)
         ),
         xaxis_title_text='',
         yaxis_title_text='MW',
-        margin=dict(l=50, r=20, t=20, b=60),
-        height=450,
-        plot_bgcolor='white',
+        margin=ChartConfig.MARGIN_WITH_LEGEND,
+        height=ChartConfig.LINE_CHART_HEIGHT,
+        plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
     )
-    fig.update_xaxes(gridcolor='#E5E7EB')
-    fig.update_yaxes(gridcolor='#E5E7EB')
+    fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
+    fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR)
 
     return pio.to_html(fig, full_html=False, include_plotlyjs='cdn')
+
+
+def create_bar_chart(df, x_col, y_col, color=None, tickangle=0):
+    """
+    Creates a standardized Plotly bar chart
+
+    Args:
+        df: DataFrame with data
+        x_col: Column name for x-axis
+        y_col: Column name for y-axis
+        color: Bar color (default: PRIMARY)
+        tickangle: Angle for x-axis labels (default: 0)
+
+    Returns:
+        HTML string of the chart
+    """
+    if color is None:
+        color = Colors.PRIMARY
+
+    fig = px.bar(
+        df,
+        x=x_col,
+        y=y_col,
+        color_discrete_sequence=[color],
+    )
+    fig.update_layout(
+        xaxis_title_text='',
+        yaxis_title_text='MWh',
+        margin=ChartConfig.MARGIN_DEFAULT,
+        height=ChartConfig.BAR_CHART_HEIGHT,
+        plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
+    )
+    fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR, tickangle=tickangle)
+    fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR)
+
+    return pio.to_html(fig, full_html=False, include_plotlyjs=False)
 
 
 def accueil(request):
@@ -126,29 +194,22 @@ def accueil(request):
     return render(request, 'consommation/accueil.html')
 
 
+# ========== Views ==========
+@handle_validation_errors
 def index(request):
     """
     Main view - displays consumption data with Plotly charts
     """
-    try:
-        # Get available min/max dates
-        min_date, max_date = get_date_range()
+    # Get available min/max dates
+    min_date, max_date = get_date_range()
 
-        # Validate and get dates from request
-        start_date, end_date = validate_and_get_dates(request, min_date, max_date)
-
-    except ValueError as e:
-        return HttpResponseBadRequest(str(e))
+    # Validate and get dates from request
+    start_date, end_date = validate_and_get_dates(request, min_date, max_date)
 
     # Load data
     df_puissance = get_puissance_data(start_date, end_date)
     df_annuel = get_annual_data()
     df_mensuel = get_monthly_data()
-
-    # Harmonized color palette (Tabler colors)
-    COLOR_PRIMARY = '#206bc4'      # Tabler primary blue
-    COLOR_SECONDARY = '#6366f1'    # Tabler indigo
-    COLOR_SUCCESS = '#10b981'      # Tabler green
 
     # ========== CHART 1: Power curve ==========
     graph_puissance = create_line_chart(
@@ -156,48 +217,27 @@ def index(request):
         x_col='date_heure',
         y_col='consommation',
         source_labels={
-            'Données Consolidées': COLOR_PRIMARY,
-            'Temps Réel': COLOR_SECONDARY
+            'Données Consolidées': Colors.PRIMARY,
+            'Temps Réel': Colors.SECONDARY
         }
     )
 
     # ========== CHART 2: Annual consumption ==========
-    fig2 = px.bar(
+    graph_annuel = create_bar_chart(
         df_annuel,
-        x='annee',
-        y='consommation_annuelle',
-        color_discrete_sequence=[COLOR_PRIMARY],
+        x_col='annee',
+        y_col='consommation_annuelle',
+        color=Colors.PRIMARY
     )
-    fig2.update_layout(
-        xaxis_title_text='',
-        yaxis_title_text='MWh',
-        margin=dict(l=50, r=20, t=20, b=40),
-        height=400,
-        plot_bgcolor='white',
-    )
-    fig2.update_xaxes(gridcolor='#E5E7EB')
-    fig2.update_yaxes(gridcolor='#E5E7EB')
 
     # ========== CHART 3: Monthly consumption ==========
-    fig3 = px.bar(
+    graph_mensuel = create_bar_chart(
         df_mensuel,
-        x='annee_mois_str',
-        y='consommation_mensuelle',
-        color_discrete_sequence=[COLOR_SECONDARY],
+        x_col='annee_mois_str',
+        y_col='consommation_mensuelle',
+        color=Colors.SECONDARY,
+        tickangle=45
     )
-    fig3.update_layout(
-        xaxis_title_text='',
-        yaxis_title_text='MWh',
-        margin=dict(l=50, r=20, t=20, b=40),
-        height=400,
-        plot_bgcolor='white',
-    )
-    fig3.update_xaxes(gridcolor='#E5E7EB', tickangle=45)
-    fig3.update_yaxes(gridcolor='#E5E7EB')
-
-    # Convert bar charts to HTML
-    graph_annuel = pio.to_html(fig2, full_html=False, include_plotlyjs=False)
-    graph_mensuel = pio.to_html(fig3, full_html=False, include_plotlyjs=False)
     
     context = {
         'titre': 'Consommation',
@@ -214,25 +254,22 @@ def index(request):
     return render(request, 'consommation/index.html', context)
 
 
+@handle_validation_errors
 def production(request):
     """
     Production page - displays production data with load curve by sector
     """
-    try:
-        # Get available min/max dates
-        min_date, max_date = get_production_date_range()
+    # Get available min/max dates
+    min_date, max_date = get_production_date_range()
 
-        # Validate filiere
-        filiere = request.GET.get('filiere', 'nucleaire')
-        filieres = get_production_filieres()
-        if filiere not in filieres:
-            return HttpResponseBadRequest(f"Filière invalide. Choisissez parmi: {', '.join(filieres.keys())}")
+    # Validate filiere
+    filiere = request.GET.get('filiere', 'nucleaire')
+    filieres = get_production_filieres()
+    if filiere not in filieres:
+        return HttpResponseBadRequest(f"Filière invalide. Choisissez parmi: {', '.join(filieres.keys())}")
 
-        # Validate and get dates from request
-        start_date, end_date = validate_and_get_dates(request, min_date, max_date)
-
-    except ValueError as e:
-        return HttpResponseBadRequest(str(e))
+    # Validate and get dates from request
+    start_date, end_date = validate_and_get_dates(request, min_date, max_date)
 
     # Load production data
     df_production = get_production_data(start_date, end_date, filiere)
@@ -266,34 +303,48 @@ def echanges(request):
     return render(request, 'consommation/echanges.html')
 
 
+# ========== Export Functions ==========
+def _export_to_csv(df, filename, columns):
+    """
+    Generic CSV export function
+
+    Args:
+        df: DataFrame to export
+        filename: Name of the CSV file
+        columns: List of column names to export
+
+    Returns:
+        HttpResponse with CSV content
+    """
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    writer = csv.writer(response, delimiter=';')
+    writer.writerow(columns)
+
+    # Performance: use values.tolist() instead of iterrows()
+    writer.writerows(df[columns].values.tolist())
+
+    return response
+
+
+@handle_validation_errors
 def export_puissance_csv(request):
     """
     Export power consumption data to CSV
     """
-    try:
-        # Get available min/max dates
-        min_date, max_date = get_date_range()
+    # Get available min/max dates
+    min_date, max_date = get_date_range()
 
-        # Validate and get dates from request
-        start_date, end_date = validate_and_get_dates(request, min_date, max_date)
-
-    except ValueError as e:
-        return HttpResponseBadRequest(str(e))
+    # Validate and get dates from request
+    start_date, end_date = validate_and_get_dates(request, min_date, max_date)
 
     # Load data
     df = get_puissance_data(start_date, end_date)
 
-    # Create CSV response
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="consommation_puissance_{start_date}_{end_date}.csv"'
-
-    writer = csv.writer(response, delimiter=';')
-    writer.writerow(['date_heure', 'consommation', 'source'])
-
-    for _, row in df.iterrows():
-        writer.writerow([row['date_heure'], row['consommation'], row['source']])
-
-    return response
+    # Export to CSV
+    filename = f'consommation_puissance_{start_date}_{end_date}.csv'
+    return _export_to_csv(df, filename, ['date_heure', 'consommation', 'source'])
 
 
 def export_annuel_csv(request):
@@ -301,17 +352,7 @@ def export_annuel_csv(request):
     Export annual consumption data to CSV
     """
     df = get_annual_data()
-
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="consommation_annuelle.csv"'
-
-    writer = csv.writer(response, delimiter=';')
-    writer.writerow(['annee', 'consommation_annuelle'])
-
-    for _, row in df.iterrows():
-        writer.writerow([row['annee'], row['consommation_annuelle']])
-
-    return response
+    return _export_to_csv(df, 'consommation_annuelle.csv', ['annee', 'consommation_annuelle'])
 
 
 def export_mensuel_csv(request):
@@ -319,50 +360,29 @@ def export_mensuel_csv(request):
     Export monthly consumption data to CSV
     """
     df = get_monthly_data()
-
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="consommation_mensuelle.csv"'
-
-    writer = csv.writer(response, delimiter=';')
-    writer.writerow(['annee_mois_str', 'consommation_mensuelle'])
-
-    for _, row in df.iterrows():
-        writer.writerow([row['annee_mois_str'], row['consommation_mensuelle']])
-
-    return response
+    return _export_to_csv(df, 'consommation_mensuelle.csv', ['annee_mois_str', 'consommation_mensuelle'])
 
 
+@handle_validation_errors
 def export_production_csv(request):
     """
     Export production data to CSV
     """
-    try:
-        # Get available min/max dates
-        min_date, max_date = get_production_date_range()
+    # Get available min/max dates
+    min_date, max_date = get_production_date_range()
 
-        # Validate filiere
-        filiere = request.GET.get('filiere', 'nucleaire')
-        filieres = get_production_filieres()
-        if filiere not in filieres:
-            return HttpResponseBadRequest(f"Filière invalide. Choisissez parmi: {', '.join(filieres.keys())}")
+    # Validate filiere
+    filiere = request.GET.get('filiere', 'nucleaire')
+    filieres = get_production_filieres()
+    if filiere not in filieres:
+        return HttpResponseBadRequest(f"Filière invalide. Choisissez parmi: {', '.join(filieres.keys())}")
 
-        # Validate and get dates from request
-        start_date, end_date = validate_and_get_dates(request, min_date, max_date)
-
-    except ValueError as e:
-        return HttpResponseBadRequest(str(e))
+    # Validate and get dates from request
+    start_date, end_date = validate_and_get_dates(request, min_date, max_date)
 
     # Load data
     df = get_production_data(start_date, end_date, filiere)
 
-    # Create CSV response
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="production_{filiere}_{start_date}_{end_date}.csv"'
-
-    writer = csv.writer(response, delimiter=';')
-    writer.writerow(['date_heure', 'production', 'source'])
-
-    for _, row in df.iterrows():
-        writer.writerow([row['date_heure'], row['production'], row['source']])
-
-    return response
+    # Export to CSV
+    filename = f'production_{filiere}_{start_date}_{end_date}.csv'
+    return _export_to_csv(df, filename, ['date_heure', 'production', 'source'])
