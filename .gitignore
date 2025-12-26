@@ -60,6 +60,7 @@ data/
 
 # Migration docs (local only)
 MIGRATION.md
+DEPLOY.md
 
 # Logs
 *.log
