@@ -182,6 +182,13 @@ def get_production_data(start_date, end_date, filiere='nucleaire'):
     # Rename the filiere column to 'production' for consistency in templates
     result = result.rename(columns={filiere: 'production'})
 
+    # Translate source labels to French for consistency with consumption
+    source_map = {
+        'Consolidated Data': 'Données Consolidées',
+        'Real-Time Data': 'Temps Réel'
+    }
+    result['source'] = result['source'].map(source_map).fillna(result['source'])
+
     return result
 
 

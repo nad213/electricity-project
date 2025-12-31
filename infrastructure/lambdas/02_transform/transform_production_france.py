@@ -105,6 +105,14 @@ def lambda_handler(event, context):
         df_result = pd.concat([df_cons_def_unique, df_tr_unique], ignore_index=True)
         df_result = df_result[all_columns]  # Réordonner les colonnes
 
+        # Filter out rows where all main production columns are NULL
+        # Keep only rows with at least one non-null value in main production columns
+        main_production_cols = ["nucleaire", "charbon", "gaz", "fioul",
+                                "eolien", "solaire", "hydraulique", "bioenergies"]
+        cols_to_check = [col for col in main_production_cols if col in df_result.columns]
+        df_result = df_result.dropna(subset=cols_to_check, how='all')
+        print(f"Size after filtering NULL rows: {len(df_result)}")
+
         # 3. Sauvegarder le fichier principal avec toutes les données
         result_buffer = io.BytesIO()
         df_result.to_parquet(result_buffer, index=False)
