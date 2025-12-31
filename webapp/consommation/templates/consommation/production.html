@@ -86,7 +86,64 @@
     </div>
 </div>
 
+<!-- Energy Produced Section with Tabs -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Énergie Produite par Filière (MWh)</h3>
+                <div class="card-actions">
+                    <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
+                        <li class="nav-item">
+                            <a href="#tab-production-annuel" class="nav-link active" data-bs-toggle="tab">
+                                Annuel
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#tab-production-mensuel" class="nav-link" data-bs-toggle="tab">
+                                Mensuel
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="tab-content">
+                    <!-- Annual Tab -->
+                    <div class="tab-pane active show" id="tab-production-annuel">
+                        <div class="text-muted mb-3">
+                            Production annuelle par filière, toutes sources empilées.
+                        </div>
+                        <div class="chart-container">
+                            {{ graph_production_annuel|safe }}
+                        </div>
+                    </div>
+
+                    <!-- Monthly Tab -->
+                    <div class="tab-pane" id="tab-production-mensuel">
+                        <div class="text-muted mb-3">
+                            Production mensuelle par filière, toutes sources empilées.
+                        </div>
+                        <div class="chart-container">
+                            {{ graph_production_mensuel|safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-// No additional scripts needed for now
+// Handle tab switching to ensure Plotly charts resize properly
+document.addEventListener('DOMContentLoaded', function() {
+    const tabs = document.querySelectorAll('a[data-bs-toggle="tab"]');
+    tabs.forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(event) {
+            // Force Plotly to redraw charts when tab is shown
+            window.dispatchEvent(new Event('resize'));
+        });
+    });
+});
 </script>
 {% endblock %}

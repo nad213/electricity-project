@@ -2,12 +2,14 @@ from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseBadRequest
 from datetime import datetime, timedelta
 import plotly.express as px
+import plotly.graph_objects as go
 import plotly.io as pio
 import csv
 from functools import wraps
 from .services import (
     get_date_range, get_puissance_data, get_annual_data, get_monthly_data,
-    get_production_date_range, get_production_filieres, get_production_data
+    get_production_date_range, get_production_filieres, get_production_data,
+    get_production_annual_data, get_production_monthly_data
 )
 
 
@@ -19,6 +21,18 @@ class Colors:
     SUCCESS = '#10b981'      # Tabler green
 
 
+class ProductionColors:
+    """Color palette for production sectors"""
+    NUCLEAIRE = '#f59e0b'      # Orange
+    HYDRAULIQUE = '#3b82f6'    # Blue
+    EOLIEN = '#10b981'         # Green
+    SOLAIRE = '#fbbf24'        # Yellow
+    GAZ = '#ef4444'            # Red
+    CHARBON = '#6b7280'        # Gray
+    FIOUL = '#78716c'          # Brown
+    BIOENERGIES = '#84cc16'    # Lime
+
+
 class ChartConfig:
     """Default configuration for charts"""
     GRID_COLOR = '#E5E7EB'
@@ -26,6 +40,7 @@ class ChartConfig:
     LINE_CHART_HEIGHT = 450
     BAR_CHART_HEIGHT = 400
     MARGIN_WITH_LEGEND = dict(l=50, r=20, t=20, b=60)
+    MARGIN_NO_LEGEND = dict(l=50, r=20, t=20, b=40)
     MARGIN_DEFAULT = dict(l=50, r=20, t=20, b=40)
 
 
@@ -124,27 +139,44 @@ def create_line_chart(df, x_col, y_col, source_col='source', source_labels=None)
             'Real-Time Data': Colors.SECONDARY
         }
 
+    # Check if there are multiple unique values in the source column
+    unique_sources = df[source_col].nunique() if source_col in df.columns else 1
+    show_legend = unique_sources > 1
+
     fig = px.line(
         df,
         x=x_col,
         y=y_col,
-        color=source_col,
-        color_discrete_map=source_labels,
+        color=source_col if show_legend else None,
+        color_discrete_map=source_labels if show_legend else None,
     )
-    fig.update_layout(
-        legend_title_text='',
-        legend=dict(
-            orientation="h",
-            x=1.0,
-            y=-0.15,
-            xanchor="right",
-        ),
-        xaxis_title_text='',
-        yaxis_title_text='MW',
-        margin=ChartConfig.MARGIN_WITH_LEGEND,
-        height=ChartConfig.LINE_CHART_HEIGHT,
-        plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
-    )
+
+    # Configure layout based on whether legend is needed
+    if show_legend:
+        fig.update_layout(
+            legend_title_text='',
+            legend=dict(
+                orientation="h",
+                x=1.0,
+                y=-0.15,
+                xanchor="right",
+            ),
+            xaxis_title_text='',
+            yaxis_title_text='MW',
+            margin=ChartConfig.MARGIN_WITH_LEGEND,
+            height=ChartConfig.LINE_CHART_HEIGHT,
+            plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
+        )
+    else:
+        fig.update_layout(
+            showlegend=False,
+            xaxis_title_text='',
+            yaxis_title_text='MW',
+            margin=ChartConfig.MARGIN_NO_LEGEND,
+            height=ChartConfig.LINE_CHART_HEIGHT,
+            plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
+        )
+
     fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
     fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR)
 
@@ -182,6 +214,52 @@ def create_bar_chart(df, x_col, y_col, color=None, tickangle=0):
         plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
     )
     fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR, tickangle=tickangle)
+    fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR)
+
+    return pio.to_html(fig, full_html=False, include_plotlyjs=False)
+
+
+def create_stacked_bar_chart(df, x_col, y_cols, colors, labels):
+    """
+    Creates a stacked bar chart with Plotly
+
+    Args:
+        df: DataFrame with data
+        x_col: Column name for x-axis
+        y_cols: List of column names to stack
+        colors: Dict mapping column names to colors
+        labels: Dict mapping column names to display labels
+
+    Returns:
+        HTML string of the chart
+    """
+    fig = go.Figure()
+
+    # Add a trace for each filiere
+    for col in y_cols:
+        if col in df.columns:
+            fig.add_trace(go.Bar(
+                x=df[x_col],
+                y=df[col],
+                name=labels.get(col, col),
+                marker_color=colors.get(col, Colors.PRIMARY),
+            ))
+
+    fig.update_layout(
+        barmode='stack',
+        xaxis_title_text='',
+        yaxis_title_text='MWh',
+        margin=ChartConfig.MARGIN_WITH_LEGEND,
+        height=ChartConfig.BAR_CHART_HEIGHT,
+        plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
+        legend=dict(
+            orientation="h",
+            x=0.5,
+            y=-0.2,
+            xanchor="center",
+        ),
+    )
+    fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
     fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR)
 
     return pio.to_html(fig, full_html=False, include_plotlyjs=False)
@@ -257,7 +335,7 @@ def index(request):
 @handle_validation_errors
 def production(request):
     """
-    Production page - displays production data with load curve by sector
+    Production page - displays production data with load curve by sector and stacked bar charts
     """
     # Get available min/max dates
     min_date, max_date = get_production_date_range()
@@ -271,7 +349,7 @@ def production(request):
     # Validate and get dates from request
     start_date, end_date = validate_and_get_dates(request, min_date, max_date)
 
-    # Load production data
+    # Load production data for the line chart
     df_production = get_production_data(start_date, end_date, filiere)
 
     # Create production curve chart
@@ -279,6 +357,77 @@ def production(request):
         df_production,
         x_col='date_heure',
         y_col='production'
+    )
+
+    # Load annual and monthly aggregated data
+    df_annual = get_production_annual_data()
+    df_monthly = get_production_monthly_data()
+
+    # Define filiere columns, colors and labels for stacked charts
+    filiere_cols_annual = ['nucleaire_yearly_mwh', 'hydraulique_yearly_mwh', 'eolien_yearly_mwh',
+                           'solaire_yearly_mwh', 'gaz_yearly_mwh', 'charbon_yearly_mwh',
+                           'fioul_yearly_mwh', 'bioenergies_yearly_mwh']
+
+    filiere_cols_monthly = ['nucleaire_mwh', 'hydraulique_mwh', 'eolien_mwh',
+                            'solaire_mwh', 'gaz_mwh', 'charbon_mwh',
+                            'fioul_mwh', 'bioenergies_mwh']
+
+    colors = {
+        'nucleaire_yearly_mwh': ProductionColors.NUCLEAIRE,
+        'hydraulique_yearly_mwh': ProductionColors.HYDRAULIQUE,
+        'eolien_yearly_mwh': ProductionColors.EOLIEN,
+        'solaire_yearly_mwh': ProductionColors.SOLAIRE,
+        'gaz_yearly_mwh': ProductionColors.GAZ,
+        'charbon_yearly_mwh': ProductionColors.CHARBON,
+        'fioul_yearly_mwh': ProductionColors.FIOUL,
+        'bioenergies_yearly_mwh': ProductionColors.BIOENERGIES,
+        'nucleaire_mwh': ProductionColors.NUCLEAIRE,
+        'hydraulique_mwh': ProductionColors.HYDRAULIQUE,
+        'eolien_mwh': ProductionColors.EOLIEN,
+        'solaire_mwh': ProductionColors.SOLAIRE,
+        'gaz_mwh': ProductionColors.GAZ,
+        'charbon_mwh': ProductionColors.CHARBON,
+        'fioul_mwh': ProductionColors.FIOUL,
+        'bioenergies_mwh': ProductionColors.BIOENERGIES,
+    }
+
+    labels = {
+        'nucleaire_yearly_mwh': 'Nucléaire',
+        'hydraulique_yearly_mwh': 'Hydraulique',
+        'eolien_yearly_mwh': 'Éolien',
+        'solaire_yearly_mwh': 'Solaire',
+        'gaz_yearly_mwh': 'Gaz',
+        'charbon_yearly_mwh': 'Charbon',
+        'fioul_yearly_mwh': 'Fioul',
+        'bioenergies_yearly_mwh': 'Bioénergies',
+        'nucleaire_mwh': 'Nucléaire',
+        'hydraulique_mwh': 'Hydraulique',
+        'eolien_mwh': 'Éolien',
+        'solaire_mwh': 'Solaire',
+        'gaz_mwh': 'Gaz',
+        'charbon_mwh': 'Charbon',
+        'fioul_mwh': 'Fioul',
+        'bioenergies_mwh': 'Bioénergies',
+    }
+
+    # Create stacked bar charts
+    graph_production_annuel = create_stacked_bar_chart(
+        df_annual,
+        x_col='year',
+        y_cols=filiere_cols_annual,
+        colors=colors,
+        labels=labels
+    )
+
+    # Create year-month label for monthly chart
+    df_monthly['annee_mois'] = df_monthly['year'].astype(str) + '-' + df_monthly['month'].astype(str).str.zfill(2)
+
+    graph_production_mensuel = create_stacked_bar_chart(
+        df_monthly,
+        x_col='annee_mois',
+        y_cols=filiere_cols_monthly,
+        colors=colors,
+        labels=labels
     )
 
     context = {
@@ -290,6 +439,8 @@ def production(request):
         'filiere': filiere,
         'filieres': filieres,
         'graph_production': graph_production,
+        'graph_production_annuel': graph_production_annuel,
+        'graph_production_mensuel': graph_production_mensuel,
         'nb_lignes': len(df_production),
     }
 
