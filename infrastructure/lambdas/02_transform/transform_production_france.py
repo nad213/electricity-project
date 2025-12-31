@@ -124,17 +124,24 @@ def lambda_handler(event, context):
         numeric_cols = [col for col in df_result.columns
                        if col not in ["date_heure", "source", "year", "month"]]
 
-        # Agrégation mensuelle
+        # Agrégation mensuelle PAR SOURCE pour appliquer le bon diviseur
         agg_dict = {col: "sum" for col in numeric_cols}
-        df_monthly = df_result.groupby(["year", "month"]).agg(agg_dict).reset_index()
+        df_monthly_by_source = df_result.groupby(["year", "month", "source"]).agg(agg_dict).reset_index()
 
         # Conversion en MWh (énergie) selon la source
         # Données consolidées: points toutes les 30 min (division par 2)
         # Données temps réel: points toutes les 15 min (division par 4)
-        # Simplification: on divise par 2 (approximation moyenne)
         for col in numeric_cols:
-            if col in df_monthly.columns:
-                df_monthly[f"{col}_mwh"] = df_monthly[col] / 2
+            if col in df_monthly_by_source.columns:
+                df_monthly_by_source[f"{col}_mwh"] = df_monthly_by_source.apply(
+                    lambda x: x[col] / 2 if x["source"] == "Consolidated Data" else x[col] / 4,
+                    axis=1
+                )
+
+        # Agréger par mois (somme des sources) pour obtenir le total mensuel
+        mwh_cols = [f"{col}_mwh" for col in numeric_cols if f"{col}_mwh" in df_monthly_by_source.columns]
+        agg_dict_monthly = {col: "sum" for col in mwh_cols}
+        df_monthly = df_monthly_by_source.groupby(["year", "month"]).agg(agg_dict_monthly).reset_index()
 
         df_monthly["year_month"] = df_monthly["year"].astype(str) + "-" + df_monthly["month"].astype(str).str.zfill(2)
 
