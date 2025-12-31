@@ -86,7 +86,60 @@
     </div>
 </div>
 
+<!-- Energy Produced Section with Tabs -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Énergie Produite par Filière</h3>
+            </div>
+            <div class="card-body">
+                <div class="text-muted mb-3">
+                    Production annuelle et mensuelle par filière, toutes sources empilées.
+                </div>
+
+                <!-- Tabs -->
+                <ul class="nav nav-tabs mb-3" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="production-annuel-tab" data-bs-toggle="tab" data-bs-target="#production-annuel" type="button" role="tab" aria-controls="production-annuel" aria-selected="true">
+                            <i class="ti ti-calendar-stats me-2"></i>
+                            Annuel
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="production-mensuel-tab" data-bs-toggle="tab" data-bs-target="#production-mensuel" type="button" role="tab" aria-controls="production-mensuel" aria-selected="false">
+                            <i class="ti ti-calendar-month me-2"></i>
+                            Mensuel
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <!-- Annual Tab -->
+                    <div class="tab-pane fade show active" id="production-annuel" role="tabpanel" aria-labelledby="production-annuel-tab">
+                        <div class="chart-container">
+                            {{ graph_production_annuel|safe }}
+                        </div>
+                    </div>
+
+                    <!-- Monthly Tab -->
+                    <div class="tab-pane fade" id="production-mensuel" role="tabpanel" aria-labelledby="production-mensuel-tab">
+                        <div class="chart-container">
+                            {{ graph_production_mensuel|safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-// No additional scripts needed for now
+// Handle tab switching to ensure Plotly charts resize properly
+document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(button => {
+    button.addEventListener('shown.bs.tab', function() {
+        window.dispatchEvent(new Event('resize'));
+    });
+});
 </script>
 {% endblock %}

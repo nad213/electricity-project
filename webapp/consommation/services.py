@@ -183,3 +183,25 @@ def get_production_data(start_date, end_date, filiere='nucleaire'):
     result = result.rename(columns={filiere: 'production'})
 
     return result
+
+
+def get_production_annual_data():
+    """
+    Loads annual production data aggregated by sector from S3
+    """
+    conn = get_duckdb_connection()
+    query = "SELECT * FROM read_parquet(?)"
+    result = conn.execute(query, [settings.S3_PATHS['production_annuel']]).fetchdf()
+    conn.close()
+    return result
+
+
+def get_production_monthly_data():
+    """
+    Loads monthly production data aggregated by sector from S3
+    """
+    conn = get_duckdb_connection()
+    query = "SELECT * FROM read_parquet(?)"
+    result = conn.execute(query, [settings.S3_PATHS['production_mensuel']]).fetchdf()
+    conn.close()
+    return result
