@@ -15,22 +15,25 @@
 </head>
 <body>
     <div class="page">
-        <!-- Sidebar -->
-        <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
-            <div class="container-fluid">
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-
-                <h1 class="navbar-brand navbar-brand-autodark">
-                    <a href="{% url 'accueil' %}">
-                        <i class="ti ti-bolt text-yellow icon-lg me-2"></i>
-                        DashElec
+        <!-- Navbar Horizontal Sticky -->
+        <header class="navbar navbar-expand-md navbar-pastel sticky-top d-print-none">
+            <div class="container-xl">
+                <!-- Brand -->
+                <h1 class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3 mb-0">
+                    <a href="{% url 'accueil' %}" class="text-decoration-none d-flex align-items-center">
+                        <i class="ti ti-bolt me-2" style="font-size: 1.5rem; color: #F5A623;"></i>
+                        <span>DashElec</span>
                     </a>
                 </h1>
 
-                <div class="collapse navbar-collapse" id="sidebar-menu">
-                    <ul class="navbar-nav pt-lg-3">
+                <!-- Mobile toggle -->
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-menu" aria-controls="navbar-menu" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Navigation -->
+                <div class="collapse navbar-collapse" id="navbar-menu">
+                    <ul class="navbar-nav ms-auto">
                         <li class="nav-item {% if request.resolver_match.url_name == 'accueil' %}active{% endif %}">
                             <a class="nav-link" href="{% url 'accueil' %}">
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
@@ -58,22 +61,22 @@
                         <li class="nav-item {% if request.resolver_match.url_name == 'echanges' %}active{% endif %}">
                             <a class="nav-link" href="{% url 'echanges' %}">
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                    <i class="ti ti-arrow-exchange"></i>
+                                    <i class="ti ti-arrows-exchange"></i>
                                 </span>
-                                <span class="nav-link-title">Échanges</span>
+                                <span class="nav-link-title">Echanges</span>
                             </a>
                         </li>
                     </ul>
                 </div>
             </div>
-        </aside>
+        </header>
 
         <!-- Page wrapper -->
         <div class="page-wrapper">
             <!-- Page header -->
             <div class="page-header d-print-none">
                 <div class="container-xl">
-                    <div class="row g-2 align-items-center">
+                    <div class="row g-2 align-items-center py-3">
                         <div class="col">
                             <h2 class="page-title">
                                 {% block page_title %}{% endblock %}
@@ -93,12 +96,12 @@
     </div>
 
     <!-- Page loader -->
-    <div id="page-loader" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); z-index: 9999; align-items: center; justify-content: center;">
+    <div id="page-loader" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(245, 249, 252, 0.95); z-index: 9999; align-items: center; justify-content: center;">
         <div style="text-align: center;">
-            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <div class="spinner-border" role="status" style="width: 3rem; height: 3rem; color: #6BA3D6;">
                 <span class="visually-hidden">Chargement...</span>
             </div>
-            <div class="mt-3 text-muted">Chargement en cours...</div>
+            <div class="mt-3" style="color: #6B8299;">Chargement en cours...</div>
         </div>
     </div>
 

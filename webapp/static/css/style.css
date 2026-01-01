@@ -1,16 +1,230 @@
 /*
- * Custom styles for Énergie France Dashboard
+ * Custom styles for DashElec - Pastel Blue Theme
  * Using Tabler as the main UI framework
  */
 
-/* Chart container - ensure proper responsive sizing */
+/* ========== CSS Variables ========== */
+:root {
+    --pastel-primary: #6BA3D6;
+    --pastel-primary-dark: #5A8FC2;
+    --pastel-light: #F5F9FC;
+    --pastel-card: #FFFFFF;
+    --pastel-navbar: #E8F1F8;
+    --pastel-accent: #89B4D4;
+    --pastel-text: #3D5A73;
+    --pastel-text-muted: #6B8299;
+    --pastel-border: #D4E5F2;
+    --pastel-shadow: rgba(107, 163, 214, 0.15);
+}
+
+/* ========== Global Styles ========== */
+body {
+    background-color: var(--pastel-light);
+    color: var(--pastel-text);
+}
+
+/* ========== Navbar Styles ========== */
+.navbar-pastel {
+    background-color: var(--pastel-navbar);
+    border-bottom: 1px solid var(--pastel-border);
+    box-shadow: 0 2px 8px var(--pastel-shadow);
+}
+
+.navbar-pastel .navbar-brand {
+    color: var(--pastel-primary-dark);
+    font-weight: 600;
+}
+
+.navbar-pastel .navbar-brand:hover {
+    color: var(--pastel-primary);
+}
+
+.navbar-pastel .nav-link {
+    color: var(--pastel-text);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.navbar-pastel .nav-link:hover {
+    background-color: rgba(107, 163, 214, 0.15);
+    color: var(--pastel-primary-dark);
+}
+
+.navbar-pastel .nav-link.active,
+.navbar-pastel .nav-item.active .nav-link {
+    background-color: var(--pastel-primary);
+    color: white;
+}
+
+/* ========== Card Styles ========== */
+.card {
+    background-color: var(--pastel-card);
+    border: 1px solid var(--pastel-border);
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 12px var(--pastel-shadow);
+    transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 20px var(--pastel-shadow);
+}
+
+.card-header {
+    background-color: transparent;
+    border-bottom: 1px solid var(--pastel-border);
+}
+
+/* ========== Button Styles ========== */
+.btn-primary {
+    background-color: var(--pastel-primary);
+    border-color: var(--pastel-primary);
+}
+
+.btn-primary:hover {
+    background-color: var(--pastel-primary-dark);
+    border-color: var(--pastel-primary-dark);
+}
+
+.btn-outline-primary {
+    color: var(--pastel-primary);
+    border-color: var(--pastel-primary);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--pastel-primary);
+    border-color: var(--pastel-primary);
+    color: white;
+}
+
+/* ========== Badge Styles ========== */
+.badge-pastel-blue {
+    background-color: rgba(107, 163, 214, 0.2);
+    color: var(--pastel-primary-dark);
+}
+
+.badge-pastel-green {
+    background-color: rgba(88, 214, 141, 0.2);
+    color: #3D9A5D;
+}
+
+/* ========== Tab Styles ========== */
+.nav-tabs .nav-link {
+    color: var(--pastel-text-muted);
+    border: none;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.nav-tabs .nav-link:hover {
+    color: var(--pastel-primary);
+    border-bottom-color: var(--pastel-accent);
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--pastel-primary);
+    border-bottom-color: var(--pastel-primary);
+    background-color: transparent;
+}
+
+/* ========== Form Styles ========== */
+.form-control, .form-select {
+    border-color: var(--pastel-border);
+    border-radius: 0.5rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--pastel-primary);
+    box-shadow: 0 0 0 0.2rem rgba(107, 163, 214, 0.25);
+}
+
+/* ========== Chart Container ========== */
 .chart-container {
     width: 100%;
     min-height: 400px;
+    background-color: var(--pastel-card);
+    border-radius: 0.5rem;
 }
 
 /* Plotly chart responsiveness */
 .plotly {
     width: 100% !important;
     height: 100% !important;
+}
+
+/* ========== Page Header ========== */
+.page-header {
+    background-color: transparent;
+}
+
+.page-title {
+    color: var(--pastel-text);
+    font-weight: 600;
+}
+
+/* ========== Welcome Card (Accueil) ========== */
+.welcome-card {
+    background: linear-gradient(135deg, var(--pastel-primary) 0%, var(--pastel-accent) 100%);
+    color: white;
+    border: none;
+}
+
+.welcome-card .card-title {
+    color: white;
+}
+
+/* ========== Feature Cards ========== */
+.feature-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px var(--pastel-shadow);
+}
+
+.feature-card .icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.icon-box-blue {
+    background-color: rgba(107, 163, 214, 0.2);
+    color: var(--pastel-primary);
+}
+
+.icon-box-green {
+    background-color: rgba(88, 214, 141, 0.2);
+    color: #58D68D;
+}
+
+.icon-box-orange {
+    background-color: rgba(245, 166, 35, 0.2);
+    color: #F5A623;
+}
+
+/* ========== Loader ========== */
+#page-loader {
+    background: rgba(245, 249, 252, 0.95) !important;
+}
+
+#page-loader .spinner-border {
+    color: var(--pastel-primary) !important;
+}
+
+/* ========== Placeholder Page ========== */
+.placeholder-icon {
+    color: var(--pastel-accent);
+}
+
+/* ========== Responsive Adjustments ========== */
+@media (max-width: 768px) {
+    .navbar-pastel .nav-link {
+        padding: 0.75rem 1rem;
+    }
 }

@@ -15,28 +15,28 @@ from .services import (
 
 # ========== Constants ==========
 class Colors:
-    """Tabler color palette"""
-    PRIMARY = '#206bc4'      # Tabler primary blue
-    SECONDARY = '#6366f1'    # Tabler indigo
-    SUCCESS = '#10b981'      # Tabler green
+    """Pastel blue color palette"""
+    PRIMARY = '#6BA3D6'      # Pastel blue
+    SECONDARY = '#89B4D4'    # Sky blue
+    SUCCESS = '#58D68D'      # Mint green
 
 
 class ProductionColors:
-    """Color palette for production sectors"""
-    NUCLEAIRE = '#f59e0b'      # Orange
-    HYDRAULIQUE = '#3b82f6'    # Blue
-    EOLIEN = '#10b981'         # Green
-    SOLAIRE = '#fbbf24'        # Yellow
-    GAZ = '#ef4444'            # Red
-    CHARBON = '#6b7280'        # Gray
-    FIOUL = '#78716c'          # Brown
-    BIOENERGIES = '#84cc16'    # Lime
+    """Color palette for production sectors - distinct but softened"""
+    NUCLEAIRE = '#F5A623'      # Warm orange
+    HYDRAULIQUE = '#5DADE2'    # Water blue
+    EOLIEN = '#58D68D'         # Mint green
+    SOLAIRE = '#F7DC6F'        # Sun yellow
+    GAZ = '#E57373'            # Soft red
+    CHARBON = '#95A5A6'        # Gray
+    FIOUL = '#A1887F'          # Soft brown
+    BIOENERGIES = '#AED581'    # Lime green
 
 
 class ChartConfig:
-    """Default configuration for charts"""
-    GRID_COLOR = '#E5E7EB'
-    BACKGROUND_COLOR = 'white'
+    """Default configuration for charts - pastel theme"""
+    GRID_COLOR = '#E8F1F8'
+    BACKGROUND_COLOR = '#FAFCFE'
     LINE_CHART_HEIGHT = 450
     BAR_CHART_HEIGHT = 400
     MARGIN_WITH_LEGEND = dict(l=50, r=20, t=20, b=60)
