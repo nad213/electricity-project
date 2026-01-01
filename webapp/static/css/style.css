@@ -9,7 +9,7 @@
     --pastel-primary-dark: #5A8FC2;
     --pastel-light: #F5F9FC;
     --pastel-card: #FFFFFF;
-    --pastel-navbar: #E8F1F8;
+    --pastel-navbar: #C0D9ED;
     --pastel-accent: #89B4D4;
     --pastel-text: #3D5A73;
     --pastel-text-muted: #6B8299;
@@ -54,6 +54,11 @@ body {
 .navbar-pastel .nav-link.active,
 .navbar-pastel .nav-item.active .nav-link {
     background-color: var(--pastel-primary);
+    color: white;
+}
+
+.navbar-pastel .nav-link.active i,
+.navbar-pastel .nav-item.active .nav-link i {
     color: white;
 }
 
