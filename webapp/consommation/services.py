@@ -98,9 +98,9 @@ def get_annual_data():
     """
     conn = get_duckdb_connection()
     query = "SELECT * FROM read_parquet(?)"
-    result = conn.execute(query, [settings.S3_PATHS['annuel']]).fetchdf()
+    df = conn.execute(query, [settings.S3_PATHS['annuel']]).fetchdf()
     conn.close()
-    return result
+    return df
 
 
 def get_monthly_data():
@@ -111,7 +111,6 @@ def get_monthly_data():
     query = "SELECT * FROM read_parquet(?)"
     df = conn.execute(query, [settings.S3_PATHS['mensuel']]).fetchdf()
     conn.close()
-    df['annee_mois_str'] = df['annee_mois'].astype(str)
     return df
 
 

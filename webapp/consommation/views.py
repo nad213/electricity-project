@@ -303,16 +303,16 @@ def index(request):
     # ========== CHART 2: Annual consumption ==========
     graph_annuel = create_bar_chart(
         df_annuel,
-        x_col='annee',
-        y_col='consommation_annuelle',
+        x_col='year',
+        y_col='yearly_consumption',
         color=Colors.PRIMARY
     )
 
     # ========== CHART 3: Monthly consumption ==========
     graph_mensuel = create_bar_chart(
         df_mensuel,
-        x_col='annee_mois_str',
-        y_col='consommation_mensuelle',
+        x_col='year_month',
+        y_col='monthly_consumption',
         color=Colors.SECONDARY,
         tickangle=45
     )
@@ -503,7 +503,7 @@ def export_annuel_csv(request):
     Export annual consumption data to CSV
     """
     df = get_annual_data()
-    return _export_to_csv(df, 'consommation_annuelle.csv', ['annee', 'consommation_annuelle'])
+    return _export_to_csv(df, 'consommation_annuelle.csv', ['year', 'yearly_consumption'])
 
 
 def export_mensuel_csv(request):
@@ -511,7 +511,7 @@ def export_mensuel_csv(request):
     Export monthly consumption data to CSV
     """
     df = get_monthly_data()
-    return _export_to_csv(df, 'consommation_mensuelle.csv', ['annee_mois_str', 'consommation_mensuelle'])
+    return _export_to_csv(df, 'consommation_mensuelle.csv', ['year_month', 'monthly_consumption'])
 
 
 @handle_validation_errors
