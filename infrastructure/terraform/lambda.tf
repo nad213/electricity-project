@@ -48,11 +48,11 @@ resource "aws_lambda_function" "downloader" {
 # 02.1 Lambda Function: 02_transform_conso_france
 # --------------------------------------------
 resource "aws_lambda_function" "transform_conso_france" {
-    layers = [
+  layers = [
     "arn:aws:lambda:eu-west-3:336392948345:layer:AWSSDKPandas-Python39:33"
   ]
-  filename         = "../lambdas/02_transform/transform_conso_france.zip"
-  source_code_hash = filebase64sha256("../lambdas/02_transform/transform_conso_france.zip")
+  filename         = "../lambdas/02_transform_conso/transform_conso_france.zip"
+  source_code_hash = filebase64sha256("../lambdas/02_transform_conso/transform_conso_france.zip")
   function_name    = "02_transform_conso_france"
   role             = aws_iam_role.lambda_common_role.arn
   handler          = "transform_conso_france.lambda_handler"
@@ -77,8 +77,8 @@ resource "aws_lambda_function" "transform_production_france" {
   layers = [
     "arn:aws:lambda:eu-west-3:336392948345:layer:AWSSDKPandas-Python39:33"
   ]
-  filename         = "../lambdas/02_transform/transform_production_france.zip"
-  source_code_hash = filebase64sha256("../lambdas/02_transform/transform_production_france.zip")
+  filename         = "../lambdas/02_transform_production/transform_production_france.zip"
+  source_code_hash = filebase64sha256("../lambdas/02_transform_production/transform_production_france.zip")
   function_name    = "02_transform_production_france"
   role             = aws_iam_role.lambda_common_role.arn
   handler          = "transform_production_france.lambda_handler"
@@ -117,8 +117,8 @@ resource "aws_lambda_event_source_mapping" "sqs_trigger" {
 # "*" means "all possible values" for that field.
 #################################################
 resource "aws_cloudwatch_event_rule" "daily_trigger" {
-  name                = "trigger-csv-to-sqs-daily"  
-  schedule_expression = "cron(0 6 * * ? *)"        # Daily at 07:00 UTC
+  name                = "trigger-csv-to-sqs-daily"
+  schedule_expression = "cron(0 6 * * ? *)" # Daily at 07:00 UTC
 }
 
 #################################################
@@ -131,9 +131,9 @@ resource "aws_cloudwatch_event_rule" "daily_trigger" {
 # - arn       : ARN of the Lambda function to be triggered.
 #################################################
 resource "aws_cloudwatch_event_target" "trigger_csv_to_sqs" {
-  rule      = aws_cloudwatch_event_rule.daily_trigger.name  
-  target_id = "csv_to_sqs"                                  
-  arn       = aws_lambda_function.csv_to_sqs.arn             
+  rule      = aws_cloudwatch_event_rule.daily_trigger.name
+  target_id = "csv_to_sqs"
+  arn       = aws_lambda_function.csv_to_sqs.arn
 }
 
 #################################################
@@ -141,7 +141,7 @@ resource "aws_cloudwatch_event_target" "trigger_csv_to_sqs" {
 #################################################
 resource "aws_cloudwatch_event_rule" "daily_trigger_transform" {
   name                = "trigger-transform-conso-france-daily"
-  schedule_expression = "cron(0 7 * * ? *)"  # 7h UTC = 8h UTC+1 ou 9h UTC+2
+  schedule_expression = "cron(0 7 * * ? *)" # 7h UTC = 8h UTC+1 ou 9h UTC+2
 }
 
 #################################################
@@ -158,7 +158,7 @@ resource "aws_cloudwatch_event_target" "trigger_transform_conso_france" {
 #################################################
 resource "aws_cloudwatch_event_rule" "daily_trigger_transform_production" {
   name                = "trigger-transform-production-france-daily"
-  schedule_expression = "cron(0 7 * * ? *)"  # 7h UTC = 8h UTC+1 ou 9h UTC+2
+  schedule_expression = "cron(0 7 * * ? *)" # 7h UTC = 8h UTC+1 ou 9h UTC+2
 }
 
 #################################################
@@ -168,4 +168,46 @@ resource "aws_cloudwatch_event_target" "trigger_transform_production_france" {
   rule      = aws_cloudwatch_event_rule.daily_trigger_transform_production.name
   target_id = "transform_production_france"
   arn       = aws_lambda_function.transform_production_france.arn
+}
+
+#################################################
+# 02. TRANSFORM ECHANGES-FRANCE LAMBDA (02_transform_echanges_france)
+#################################################
+# 02.3 Lambda Function: 02_transform_echanges_france
+# --------------------------------------------
+resource "aws_lambda_function" "transform_echanges_france" {
+  layers = [
+    "arn:aws:lambda:eu-west-3:336392948345:layer:AWSSDKPandas-Python39:33"
+  ]
+  filename         = "../lambdas/02_transform_echanges/transform_echanges_france.zip"
+  source_code_hash = filebase64sha256("../lambdas/02_transform_echanges/transform_echanges_france.zip")
+  function_name    = "02_transform_echanges_france"
+  role             = aws_iam_role.lambda_common_role.arn
+  handler          = "transform_echanges_france.lambda_handler"
+  runtime          = "python3.9"
+  timeout          = 300
+  memory_size      = 2048
+
+  environment {
+    variables = {
+      BUCKET_NAME = aws_s3_bucket.elecshiny_bucket.bucket
+    }
+  }
+}
+
+#################################################
+# CloudWatch Event Rule: Daily Trigger for transform_echanges_france
+#################################################
+resource "aws_cloudwatch_event_rule" "daily_trigger_transform_echanges" {
+  name                = "trigger-transform-echanges-france-daily"
+  schedule_expression = "cron(0 7 * * ? *)" # 7h UTC = 8h UTC+1 ou 9h UTC+2
+}
+
+#################################################
+# CloudWatch Event Target: Rule Target for transform_echanges_france
+#################################################
+resource "aws_cloudwatch_event_target" "trigger_transform_echanges_france" {
+  rule      = aws_cloudwatch_event_rule.daily_trigger_transform_echanges.name
+  target_id = "transform_echanges_france"
+  arn       = aws_lambda_function.transform_echanges_france.arn
 }

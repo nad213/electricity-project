@@ -24,8 +24,8 @@ resource "aws_iam_policy" "lambda_common_policy" {
     Statement = [
       # SQS Permissions (send, receive, delete messages, and read queue attributes)
       {
-        Effect   = "Allow",
-        Action   = [
+        Effect = "Allow",
+        Action = [
           "sqs:SendMessage",
           "sqs:ReceiveMessage",
           "sqs:DeleteMessage",
@@ -35,32 +35,32 @@ resource "aws_iam_policy" "lambda_common_policy" {
       },
       # S3 Permissions (read the source CSV file)
       {
-        Effect   = "Allow",
-        Action   = [
+        Effect = "Allow",
+        Action = [
           "s3:GetObject"
         ],
         Resource = [
           "${aws_s3_bucket.elecshiny_bucket.arn}/99_params/filelist.csv",
-          "${aws_s3_bucket.elecshiny_bucket.arn}/01_downloaded/*"  
+          "${aws_s3_bucket.elecshiny_bucket.arn}/01_downloaded/*"
         ]
-        
+
       },
       # S3 Permissions (write downloaded files)
       {
-        Effect   = "Allow",
-        Action   = [
+        Effect = "Allow",
+        Action = [
           "s3:PutObject"
         ],
         Resource = [
           "${aws_s3_bucket.elecshiny_bucket.arn}/99_params/filelist.csv",
           "${aws_s3_bucket.elecshiny_bucket.arn}/01_downloaded/*",
-          "${aws_s3_bucket.elecshiny_bucket.arn}/02_clean/*" 
+          "${aws_s3_bucket.elecshiny_bucket.arn}/02_clean/*"
         ]
       },
       # CloudWatch Logs Permissions (required for Lambda)
       {
-        Effect   = "Allow",
-        Action   = [
+        Effect = "Allow",
+        Action = [
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents"
@@ -111,4 +111,15 @@ resource "aws_lambda_permission" "allow_cloudwatch_transform_production" {
   function_name = aws_lambda_function.transform_production_france.function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.daily_trigger_transform_production.arn
+}
+
+# --------------------------------------------
+# Lambda Permission: Allow EventBridge to invoke transform_echanges_france
+# --------------------------------------------
+resource "aws_lambda_permission" "allow_cloudwatch_transform_echanges" {
+  statement_id  = "AllowExecutionFromCloudWatchTransformEchanges"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.transform_echanges_france.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.daily_trigger_transform_echanges.arn
 }
