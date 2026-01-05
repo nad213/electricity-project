@@ -211,3 +211,77 @@ def get_production_monthly_data():
     result = conn.execute(query, [settings.S3_PATHS['production_mensuel']]).fetchdf()
     conn.close()
     return result
+
+
+def get_echanges_pays():
+    """
+    Returns the list of available exchange countries
+    """
+    pays = {
+        'ech_physiques': 'Échanges physiques (total)',
+        'ech_comm_angleterre': 'Angleterre',
+        'ech_comm_espagne': 'Espagne',
+        'ech_comm_italie': 'Italie',
+        'ech_comm_suisse': 'Suisse',
+        'ech_comm_allemagne_belgique': 'Allemagne / Belgique',
+    }
+    return pays
+
+
+def get_echanges_date_range():
+    """
+    Retrieves the min and max dates from the echanges dataset
+    """
+    conn = get_duckdb_connection()
+    query = """
+        SELECT MIN(date_heure) as min_date, MAX(date_heure) as max_date
+        FROM read_parquet(?);
+    """
+    result = conn.execute(query, [settings.S3_PATHS['echanges']]).fetchdf()
+    conn.close()
+
+    min_date = pd.to_datetime(result['min_date'].iloc[0]).date()
+    max_date = pd.to_datetime(result['max_date'].iloc[0]).date()
+
+    return min_date, max_date
+
+
+def get_echanges_data(start_date, end_date, pays='ech_physiques'):
+    """
+    Loads exchange data for a date range and specific country
+    Uses parameterized queries to prevent SQL injection
+    """
+    conn = get_duckdb_connection()
+
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+
+    # Validate pays to prevent SQL injection
+    valid_pays = list(get_echanges_pays().keys())
+    if pays not in valid_pays:
+        conn.close()
+        raise ValueError(f"Pays invalide. Choisissez parmi: {', '.join(valid_pays)}")
+
+    query = f"""
+        SELECT date_heure, {pays}, source
+        FROM read_parquet(?)
+        WHERE date_heure BETWEEN ? AND ?
+        ORDER BY date_heure;
+    """
+    result = conn.execute(
+        query,
+        [settings.S3_PATHS['echanges'], start_str, f"{end_str} 23:59:59"]
+    ).fetchdf()
+    conn.close()
+
+    # Rename the pays column to 'echange' for consistency in templates
+    result = result.rename(columns={pays: 'echange'})
+
+    # Translate source labels to French for consistency
+    source_map = {
+        'Consolidated Data': 'Données Consolidées',
+        'Real-Time Data': 'Temps Réel'
+    }
+    result['source'] = result['source'].map(source_map).fillna(result['source'])
+
+    return result

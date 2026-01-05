@@ -1,59 +1,77 @@
 /*
- * Custom styles for DashElec - Pastel Blue Theme
+ * Custom styles for DashElec - Navy Blue Professional Theme
  * Using Tabler as the main UI framework
  */
 
 /* ========== CSS Variables ========== */
 :root {
-    --pastel-primary: #6BA3D6;
-    --pastel-primary-dark: #5A8FC2;
-    --pastel-light: #F5F9FC;
-    --pastel-card: #FFFFFF;
-    --pastel-navbar: #C0D9ED;
-    --pastel-accent: #89B4D4;
-    --pastel-text: #3D5A73;
-    --pastel-text-muted: #6B8299;
-    --pastel-border: #D4E5F2;
-    --pastel-shadow: rgba(107, 163, 214, 0.15);
+    --navy-primary: #1A2B4A;
+    --navy-primary-dark: #0F1A2E;
+    --navy-secondary: #2C3E5C;
+    --navy-background: #0D1B2A;
+    --navy-card: #1A2B4A;
+    --navy-card-hover: #233656;
+    --navy-accent: #4A90D9;
+    --navy-accent-light: #5BA3E8;
+    --navy-gold: #D4AF37;
+    --navy-text: #E8EDF3;
+    --navy-text-muted: #8FA3BF;
+    --navy-text-heading: #FFFFFF;
+    --navy-border: #2C3E5C;
+    --navy-border-light: #3D5178;
+    --navy-shadow: rgba(0, 0, 0, 0.3);
+    --navy-glow: rgba(74, 144, 217, 0.15);
 }
 
 /* ========== Global Styles ========== */
 body {
-    background-color: var(--pastel-light);
-    color: var(--pastel-text);
+    background-color: var(--navy-background) !important;
+    color: var(--navy-text) !important;
+}
+
+.page {
+    background-color: var(--navy-background) !important;
+}
+
+.page-wrapper {
+    background-color: var(--navy-background) !important;
+}
+
+.page-body {
+    background-color: var(--navy-background) !important;
 }
 
 /* ========== Navbar Styles ========== */
 .navbar-pastel {
-    background-color: var(--pastel-navbar);
-    border-bottom: 1px solid var(--pastel-border);
-    box-shadow: 0 2px 8px var(--pastel-shadow);
+    background-color: var(--navy-primary);
+    border-bottom: 1px solid var(--navy-border);
+    box-shadow: 0 2px 8px var(--navy-shadow);
 }
 
 .navbar-pastel .navbar-brand {
-    color: var(--pastel-primary-dark);
+    color: var(--navy-text-heading);
     font-weight: 600;
 }
 
 .navbar-pastel .navbar-brand:hover {
-    color: var(--pastel-primary);
+    color: var(--navy-accent);
 }
 
 .navbar-pastel .nav-link {
-    color: var(--pastel-text);
+    color: var(--navy-text);
     padding: 0.5rem 1rem;
     border-radius: 0.5rem;
     transition: all 0.2s ease;
 }
 
 .navbar-pastel .nav-link:hover {
-    background-color: rgba(107, 163, 214, 0.15);
-    color: var(--pastel-primary-dark);
+    background-color: var(--navy-glow);
+    color: var(--navy-accent-light);
 }
 
 .navbar-pastel .nav-link.active,
 .navbar-pastel .nav-item.active .nav-link {
-    background-color: var(--pastel-primary);
+    background-color: var(--navy-accent);
     color: white;
 }
 
@@ -64,90 +82,110 @@ body {
 
 /* ========== Card Styles ========== */
 .card {
-    background-color: var(--pastel-card);
-    border: 1px solid var(--pastel-border);
+    background-color: var(--navy-card);
+    border: 1px solid var(--navy-border);
     border-radius: 0.75rem;
-    box-shadow: 0 2px 12px var(--pastel-shadow);
-    transition: box-shadow 0.2s ease;
+    box-shadow: 0 2px 12px var(--navy-shadow);
+    transition: box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
 .card:hover {
-    box-shadow: 0 4px 20px var(--pastel-shadow);
+    box-shadow: 0 4px 20px var(--navy-shadow);
+    background-color: var(--navy-card-hover);
 }
 
 .card-header {
     background-color: transparent;
-    border-bottom: 1px solid var(--pastel-border);
+    border-bottom: 1px solid var(--navy-border);
+    color: var(--navy-text-heading);
+}
+
+.card-title {
+    color: var(--navy-text-heading);
 }
 
 /* ========== Button Styles ========== */
 .btn-primary {
-    background-color: var(--pastel-primary);
-    border-color: var(--pastel-primary);
+    background-color: var(--navy-accent);
+    border-color: var(--navy-accent);
+    color: white;
 }
 
 .btn-primary:hover {
-    background-color: var(--pastel-primary-dark);
-    border-color: var(--pastel-primary-dark);
+    background-color: var(--navy-accent-light);
+    border-color: var(--navy-accent-light);
 }
 
 .btn-outline-primary {
-    color: var(--pastel-primary);
-    border-color: var(--pastel-primary);
+    color: var(--navy-accent);
+    border-color: var(--navy-accent);
+    background-color: transparent;
 }
 
 .btn-outline-primary:hover {
-    background-color: var(--pastel-primary);
-    border-color: var(--pastel-primary);
+    background-color: var(--navy-accent);
+    border-color: var(--navy-accent);
     color: white;
 }
 
 /* ========== Badge Styles ========== */
-.badge-pastel-blue {
-    background-color: rgba(107, 163, 214, 0.2);
-    color: var(--pastel-primary-dark);
+.badge-navy-blue, .badge-pastel-blue {
+    background-color: rgba(74, 144, 217, 0.2);
+    color: var(--navy-accent);
 }
 
-.badge-pastel-green {
-    background-color: rgba(88, 214, 141, 0.2);
-    color: #3D9A5D;
+.badge-navy-gold, .badge-pastel-green {
+    background-color: rgba(212, 175, 55, 0.2);
+    color: var(--navy-gold);
 }
 
 /* ========== Tab Styles ========== */
+.nav-tabs {
+    border-bottom-color: var(--navy-border);
+}
+
 .nav-tabs .nav-link {
-    color: var(--pastel-text-muted);
+    color: var(--navy-text-muted);
     border: none;
     border-bottom: 2px solid transparent;
     transition: all 0.2s ease;
 }
 
 .nav-tabs .nav-link:hover {
-    color: var(--pastel-primary);
-    border-bottom-color: var(--pastel-accent);
+    color: var(--navy-accent);
+    border-bottom-color: var(--navy-accent-light);
 }
 
 .nav-tabs .nav-link.active {
-    color: var(--pastel-primary);
-    border-bottom-color: var(--pastel-primary);
+    color: var(--navy-accent);
+    border-bottom-color: var(--navy-accent);
     background-color: transparent;
 }
 
 /* ========== Form Styles ========== */
 .form-control, .form-select {
-    border-color: var(--pastel-border);
+    border-color: var(--navy-border);
     border-radius: 0.5rem;
+    background-color: var(--navy-secondary);
+    color: var(--navy-text);
 }
 
 .form-control:focus, .form-select:focus {
-    border-color: var(--pastel-primary);
-    box-shadow: 0 0 0 0.2rem rgba(107, 163, 214, 0.25);
+    border-color: var(--navy-accent);
+    box-shadow: 0 0 0 0.2rem var(--navy-glow);
+    background-color: var(--navy-secondary);
+    color: var(--navy-text);
+}
+
+.form-label {
+    color: var(--navy-text);
 }
 
 /* ========== Chart Container ========== */
 .chart-container {
     width: 100%;
     min-height: 400px;
-    background-color: var(--pastel-card);
+    background-color: var(--navy-card);
     border-radius: 0.5rem;
 }
 
@@ -163,15 +201,15 @@ body {
 }
 
 .page-title {
-    color: var(--pastel-text);
+    color: var(--navy-text-heading);
     font-weight: 600;
 }
 
 /* ========== Welcome Card (Accueil) ========== */
 .welcome-card {
-    background: linear-gradient(135deg, var(--pastel-primary) 0%, var(--pastel-accent) 100%);
+    background: linear-gradient(135deg, var(--navy-primary) 0%, var(--navy-secondary) 50%, var(--navy-accent) 100%);
     color: white;
-    border: none;
+    border: 1px solid var(--navy-border-light);
 }
 
 .welcome-card .card-title {
@@ -185,7 +223,7 @@ body {
 
 .feature-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 24px var(--pastel-shadow);
+    box-shadow: 0 8px 24px var(--navy-shadow);
 }
 
 .feature-card .icon-box {
@@ -199,8 +237,8 @@ body {
 }
 
 .icon-box-blue {
-    background-color: rgba(107, 163, 214, 0.2);
-    color: var(--pastel-primary);
+    background-color: rgba(74, 144, 217, 0.2);
+    color: var(--navy-accent);
 }
 
 .icon-box-green {
@@ -209,22 +247,27 @@ body {
 }
 
 .icon-box-orange {
-    background-color: rgba(245, 166, 35, 0.2);
-    color: #F5A623;
+    background-color: rgba(212, 175, 55, 0.2);
+    color: var(--navy-gold);
 }
 
 /* ========== Loader ========== */
 #page-loader {
-    background: rgba(245, 249, 252, 0.95) !important;
+    background: rgba(13, 27, 42, 0.95) !important;
 }
 
 #page-loader .spinner-border {
-    color: var(--pastel-primary) !important;
+    color: var(--navy-accent) !important;
 }
 
 /* ========== Placeholder Page ========== */
 .placeholder-icon {
-    color: var(--pastel-accent);
+    color: var(--navy-accent);
+}
+
+/* ========== Text Utilities ========== */
+.text-muted {
+    color: var(--navy-text-muted) !important;
 }
 
 /* ========== Responsive Adjustments ========== */

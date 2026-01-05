@@ -9,16 +9,18 @@ from functools import wraps
 from .services import (
     get_date_range, get_puissance_data, get_annual_data, get_monthly_data,
     get_production_date_range, get_production_filieres, get_production_data,
-    get_production_annual_data, get_production_monthly_data
+    get_production_annual_data, get_production_monthly_data,
+    get_echanges_date_range, get_echanges_pays, get_echanges_data
 )
 
 
 # ========== Constants ==========
 class Colors:
-    """Pastel blue color palette"""
-    PRIMARY = '#6BA3D6'      # Pastel blue
-    SECONDARY = '#89B4D4'    # Sky blue
-    SUCCESS = '#58D68D'      # Mint green
+    """Navy blue professional color palette for charts"""
+    PRIMARY = '#4A90D9'      # Corporate blue accent
+    SECONDARY = '#2C3E5C'    # Navy secondary
+    ACCENT = '#D4AF37'       # Gold accent
+    SUCCESS = '#58D68D'      # Mint green (unchanged)
 
 
 class ProductionColors:
@@ -34,9 +36,12 @@ class ProductionColors:
 
 
 class ChartConfig:
-    """Default configuration for charts - pastel theme"""
-    GRID_COLOR = '#E8F1F8'
-    BACKGROUND_COLOR = '#FAFCFE'
+    """Default configuration for charts - soft blue-gray background"""
+    GRID_COLOR = '#8FA3BF'
+    BACKGROUND_COLOR = '#B8C5D3'
+    PAPER_COLOR = '#B8C5D3'
+    TEXT_COLOR = '#1A2B4A'
+    AXIS_COLOR = '#2C3E5C'
     LINE_CHART_HEIGHT = 450
     BAR_CHART_HEIGHT = 400
     MARGIN_WITH_LEGEND = dict(l=50, r=20, t=20, b=60)
@@ -166,6 +171,8 @@ def create_line_chart(df, x_col, y_col, source_col='source', source_labels=None)
             margin=ChartConfig.MARGIN_WITH_LEGEND,
             height=ChartConfig.LINE_CHART_HEIGHT,
             plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
+            paper_bgcolor=ChartConfig.PAPER_COLOR,
+            font=dict(color=ChartConfig.TEXT_COLOR),
         )
     else:
         fig.update_layout(
@@ -175,10 +182,12 @@ def create_line_chart(df, x_col, y_col, source_col='source', source_labels=None)
             margin=ChartConfig.MARGIN_NO_LEGEND,
             height=ChartConfig.LINE_CHART_HEIGHT,
             plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
+            paper_bgcolor=ChartConfig.PAPER_COLOR,
+            font=dict(color=ChartConfig.TEXT_COLOR),
         )
 
     fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
-    fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR)
+    fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR, zerolinecolor=ChartConfig.GRID_COLOR)
 
     return pio.to_html(fig, full_html=False, include_plotlyjs='cdn')
 
@@ -212,6 +221,8 @@ def create_bar_chart(df, x_col, y_col, color=None, tickangle=0):
         margin=ChartConfig.MARGIN_DEFAULT,
         height=ChartConfig.BAR_CHART_HEIGHT,
         plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
+        paper_bgcolor=ChartConfig.PAPER_COLOR,
+        font=dict(color=ChartConfig.TEXT_COLOR),
     )
     fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR, tickangle=tickangle)
     fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR)
@@ -252,6 +263,8 @@ def create_stacked_bar_chart(df, x_col, y_cols, colors, labels):
         margin=ChartConfig.MARGIN_WITH_LEGEND,
         height=ChartConfig.BAR_CHART_HEIGHT,
         plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
+        paper_bgcolor=ChartConfig.PAPER_COLOR,
+        font=dict(color=ChartConfig.TEXT_COLOR),
         legend=dict(
             orientation="h",
             x=0.5,
@@ -447,11 +460,47 @@ def production(request):
     return render(request, 'consommation/production.html', context)
 
 
+@handle_validation_errors
 def echanges(request):
     """
-    Échanges page - placeholder for future exchange data
+    Échanges page - displays commercial exchange data with load curve by country
     """
-    return render(request, 'consommation/echanges.html')
+    # Get available min/max dates
+    min_date, max_date = get_echanges_date_range()
+
+    # Validate pays
+    pays = request.GET.get('pays', 'ech_physiques')
+    pays_disponibles = get_echanges_pays()
+    if pays not in pays_disponibles:
+        return HttpResponseBadRequest(f"Pays invalide. Choisissez parmi: {', '.join(pays_disponibles.keys())}")
+
+    # Validate and get dates from request
+    start_date, end_date = validate_and_get_dates(request, min_date, max_date)
+
+    # Load echanges data for the line chart
+    df_echanges = get_echanges_data(start_date, end_date, pays)
+
+    # Create echanges curve chart
+    graph_echanges = create_line_chart(
+        df_echanges,
+        x_col='date_heure',
+        y_col='echange'
+    )
+
+    context = {
+        'titre': 'Échanges commerciaux',
+        'min_date': min_date,
+        'max_date': max_date,
+        'start_date': start_date,
+        'end_date': end_date,
+        'pays': pays,
+        'pays_options': pays_disponibles,
+        'selected_pays': pays,
+        'graph_echanges': graph_echanges,
+        'row_count': len(df_echanges),
+    }
+
+    return render(request, 'consommation/echanges.html', context)
 
 
 # ========== Export Functions ==========
@@ -537,3 +586,28 @@ def export_production_csv(request):
     # Export to CSV
     filename = f'production_{filiere}_{start_date}_{end_date}.csv'
     return _export_to_csv(df, filename, ['date_heure', 'production', 'source'])
+
+
+@handle_validation_errors
+def export_echanges_csv(request):
+    """
+    Export echanges data to CSV
+    """
+    # Get available min/max dates
+    min_date, max_date = get_echanges_date_range()
+
+    # Validate pays
+    pays = request.GET.get('pays', 'ech_physiques')
+    pays_disponibles = get_echanges_pays()
+    if pays not in pays_disponibles:
+        return HttpResponseBadRequest(f"Pays invalide. Choisissez parmi: {', '.join(pays_disponibles.keys())}")
+
+    # Validate and get dates from request
+    start_date, end_date = validate_and_get_dates(request, min_date, max_date)
+
+    # Load data
+    df = get_echanges_data(start_date, end_date, pays)
+
+    # Export to CSV
+    filename = f'echanges_{pays}_{start_date}_{end_date}.csv'
+    return _export_to_csv(df, filename, ['date_heure', 'echange', 'source'])
