@@ -34,6 +34,11 @@ S3_PATHS = {
     'echanges': os.getenv('S3_PATH_ECHANGES'),
 }
 
+# Auth0 Configuration
+AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN', '')
+AUTH0_CLIENT_ID = os.getenv('AUTH0_CLIENT_ID', '')
+AUTH0_CLIENT_SECRET = os.getenv('AUTH0_CLIENT_SECRET', '')
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -41,11 +46,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-c80%^a4+=--h*m+ad(t5z6z_dys^!!@#@092&zo9zku+vbh)+s')
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
+
+# SECURITY WARNING: keep the secret key used in production secret!
+if DEBUG:
+    # Dev: default key is acceptable for local development
+    SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dev-only-not-for-production')
+else:
+    # Prod: SECRET_KEY is mandatory, crash if missing
+    SECRET_KEY = os.environ['SECRET_KEY']
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
@@ -97,6 +107,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'consommation.context_processors.auth0_user',
             ],
         },
     },
@@ -110,6 +121,9 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Not using a database - data is read directly from S3 via DuckDB
 
 DATABASES = {}
+
+# Session configuration - use signed cookies (no database required)
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 
 
 # Password validation

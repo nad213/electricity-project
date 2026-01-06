@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}DashElec{% endblock %}</title>
+    <title>{% block title %}ElecFlow{% endblock %}</title>
 
     <!-- Tabler CSS -->
     <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css" rel="stylesheet"/>
@@ -22,7 +22,7 @@
                 <h1 class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3 mb-0">
                     <a href="{% url 'accueil' %}" class="text-decoration-none d-flex align-items-center">
                         <i class="ti ti-bolt me-2" style="font-size: 1.5rem; color: #D4AF37;"></i>
-                        <span>DashElec</span>
+                        <span>ElecFlow</span>
                     </a>
                 </h1>
 
@@ -33,7 +33,7 @@
 
                 <!-- Navigation -->
                 <div class="collapse navbar-collapse" id="navbar-menu">
-                    <ul class="navbar-nav ms-auto">
+                    <ul class="navbar-nav me-auto">
                         <li class="nav-item {% if request.resolver_match.url_name == 'accueil' %}active{% endif %}">
                             <a class="nav-link" href="{% url 'accueil' %}">
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
@@ -67,12 +67,58 @@
                             </a>
                         </li>
                     </ul>
+
+                    <!-- Auth section -->
+                    <ul class="navbar-nav">
+                        {% if is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" role="button" aria-expanded="false">
+                                {% if user_info.picture %}
+                                <span class="avatar avatar-sm me-2" style="background-image: url({{ user_info.picture }})"></span>
+                                {% else %}
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="ti ti-user-circle"></i>
+                                </span>
+                                {% endif %}
+                                <span class="nav-link-title">{{ user_info.name }}</span>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-end">
+                                <span class="dropdown-header">{{ user_info.email }}</span>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="{% url 'logout' %}">
+                                    <i class="ti ti-logout me-2"></i>Se deconnecter
+                                </a>
+                            </div>
+                        </li>
+                        {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'login' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="ti ti-login"></i>
+                                </span>
+                                <span class="nav-link-title">Se connecter</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
                 </div>
             </div>
         </header>
 
         <!-- Page wrapper -->
         <div class="page-wrapper">
+            <!-- Messages -->
+            {% if messages %}
+            <div class="container-xl mt-3">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
             <!-- Page header -->
             <div class="page-header d-print-none">
                 <div class="container-xl">

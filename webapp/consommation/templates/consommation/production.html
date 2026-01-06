@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Production - DashElec{% endblock %}
+{% block title %}Production - ElecFlow{% endblock %}
 
 {% block page_title %}
     <i class="ti ti-building-factory me-2"></i>
@@ -120,12 +120,26 @@
                         <div class="chart-container">
                             {{ graph_production_annuel|safe }}
                         </div>
+                        <!-- Download button -->
+                        <div class="mt-3 text-end">
+                            <a href="{% url 'export_production_annuel' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="ti ti-download me-1"></i>
+                                Télécharger CSV
+                            </a>
+                        </div>
                     </div>
 
                     <!-- Monthly Tab -->
                     <div class="tab-pane fade" id="production-mensuel" role="tabpanel" aria-labelledby="production-mensuel-tab">
                         <div class="chart-container">
                             {{ graph_production_mensuel|safe }}
+                        </div>
+                        <!-- Download button -->
+                        <div class="mt-3 text-end">
+                            <a href="{% url 'export_production_mensuel' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="ti ti-download me-1"></i>
+                                Télécharger CSV
+                            </a>
                         </div>
                     </div>
                 </div>

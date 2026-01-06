@@ -93,8 +93,8 @@ def validate_and_get_dates(request, min_date, max_date):
     Validates and returns start_date and end_date from request
     Returns tuple (start_date, end_date) or raises HttpResponseBadRequest
     """
-    # Default dates (last 90 days)
-    default_start = max_date - timedelta(days=90)
+    # Default dates (last 15 days)
+    default_start = max_date - timedelta(days=15)
 
     # Get dates from URL query parameters
     start_date_str = request.GET.get('start_date')
@@ -586,6 +586,27 @@ def export_production_csv(request):
     # Export to CSV
     filename = f'production_{filiere}_{start_date}_{end_date}.csv'
     return _export_to_csv(df, filename, ['date_heure', 'production', 'source'])
+
+
+def export_production_annuel_csv(request):
+    """
+    Export annual production data by sector to CSV
+    """
+    df = get_production_annual_data()
+    columns = ['year', 'nucleaire_yearly_mwh', 'hydraulique_yearly_mwh', 'eolien_yearly_mwh',
+               'solaire_yearly_mwh', 'gaz_yearly_mwh', 'charbon_yearly_mwh',
+               'fioul_yearly_mwh', 'bioenergies_yearly_mwh']
+    return _export_to_csv(df, 'production_annuelle.csv', columns)
+
+
+def export_production_mensuel_csv(request):
+    """
+    Export monthly production data by sector to CSV
+    """
+    df = get_production_monthly_data()
+    columns = ['year', 'month', 'nucleaire_mwh', 'hydraulique_mwh', 'eolien_mwh',
+               'solaire_mwh', 'gaz_mwh', 'charbon_mwh', 'fioul_mwh', 'bioenergies_mwh']
+    return _export_to_csv(df, 'production_mensuelle.csv', columns)
 
 
 @handle_validation_errors
