@@ -3,5 +3,6 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('consommation.urls')),  # Redirect to our app
+    path('api/', include('consommation.api_urls')),  # API endpoints
+    path('', include('consommation.urls')),  # Traditional views (for backward compatibility)
 ]
