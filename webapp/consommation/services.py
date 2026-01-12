@@ -2,6 +2,7 @@ import duckdb
 import pandas as pd
 from django.conf import settings
 from datetime import datetime, timedelta
+from contextlib import contextmanager
 import re
 
 
@@ -24,10 +25,18 @@ def _validate_s3_credential(value, name):
     return value
 
 
+@contextmanager
 def get_duckdb_connection():
     """
-    Creates and configures a DuckDB connection with S3 access
-    Uses validated credentials to prevent SQL injection
+    Creates and configures a DuckDB connection with S3 access.
+    Uses validated credentials to prevent SQL injection.
+
+    Usage:
+        with get_duckdb_connection() as conn:
+            df = conn.execute(query, params).fetchdf()
+
+    The connection is automatically closed when exiting the context,
+    even if an exception occurs.
     """
     # Validate credentials before using them
     region = _validate_s3_credential(settings.AWS_CONFIG['region'], 'AWS region')
@@ -35,31 +44,32 @@ def get_duckdb_connection():
     secret_key = _validate_s3_credential(settings.AWS_CONFIG['secret_key'], 'AWS secret key')
 
     conn = duckdb.connect()
+    try:
+        # Install and load httpfs
+        conn.execute("INSTALL httpfs")
+        conn.execute("LOAD httpfs")
 
-    # Install and load httpfs
-    conn.execute("INSTALL httpfs")
-    conn.execute("LOAD httpfs")
+        # Set S3 credentials using parameterized approach
+        # Note: DuckDB's SET doesn't support parameterized queries, so we validate inputs strictly
+        conn.execute(f"SET s3_region='{region}'")
+        conn.execute(f"SET s3_access_key_id='{access_key}'")
+        conn.execute(f"SET s3_secret_access_key='{secret_key}'")
 
-    # Set S3 credentials using parameterized approach
-    # Note: DuckDB's SET doesn't support parameterized queries, so we validate inputs strictly
-    conn.execute(f"SET s3_region='{region}'")
-    conn.execute(f"SET s3_access_key_id='{access_key}'")
-    conn.execute(f"SET s3_secret_access_key='{secret_key}'")
-
-    return conn
+        yield conn
+    finally:
+        conn.close()
 
 
 def get_date_range():
     """
     Retrieves the min and max dates from the dataset
     """
-    conn = get_duckdb_connection()
-    query = """
-        SELECT MIN(date_heure) as min_date, MAX(date_heure) as max_date
-        FROM read_parquet(?);
-    """
-    result = conn.execute(query, [settings.S3_PATHS['puissance']]).fetchdf()
-    conn.close()
+    with get_duckdb_connection() as conn:
+        query = """
+            SELECT MIN(date_heure) as min_date, MAX(date_heure) as max_date
+            FROM read_parquet(?);
+        """
+        result = conn.execute(query, [settings.S3_PATHS['puissance']]).fetchdf()
 
     min_date = pd.to_datetime(result['min_date'].iloc[0]).date()
     max_date = pd.to_datetime(result['max_date'].iloc[0]).date()
@@ -72,22 +82,20 @@ def get_puissance_data(start_date, end_date):
     Loads power data for a date range
     Uses parameterized queries to prevent SQL injection
     """
-    conn = get_duckdb_connection()
-
     start_str = start_date.strftime("%Y-%m-%d")
     end_str = end_date.strftime("%Y-%m-%d")
 
-    query = """
-        SELECT date_heure, consommation, source
-        FROM read_parquet(?)
-        WHERE date_heure BETWEEN ? AND ?
-        ORDER BY date_heure;
-    """
-    result = conn.execute(
-        query,
-        [settings.S3_PATHS['puissance'], start_str, f"{end_str} 23:59:59"]
-    ).fetchdf()
-    conn.close()
+    with get_duckdb_connection() as conn:
+        query = """
+            SELECT date_heure, consommation, source
+            FROM read_parquet(?)
+            WHERE date_heure BETWEEN ? AND ?
+            ORDER BY date_heure;
+        """
+        result = conn.execute(
+            query,
+            [settings.S3_PATHS['puissance'], start_str, f"{end_str} 23:59:59"]
+        ).fetchdf()
 
     return result
 
@@ -96,10 +104,9 @@ def get_annual_data():
     """
     Loads annual data
     """
-    conn = get_duckdb_connection()
-    query = "SELECT * FROM read_parquet(?)"
-    df = conn.execute(query, [settings.S3_PATHS['annuel']]).fetchdf()
-    conn.close()
+    with get_duckdb_connection() as conn:
+        query = "SELECT * FROM read_parquet(?)"
+        df = conn.execute(query, [settings.S3_PATHS['annuel']]).fetchdf()
     return df
 
 
@@ -107,10 +114,9 @@ def get_monthly_data():
     """
     Loads monthly data
     """
-    conn = get_duckdb_connection()
-    query = "SELECT * FROM read_parquet(?)"
-    df = conn.execute(query, [settings.S3_PATHS['mensuel']]).fetchdf()
-    conn.close()
+    with get_duckdb_connection() as conn:
+        query = "SELECT * FROM read_parquet(?)"
+        df = conn.execute(query, [settings.S3_PATHS['mensuel']]).fetchdf()
     return df
 
 
@@ -118,13 +124,12 @@ def get_production_date_range():
     """
     Retrieves the min and max dates from the production dataset
     """
-    conn = get_duckdb_connection()
-    query = """
-        SELECT MIN(date_heure) as min_date, MAX(date_heure) as max_date
-        FROM read_parquet(?);
-    """
-    result = conn.execute(query, [settings.S3_PATHS['production']]).fetchdf()
-    conn.close()
+    with get_duckdb_connection() as conn:
+        query = """
+            SELECT MIN(date_heure) as min_date, MAX(date_heure) as max_date
+            FROM read_parquet(?);
+        """
+        result = conn.execute(query, [settings.S3_PATHS['production']]).fetchdf()
 
     min_date = pd.to_datetime(result['min_date'].iloc[0]).date()
     max_date = pd.to_datetime(result['max_date'].iloc[0]).date()
@@ -155,28 +160,25 @@ def get_production_data(start_date, end_date, filiere='nucleaire'):
     Loads production data for a date range and specific sector
     Uses parameterized queries to prevent SQL injection
     """
-    conn = get_duckdb_connection()
-
     start_str = start_date.strftime("%Y-%m-%d")
     end_str = end_date.strftime("%Y-%m-%d")
 
-    # Validate filiere to prevent SQL injection
+    # Validate filiere to prevent SQL injection (before opening connection)
     valid_filieres = list(get_production_filieres().keys())
     if filiere not in valid_filieres:
-        conn.close()
         raise ValueError(f"Filière invalide. Choisissez parmi: {', '.join(valid_filieres)}")
 
-    query = f"""
-        SELECT date_heure, {filiere}, source
-        FROM read_parquet(?)
-        WHERE date_heure BETWEEN ? AND ?
-        ORDER BY date_heure;
-    """
-    result = conn.execute(
-        query,
-        [settings.S3_PATHS['production'], start_str, f"{end_str} 23:59:59"]
-    ).fetchdf()
-    conn.close()
+    with get_duckdb_connection() as conn:
+        query = f"""
+            SELECT date_heure, {filiere}, source
+            FROM read_parquet(?)
+            WHERE date_heure BETWEEN ? AND ?
+            ORDER BY date_heure;
+        """
+        result = conn.execute(
+            query,
+            [settings.S3_PATHS['production'], start_str, f"{end_str} 23:59:59"]
+        ).fetchdf()
 
     # Rename the filiere column to 'production' for consistency in templates
     result = result.rename(columns={filiere: 'production'})
@@ -195,10 +197,9 @@ def get_production_annual_data():
     """
     Loads annual production data aggregated by sector from S3
     """
-    conn = get_duckdb_connection()
-    query = "SELECT * FROM read_parquet(?)"
-    result = conn.execute(query, [settings.S3_PATHS['production_annuel']]).fetchdf()
-    conn.close()
+    with get_duckdb_connection() as conn:
+        query = "SELECT * FROM read_parquet(?)"
+        result = conn.execute(query, [settings.S3_PATHS['production_annuel']]).fetchdf()
     return result
 
 
@@ -206,10 +207,9 @@ def get_production_monthly_data():
     """
     Loads monthly production data aggregated by sector from S3
     """
-    conn = get_duckdb_connection()
-    query = "SELECT * FROM read_parquet(?)"
-    result = conn.execute(query, [settings.S3_PATHS['production_mensuel']]).fetchdf()
-    conn.close()
+    with get_duckdb_connection() as conn:
+        query = "SELECT * FROM read_parquet(?)"
+        result = conn.execute(query, [settings.S3_PATHS['production_mensuel']]).fetchdf()
     return result
 
 
@@ -232,13 +232,12 @@ def get_echanges_date_range():
     """
     Retrieves the min and max dates from the echanges dataset
     """
-    conn = get_duckdb_connection()
-    query = """
-        SELECT MIN(date_heure) as min_date, MAX(date_heure) as max_date
-        FROM read_parquet(?);
-    """
-    result = conn.execute(query, [settings.S3_PATHS['echanges']]).fetchdf()
-    conn.close()
+    with get_duckdb_connection() as conn:
+        query = """
+            SELECT MIN(date_heure) as min_date, MAX(date_heure) as max_date
+            FROM read_parquet(?);
+        """
+        result = conn.execute(query, [settings.S3_PATHS['echanges']]).fetchdf()
 
     min_date = pd.to_datetime(result['min_date'].iloc[0]).date()
     max_date = pd.to_datetime(result['max_date'].iloc[0]).date()
@@ -251,28 +250,25 @@ def get_echanges_data(start_date, end_date, pays='ech_physiques'):
     Loads exchange data for a date range and specific country
     Uses parameterized queries to prevent SQL injection
     """
-    conn = get_duckdb_connection()
-
     start_str = start_date.strftime("%Y-%m-%d")
     end_str = end_date.strftime("%Y-%m-%d")
 
-    # Validate pays to prevent SQL injection
+    # Validate pays to prevent SQL injection (before opening connection)
     valid_pays = list(get_echanges_pays().keys())
     if pays not in valid_pays:
-        conn.close()
         raise ValueError(f"Pays invalide. Choisissez parmi: {', '.join(valid_pays)}")
 
-    query = f"""
-        SELECT date_heure, {pays}, source
-        FROM read_parquet(?)
-        WHERE date_heure BETWEEN ? AND ?
-        ORDER BY date_heure;
-    """
-    result = conn.execute(
-        query,
-        [settings.S3_PATHS['echanges'], start_str, f"{end_str} 23:59:59"]
-    ).fetchdf()
-    conn.close()
+    with get_duckdb_connection() as conn:
+        query = f"""
+            SELECT date_heure, {pays}, source
+            FROM read_parquet(?)
+            WHERE date_heure BETWEEN ? AND ?
+            ORDER BY date_heure;
+        """
+        result = conn.execute(
+            query,
+            [settings.S3_PATHS['echanges'], start_str, f"{end_str} 23:59:59"]
+        ).fetchdf()
 
     # Rename the pays column to 'echange' for consistency in templates
     result = result.rename(columns={pays: 'echange'})

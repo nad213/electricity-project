@@ -23,7 +23,7 @@
                 </div>
 
                 <!-- Date filters -->
-                <form method="get" class="mb-4">
+                <form method="get" class="mb-4" id="date-filter-form">
                     <div class="row g-2 align-items-end">
                         <div class="col-md-4">
                             <label class="form-label fs-6 mb-1">Date début</label>
@@ -31,6 +31,7 @@
                                 type="date"
                                 class="form-control form-control-sm"
                                 name="start_date"
+                                id="start_date"
                                 value="{{ start_date|date:'Y-m-d' }}"
                                 min="{{ min_date|date:'Y-m-d' }}"
                                 max="{{ max_date|date:'Y-m-d' }}"
@@ -42,6 +43,7 @@
                                 type="date"
                                 class="form-control form-control-sm"
                                 name="end_date"
+                                id="end_date"
                                 value="{{ end_date|date:'Y-m-d' }}"
                                 min="{{ min_date|date:'Y-m-d' }}"
                                 max="{{ max_date|date:'Y-m-d' }}"
@@ -53,6 +55,10 @@
                                 Actualiser
                             </button>
                         </div>
+                    </div>
+                    <div id="date-error" class="alert alert-danger mt-2" style="display: none;">
+                        <i class="ti ti-alert-circle me-1"></i>
+                        La date de début doit être antérieure à la date de fin.
                     </div>
                 </form>
 
@@ -139,6 +145,28 @@ document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(button => {
     button.addEventListener('shown.bs.tab', function() {
         window.dispatchEvent(new Event('resize'));
     });
+});
+
+// Date validation
+document.getElementById('date-filter-form').addEventListener('submit', function(e) {
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    const errorDiv = document.getElementById('date-error');
+
+    if (startDate && endDate && startDate > endDate) {
+        e.preventDefault();
+        errorDiv.style.display = 'block';
+    } else {
+        errorDiv.style.display = 'none';
+    }
+});
+
+// Hide error when dates change
+document.getElementById('start_date').addEventListener('change', function() {
+    document.getElementById('date-error').style.display = 'none';
+});
+document.getElementById('end_date').addEventListener('change', function() {
+    document.getElementById('date-error').style.display = 'none';
 });
 </script>
 {% endblock %}
