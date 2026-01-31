@@ -16,32 +16,32 @@ from .services import (
 
 # ========== Constants ==========
 class Colors:
-    """Navy blue professional color palette for charts"""
-    PRIMARY = '#4A90D9'      # Corporate blue accent
-    SECONDARY = '#2C3E5C'    # Navy secondary
-    ACCENT = '#D4AF37'       # Gold accent
-    SUCCESS = '#58D68D'      # Mint green (unchanged)
+    """Dark modern color palette for charts"""
+    PRIMARY = '#22D3EE'      # Cyan electric
+    SECONDARY = '#67E8F9'    # Cyan light
+    ACCENT = '#FBBF24'       # Amber
+    SUCCESS = '#10B981'      # Emerald
 
 
 class ProductionColors:
-    """Color palette for production sectors - distinct but softened"""
-    NUCLEAIRE = '#F5A623'      # Warm orange
-    HYDRAULIQUE = '#5DADE2'    # Water blue
-    EOLIEN = '#58D68D'         # Mint green
-    SOLAIRE = '#F7DC6F'        # Sun yellow
-    GAZ = '#E57373'            # Soft red
-    CHARBON = '#95A5A6'        # Gray
-    FIOUL = '#A1887F'          # Soft brown
-    BIOENERGIES = '#AED581'    # Lime green
+    """Color palette for production sectors - vibrant on dark"""
+    NUCLEAIRE = '#F59E0B'      # Amber
+    HYDRAULIQUE = '#06B6D4'    # Cyan
+    EOLIEN = '#10B981'         # Emerald
+    SOLAIRE = '#FBBF24'        # Yellow
+    GAZ = '#EF4444'            # Red
+    CHARBON = '#6B7280'        # Gray
+    FIOUL = '#A78BFA'          # Violet
+    BIOENERGIES = '#34D399'    # Teal
 
 
 class ChartConfig:
-    """Default configuration for charts - soft blue-gray background"""
-    GRID_COLOR = '#8FA3BF'
-    BACKGROUND_COLOR = '#B8C5D3'
-    PAPER_COLOR = '#B8C5D3'
-    TEXT_COLOR = '#1A2B4A'
-    AXIS_COLOR = '#2C3E5C'
+    """Default configuration for charts - dark transparent background"""
+    GRID_COLOR = '#27272A'
+    BACKGROUND_COLOR = 'rgba(0,0,0,0)'
+    PAPER_COLOR = 'rgba(0,0,0,0)'
+    TEXT_COLOR = '#A1A1AA'
+    AXIS_COLOR = '#3F3F46'
     LINE_CHART_HEIGHT = 450
     BAR_CHART_HEIGHT = 400
     MARGIN_WITH_LEGEND = dict(l=50, r=20, t=20, b=60)

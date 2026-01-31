@@ -6,12 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}ElecFlow{% endblock %}</title>
 
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
     <!-- Tabler CSS -->
     <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css" rel="stylesheet"/>
     <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet"/>
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=5">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=6">
 </head>
 <body>
     <div class="page">
@@ -21,7 +25,7 @@
                 <!-- Brand -->
                 <h1 class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3 mb-0">
                     <a href="{% url 'accueil' %}" class="text-decoration-none d-flex align-items-center">
-                        <i class="ti ti-bolt me-2" style="font-size: 1.5rem; color: #D4AF37;"></i>
+                        <i class="ti ti-bolt me-2" style="font-size: 1.5rem; color: #22D3EE;"></i>
                         <span>ElecFlow</span>
                     </a>
                 </h1>

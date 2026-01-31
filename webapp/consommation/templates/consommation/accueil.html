@@ -1,23 +1,28 @@
 {% extends 'base.html' %}
 
-{% block title %}Accueil - ElecFlow{% endblock %}
+{% block title %}ElecFlow{% endblock %}
 
-{% block page_title %}
-    <i class="ti ti-home me-2"></i>
-    Accueil
-{% endblock %}
+{% block page_title %}{% endblock %}
 
 {% block content %}
 
 <div class="row mb-4">
     <div class="col-12">
         <div class="card welcome-card">
-            <div class="card-body text-center py-5">
-                <i class="ti ti-bolt" style="font-size: 4rem; color: #D4AF37;"></i>
-                <h1 class="mt-3 mb-3">Bienvenue sur ElecFlow</h1>
-                <p class="fs-4 mb-0" style="opacity: 0.9;">
-                    Visualisez les données de consommation, production et échanges électriques en France
+            <div class="card-body py-5" style="padding-left: 3rem; padding-right: 3rem;">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="ti ti-bolt" style="font-size: 2rem; color: #22D3EE;"></i>
+                </div>
+                <h1 class="mb-2" style="font-size: 2.25rem; font-weight: 700; letter-spacing: -0.03em; color: #FAFAFA;">
+                    ElecFlow
+                </h1>
+                <p style="font-size: 1.125rem; color: #A1A1AA; max-width: 600px; margin-bottom: 2rem;">
+                    Visualisez les données de consommation, production et échanges électriques en France.
                 </p>
+                <a href="{% url 'index' %}" class="btn btn-primary">
+                    <i class="ti ti-chart-line me-1"></i>
+                    Explorer les données
+                </a>
             </div>
         </div>
     </div>
@@ -25,67 +30,66 @@
 
 <div class="row row-cards">
     <div class="col-md-4">
-        <div class="card feature-card h-100">
-            <a href="{% url 'index' %}" class="text-decoration-none text-reset d-flex h-100">
-                <div class="card-body text-center py-4 d-flex flex-column">
-                    <div class="icon-box icon-box-blue mx-auto mb-3">
-                        <i class="ti ti-chart-line"></i>
+        <a href="{% url 'index' %}" class="text-decoration-none text-reset d-block h-100">
+            <div class="card feature-card h-100">
+                <div class="card-body py-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-box icon-box-blue me-3">
+                            <i class="ti ti-chart-line"></i>
+                        </div>
+                        <h3 class="card-title mb-0">Consommation</h3>
                     </div>
-                    <h3 class="card-title">Consommation</h3>
-                    <p class="text-muted mb-0">
-                        Courbes de puissance et historique de la consommation électrique en France
+                    <p class="text-muted mb-0" style="font-size: 0.875rem;">
+                        Courbes de puissance et historique de la consommation électrique
                     </p>
                 </div>
-            </a>
-        </div>
+            </div>
+        </a>
     </div>
 
     <div class="col-md-4">
-        <div class="card feature-card h-100">
-            <a href="{% url 'production' %}" class="text-decoration-none text-reset d-flex h-100">
-                <div class="card-body text-center py-4 d-flex flex-column">
-                    <div class="icon-box icon-box-green mx-auto mb-3">
-                        <i class="ti ti-building-factory"></i>
+        <a href="{% url 'production' %}" class="text-decoration-none text-reset d-block h-100">
+            <div class="card feature-card h-100">
+                <div class="card-body py-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-box icon-box-green me-3">
+                            <i class="ti ti-building-factory"></i>
+                        </div>
+                        <h3 class="card-title mb-0">Production</h3>
                     </div>
-                    <h3 class="card-title">Production</h3>
-                    <p class="text-muted mb-0">
-                        Données de production électrique par filière énergétique
+                    <p class="text-muted mb-0" style="font-size: 0.875rem;">
+                        Production par filière : nucléaire, éolien, solaire, hydraulique...
                     </p>
                 </div>
-            </a>
-        </div>
+            </div>
+        </a>
     </div>
 
     <div class="col-md-4">
-        <div class="card feature-card h-100">
-            <a href="{% url 'echanges' %}" class="text-decoration-none text-reset d-flex h-100">
-                <div class="card-body text-center py-4 d-flex flex-column">
-                    <div class="icon-box icon-box-orange mx-auto mb-3">
-                        <i class="ti ti-arrows-exchange"></i>
+        <a href="{% url 'echanges' %}" class="text-decoration-none text-reset d-block h-100">
+            <div class="card feature-card h-100">
+                <div class="card-body py-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-box icon-box-orange me-3">
+                            <i class="ti ti-arrows-exchange"></i>
+                        </div>
+                        <h3 class="card-title mb-0">Échanges</h3>
                     </div>
-                    <h3 class="card-title">Echanges</h3>
-                    <p class="text-muted mb-0">
-                        Echanges d'électricité avec les pays frontaliers
+                    <p class="text-muted mb-0" style="font-size: 0.875rem;">
+                        Flux d'électricité avec les pays frontaliers
                     </p>
                 </div>
-            </a>
-        </div>
+            </div>
+        </a>
     </div>
 </div>
 
 <div class="row mt-4">
     <div class="col-12">
         <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">A propos</h3>
-            </div>
-            <div class="card-body">
-                <p style="color: rgba(255, 255, 255, 0.9);">
-                    Cette application permet de visualiser les données énergétiques de la France,
-                    incluant la consommation, la production et les échanges d'électricité.
-                </p>
-                <p class="mb-0" style="color: rgba(255, 255, 255, 0.9);">
-                    Les données proviennent de sources officielles et sont mises à jour régulièrement.
+            <div class="card-body" style="padding: 1.25rem 1.5rem;">
+                <p class="mb-0" style="font-size: 0.8125rem; color: #71717A;">
+                    Données issues de sources officielles (data.gouv.fr) et mises à jour quotidiennement.
                 </p>
             </div>
         </div>
