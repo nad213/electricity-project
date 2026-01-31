@@ -33,19 +33,21 @@ resource "aws_iam_policy" "lambda_common_policy" {
         ],
         Resource = aws_sqs_queue.download_queue.arn
       },
-      # S3 Permissions (read the source CSV file)
+      # S3 Permissions (read source files and logs)
       {
         Effect = "Allow",
         Action = [
-          "s3:GetObject"
+          "s3:GetObject",
+          "s3:HeadObject"
         ],
         Resource = [
           "${aws_s3_bucket.elecshiny_bucket.arn}/99_params/filelist.csv",
-          "${aws_s3_bucket.elecshiny_bucket.arn}/01_downloaded/*"
+          "${aws_s3_bucket.elecshiny_bucket.arn}/01_downloaded/*",
+          "${aws_s3_bucket.elecshiny_bucket.arn}/logs/*"
         ]
 
       },
-      # S3 Permissions (write downloaded files)
+      # S3 Permissions (write downloaded files, clean data, and logs)
       {
         Effect = "Allow",
         Action = [
@@ -54,7 +56,8 @@ resource "aws_iam_policy" "lambda_common_policy" {
         Resource = [
           "${aws_s3_bucket.elecshiny_bucket.arn}/99_params/filelist.csv",
           "${aws_s3_bucket.elecshiny_bucket.arn}/01_downloaded/*",
-          "${aws_s3_bucket.elecshiny_bucket.arn}/02_clean/*"
+          "${aws_s3_bucket.elecshiny_bucket.arn}/02_clean/*",
+          "${aws_s3_bucket.elecshiny_bucket.arn}/logs/*"
         ]
       },
       # CloudWatch Logs Permissions (required for Lambda)

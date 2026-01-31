@@ -16,8 +16,41 @@ def lambda_handler(event, context):
         cons_def_key = f"{S3_PREFIX_IN}/eco2mix-national-cons-def.parquet"
         tr_obj = s3.get_object(Bucket=S3_BUCKET, Key=tr_key)
         cons_def_obj = s3.get_object(Bucket=S3_BUCKET, Key=cons_def_key)
-        df_tr = pd.read_parquet(io.BytesIO(tr_obj['Body'].read()))[["date_heure", "consommation"]].dropna()
-        df_cons_def = pd.read_parquet(io.BytesIO(cons_def_obj['Body'].read()))[["date_heure", "consommation"]].dropna()
+        df_tr_full = pd.read_parquet(io.BytesIO(tr_obj['Body'].read()))
+        df_cons_def_full = pd.read_parquet(io.BytesIO(cons_def_obj['Body'].read()))
+
+        # --- Logging des fichiers source ---
+        log_entries = []
+        for fname, df_src, s3_key in [
+            ("eco2mix-national-tr.parquet", df_tr_full, tr_key),
+            ("eco2mix-national-cons-def.parquet", df_cons_def_full, cons_def_key),
+        ]:
+            head = s3.head_object(Bucket=S3_BUCKET, Key=s3_key)
+            log_entries.append({
+                "file_name": fname,
+                "log_datetime": datetime.utcnow().isoformat(),
+                "nb_rows": len(df_src),
+                "nb_columns": len(df_src.columns),
+                "date_min": str(df_src["date_heure"].min()),
+                "date_max": str(df_src["date_heure"].max()),
+                "file_size_bytes": head["ContentLength"],
+            })
+
+        LOG_KEY = "logs/download_log.csv"
+        try:
+            log_obj = s3.get_object(Bucket=S3_BUCKET, Key=LOG_KEY)
+            df_log = pd.read_csv(io.BytesIO(log_obj['Body'].read()))
+        except Exception:
+            df_log = pd.DataFrame()
+
+        df_log = pd.concat([df_log, pd.DataFrame(log_entries)], ignore_index=True)
+        csv_buffer = io.StringIO()
+        df_log.to_csv(csv_buffer, index=False)
+        s3.put_object(Bucket=S3_BUCKET, Key=LOG_KEY, Body=csv_buffer.getvalue())
+        print(f"Logged {len(log_entries)} entries to s3://{S3_BUCKET}/{LOG_KEY}")
+
+        df_tr = df_tr_full[["date_heure", "consommation"]].dropna()
+        df_cons_def = df_cons_def_full[["date_heure", "consommation"]].dropna()
         print(f"Size of df_tr after loading: {len(df_tr)}")
         print(f"Size of df_cons_def after loading: {len(df_cons_def)}")
 
