@@ -118,7 +118,7 @@ resource "aws_lambda_event_source_mapping" "sqs_trigger" {
 #################################################
 resource "aws_cloudwatch_event_rule" "daily_trigger" {
   name                = "trigger-csv-to-sqs-daily"
-  schedule_expression = "cron(0 6 * * ? *)" # Daily at 07:00 UTC
+  schedule_expression = "cron(0 6,12,18 * * ? *)" # 3x daily at 06:00, 12:00, 18:00 UTC
 }
 
 #################################################
@@ -141,7 +141,7 @@ resource "aws_cloudwatch_event_target" "trigger_csv_to_sqs" {
 #################################################
 resource "aws_cloudwatch_event_rule" "daily_trigger_transform" {
   name                = "trigger-transform-conso-france-daily"
-  schedule_expression = "cron(0 7 * * ? *)" # 7h UTC = 8h UTC+1 ou 9h UTC+2
+  schedule_expression = "cron(0 7,13,19 * * ? *)" # 3x daily at 07:00, 13:00, 19:00 UTC
 }
 
 #################################################
@@ -158,7 +158,7 @@ resource "aws_cloudwatch_event_target" "trigger_transform_conso_france" {
 #################################################
 resource "aws_cloudwatch_event_rule" "daily_trigger_transform_production" {
   name                = "trigger-transform-production-france-daily"
-  schedule_expression = "cron(0 7 * * ? *)" # 7h UTC = 8h UTC+1 ou 9h UTC+2
+  schedule_expression = "cron(0 7,13,19 * * ? *)" # 3x daily at 07:00, 13:00, 19:00 UTC
 }
 
 #################################################
@@ -200,7 +200,7 @@ resource "aws_lambda_function" "transform_echanges_france" {
 #################################################
 resource "aws_cloudwatch_event_rule" "daily_trigger_transform_echanges" {
   name                = "trigger-transform-echanges-france-daily"
-  schedule_expression = "cron(0 7 * * ? *)" # 7h UTC = 8h UTC+1 ou 9h UTC+2
+  schedule_expression = "cron(0 7,13,19 * * ? *)" # 3x daily at 07:00, 13:00, 19:00 UTC
 }
 
 #################################################
