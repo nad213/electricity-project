@@ -36,11 +36,11 @@ class ProductionColors:
 
 class ChartConfig:
     """Default configuration for charts - dark transparent background"""
-    GRID_COLOR = '#27272A'
+    GRID_COLOR = '#334155'
     BACKGROUND_COLOR = 'rgba(0,0,0,0)'
     PAPER_COLOR = 'rgba(0,0,0,0)'
-    TEXT_COLOR = '#A1A1AA'
-    AXIS_COLOR = '#3F3F46'
+    TEXT_COLOR = '#94A3B8'
+    AXIS_COLOR = '#475569'
     LINE_CHART_HEIGHT = 450
     BAR_CHART_HEIGHT = 400
     MARGIN_WITH_LEGEND = dict(l=50, r=20, t=20, b=60)

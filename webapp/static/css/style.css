@@ -8,21 +8,21 @@
 
 /* ========== CSS Variables ========== */
 :root {
-    --bg: #09090B;
-    --surface: #18181B;
-    --surface-hover: #27272A;
-    --border: #27272A;
-    --border-light: #3F3F46;
+    --bg: #0F172A;
+    --surface: #1E293B;
+    --surface-hover: #334155;
+    --border: #334155;
+    --border-light: #475569;
     --accent: #22D3EE;
     --accent-hover: #67E8F9;
     --accent-glow: rgba(34, 211, 238, 0.08);
     --accent-glow-strong: rgba(34, 211, 238, 0.15);
     --amber: #FBBF24;
     --amber-glow: rgba(251, 191, 36, 0.15);
-    --text: #FAFAFA;
-    --text-secondary: #A1A1AA;
-    --text-muted: #71717A;
-    --shadow: rgba(0, 0, 0, 0.4);
+    --text: #F1F5F9;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+    --shadow: rgba(0, 0, 0, 0.3);
 }
 
 /* ========== Global Styles ========== */
@@ -41,7 +41,7 @@ body {
 
 /* ========== Navbar ========== */
 .navbar-pastel {
-    background-color: rgba(9, 9, 11, 0.8);
+    background-color: rgba(15, 23, 42, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
@@ -151,14 +151,14 @@ body {
 .btn-primary {
     background-color: var(--accent);
     border-color: var(--accent);
-    color: #09090B;
+    color: var(--bg);
     font-weight: 600;
 }
 
 .btn-primary:hover {
     background-color: var(--accent-hover);
     border-color: var(--accent-hover);
-    color: #09090B;
+    color: var(--bg);
 }
 
 .btn-outline-primary {
@@ -315,7 +315,7 @@ body {
 
 /* ========== Loader ========== */
 #page-loader {
-    background: rgba(9, 9, 11, 0.95) !important;
+    background: rgba(15, 23, 42, 0.95) !important;
 }
 
 #page-loader .spinner-border {
