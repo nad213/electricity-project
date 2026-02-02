@@ -64,7 +64,7 @@
 
                 <!-- Power Chart -->
                 <div class="chart-container">
-                    {{ graph_puissance|safe }}
+                    <div id="chart-puissance"></div>
                 </div>
 
                 <!-- Download button -->
@@ -110,7 +110,7 @@
                 <div class="tab-content">
                     <div class="tab-pane fade show active" id="annuel" role="tabpanel" aria-labelledby="annuel-tab">
                         <div class="chart-container">
-                            {{ graph_annuel|safe }}
+                            <div id="chart-annuel"></div>
                         </div>
                         <!-- Download button -->
                         <div class="mt-3 text-end">
@@ -123,7 +123,7 @@
 
                     <div class="tab-pane fade" id="mensuel" role="tabpanel" aria-labelledby="mensuel-tab">
                         <div class="chart-container">
-                            {{ graph_mensuel|safe }}
+                            <div id="chart-mensuel"></div>
                         </div>
                         <!-- Download button -->
                         <div class="mt-3 text-end">
@@ -140,6 +140,21 @@
 </div>
 
 <script>
+// Render charts client-side
+(function() {
+    var plotConfig = {responsive: true};
+    var chartData;
+
+    chartData = JSON.parse('{{ graph_puissance|escapejs }}');
+    Plotly.newPlot('chart-puissance', chartData.data, chartData.layout, plotConfig);
+
+    chartData = JSON.parse('{{ graph_annuel|escapejs }}');
+    Plotly.newPlot('chart-annuel', chartData.data, chartData.layout, plotConfig);
+
+    chartData = JSON.parse('{{ graph_mensuel|escapejs }}');
+    Plotly.newPlot('chart-mensuel', chartData.data, chartData.layout, plotConfig);
+})();
+
 // Trigger resize event when tab is shown to properly render Plotly charts
 document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(button => {
     button.addEventListener('shown.bs.tab', function() {

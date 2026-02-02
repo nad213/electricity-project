@@ -3,7 +3,6 @@ from django.http import HttpResponse, HttpResponseBadRequest
 from datetime import datetime, timedelta
 import plotly.express as px
 import plotly.graph_objects as go
-import plotly.io as pio
 import csv
 from functools import wraps
 from .services import (
@@ -189,7 +188,7 @@ def create_line_chart(df, x_col, y_col, source_col='source', source_labels=None)
     fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
     fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR, zerolinecolor=ChartConfig.GRID_COLOR)
 
-    return pio.to_html(fig, full_html=False, include_plotlyjs='cdn')
+    return fig.to_json()
 
 
 def create_bar_chart(df, x_col, y_col, color=None, tickangle=0):
@@ -227,7 +226,7 @@ def create_bar_chart(df, x_col, y_col, color=None, tickangle=0):
     fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR, tickangle=tickangle)
     fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR)
 
-    return pio.to_html(fig, full_html=False, include_plotlyjs=False)
+    return fig.to_json()
 
 
 def create_stacked_bar_chart(df, x_col, y_cols, colors, labels):
@@ -275,7 +274,7 @@ def create_stacked_bar_chart(df, x_col, y_cols, colors, labels):
     fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
     fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR)
 
-    return pio.to_html(fig, full_html=False, include_plotlyjs=False)
+    return fig.to_json()
 
 
 def accueil(request):

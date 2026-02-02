@@ -72,7 +72,7 @@
 
                 <!-- Graphique -->
                 <div class="chart-container">
-                    {{ graph_echanges|safe }}
+                    <div id="chart-echanges"></div>
                 </div>
 
                 <!-- Download button -->
@@ -88,6 +88,12 @@
 </div>
 
 <script>
+// Render chart client-side
+(function() {
+    var chartData = JSON.parse('{{ graph_echanges|escapejs }}');
+    Plotly.newPlot('chart-echanges', chartData.data, chartData.layout, {responsive: true});
+})();
+
 // Date validation
 document.getElementById('date-filter-form').addEventListener('submit', function(e) {
     const startDate = document.getElementById('start_date').value;
