@@ -1,0 +1,78 @@
+{% comment %}
+Formulaire de filtre par dates réutilisable.
+
+Variables requises :
+  - min_date : date minimum disponible
+  - max_date : date maximum disponible
+  - start_date : date de début sélectionnée
+  - end_date : date de fin sélectionnée
+
+Variables optionnelles :
+  - col_size : taille des colonnes Bootstrap (défaut: 4 sans filtre, 3 avec filtre)
+  - extra_filter_label : label du filtre additionnel (ex: "Filière", "Pays")
+  - extra_filter_name : nom du champ (ex: "filiere", "pays")
+  - extra_filter_options : dict {key: label} des options
+  - extra_filter_selected : valeur sélectionnée
+{% endcomment %}
+
+<form method="get" class="mb-4" id="date-filter-form">
+    <div class="row g-2 align-items-end">
+        {% if extra_filter_name %}
+        {# Filtre additionnel (filière, pays, etc.) #}
+        <div class="col-md-3">
+            <label class="form-label fs-6 mb-1">{{ extra_filter_label }}</label>
+            <select class="form-select form-select-sm" name="{{ extra_filter_name }}">
+                {% for key, label in extra_filter_options.items %}
+                <option value="{{ key }}" {% if key == extra_filter_selected %}selected{% endif %}>
+                    {{ label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+        {% else %}
+        <div class="col-md-4">
+        {% endif %}
+            <label class="form-label fs-6 mb-1">Date début</label>
+            <input
+                type="date"
+                class="form-control form-control-sm"
+                name="start_date"
+                id="start_date"
+                value="{{ start_date|date:'Y-m-d' }}"
+                min="{{ min_date|date:'Y-m-d' }}"
+                max="{{ max_date|date:'Y-m-d' }}"
+            >
+        </div>
+        {% if extra_filter_name %}
+        <div class="col-md-3">
+        {% else %}
+        <div class="col-md-4">
+        {% endif %}
+            <label class="form-label fs-6 mb-1">Date fin</label>
+            <input
+                type="date"
+                class="form-control form-control-sm"
+                name="end_date"
+                id="end_date"
+                value="{{ end_date|date:'Y-m-d' }}"
+                min="{{ min_date|date:'Y-m-d' }}"
+                max="{{ max_date|date:'Y-m-d' }}"
+            >
+        </div>
+        {% if extra_filter_name %}
+        <div class="col-md-3">
+        {% else %}
+        <div class="col-md-4">
+        {% endif %}
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="ti ti-refresh me-1"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+    <div id="date-error" class="alert alert-danger mt-2" style="display: none;">
+        <i class="ti ti-alert-circle me-1"></i>
+        La date de début doit être antérieure à la date de fin.
+    </div>
+</form>

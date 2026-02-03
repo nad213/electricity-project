@@ -19,7 +19,7 @@
                 <p style="font-size: 1.125rem; color: #A1A1AA; max-width: 600px; margin-bottom: 2rem;">
                     Visualisez les données de consommation, production et échanges électriques en France.
                 </p>
-                <a href="{% url 'index' %}" class="btn btn-primary">
+                <a href="{% url 'consommation:index' %}" class="btn btn-primary">
                     <i class="ti ti-chart-line me-1"></i>
                     Explorer les données
                 </a>
@@ -30,7 +30,7 @@
 
 <div class="row row-cards">
     <div class="col-md-4">
-        <a href="{% url 'index' %}" class="text-decoration-none text-reset d-block h-100">
+        <a href="{% url 'consommation:index' %}" class="text-decoration-none text-reset d-block h-100">
             <div class="card feature-card h-100">
                 <div class="card-body py-4">
                     <div class="d-flex align-items-center mb-3">
@@ -48,7 +48,7 @@
     </div>
 
     <div class="col-md-4">
-        <a href="{% url 'production' %}" class="text-decoration-none text-reset d-block h-100">
+        <a href="{% url 'consommation:production' %}" class="text-decoration-none text-reset d-block h-100">
             <div class="card feature-card h-100">
                 <div class="card-body py-4">
                     <div class="d-flex align-items-center mb-3">
@@ -66,7 +66,7 @@
     </div>
 
     <div class="col-md-4">
-        <a href="{% url 'echanges' %}" class="text-decoration-none text-reset d-block h-100">
+        <a href="{% url 'consommation:echanges' %}" class="text-decoration-none text-reset d-block h-100">
             <div class="card feature-card h-100">
                 <div class="card-body py-4">
                     <div class="d-flex align-items-center mb-3">

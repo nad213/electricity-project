@@ -27,7 +27,7 @@
             <div class="container-xl">
                 <!-- Brand -->
                 <h1 class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3 mb-0">
-                    <a href="{% url 'accueil' %}" class="text-decoration-none d-flex align-items-center">
+                    <a href="{% url 'consommation:accueil' %}" class="text-decoration-none d-flex align-items-center">
                         <i class="ti ti-bolt me-2" style="font-size: 1.5rem; color: #22D3EE;"></i>
                         <span>ElecFlow</span>
                     </a>
@@ -42,7 +42,7 @@
                 <div class="collapse navbar-collapse" id="navbar-menu">
                     <ul class="navbar-nav me-auto">
                         <li class="nav-item {% if request.resolver_match.url_name == 'accueil' %}active{% endif %}">
-                            <a class="nav-link" href="{% url 'accueil' %}">
+                            <a class="nav-link" href="{% url 'consommation:accueil' %}">
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
                                     <i class="ti ti-home"></i>
                                 </span>
@@ -50,7 +50,7 @@
                             </a>
                         </li>
                         <li class="nav-item {% if request.resolver_match.url_name == 'index' %}active{% endif %}">
-                            <a class="nav-link" href="{% url 'index' %}">
+                            <a class="nav-link" href="{% url 'consommation:index' %}">
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
                                     <i class="ti ti-chart-line"></i>
                                 </span>
@@ -58,7 +58,7 @@
                             </a>
                         </li>
                         <li class="nav-item {% if request.resolver_match.url_name == 'production' %}active{% endif %}">
-                            <a class="nav-link" href="{% url 'production' %}">
+                            <a class="nav-link" href="{% url 'consommation:production' %}">
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
                                     <i class="ti ti-building-factory"></i>
                                 </span>
@@ -66,7 +66,7 @@
                             </a>
                         </li>
                         <li class="nav-item {% if request.resolver_match.url_name == 'echanges' %}active{% endif %}">
-                            <a class="nav-link" href="{% url 'echanges' %}">
+                            <a class="nav-link" href="{% url 'consommation:echanges' %}">
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
                                     <i class="ti ti-arrows-exchange"></i>
                                 </span>
@@ -92,14 +92,14 @@
                             <div class="dropdown-menu dropdown-menu-end">
                                 <span class="dropdown-header">{{ user_info.email }}</span>
                                 <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="{% url 'logout' %}">
+                                <a class="dropdown-item" href="{% url 'consommation:logout' %}">
                                     <i class="ti ti-logout me-2"></i>Se deconnecter
                                 </a>
                             </div>
                         </li>
                         {% else %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'login' %}">
+                            <a class="nav-link" href="{% url 'consommation:login' %}">
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
                                     <i class="ti ti-login"></i>
                                 </span>
@@ -150,5 +150,7 @@
 
     <!-- Tabler JS -->
     <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"></script>
+    <!-- Date filter validation -->
+    <script src="{% static 'js/date-filter.js' %}"></script>
 </body>
 </html>

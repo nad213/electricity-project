@@ -3,7 +3,6 @@ import pandas as pd
 from django.conf import settings
 from datetime import datetime, timedelta
 from contextlib import contextmanager
-import re
 
 
 def _validate_s3_credential(value, name):

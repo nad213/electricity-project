@@ -40,20 +40,20 @@ def callback(request: HttpRequest) -> HttpResponse:
 
     if not state or state != stored_state:
         messages.error(request, "Erreur d'authentification: state invalide.")
-        return redirect('accueil')
+        return redirect('consommation:accueil')
 
     # Check for errors from Auth0
     error = request.GET.get('error')
     if error:
         error_description = request.GET.get('error_description', 'Erreur inconnue')
         messages.error(request, f"Erreur Auth0: {error_description}")
-        return redirect('accueil')
+        return redirect('consommation:accueil')
 
     # Get authorization code
     code = request.GET.get('code')
     if not code:
         messages.error(request, "Erreur d'authentification: code manquant.")
-        return redirect('accueil')
+        return redirect('consommation:accueil')
 
     try:
         # Exchange code for tokens
@@ -75,7 +75,7 @@ def callback(request: HttpRequest) -> HttpResponse:
 
     except Exception as e:
         messages.error(request, f"Erreur lors de la connexion: {str(e)}")
-        return redirect('accueil')
+        return redirect('consommation:accueil')
 
     # Redirect to home or stored next URL
     next_url = request.session.pop('next', 'accueil')
