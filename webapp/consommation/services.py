@@ -112,10 +112,13 @@ def get_annual_data():
 def get_monthly_data():
     """
     Loads monthly data
+    Aggregates by year_month to handle multiple sources (Consolidated/Real-Time)
     """
     with get_duckdb_connection() as conn:
         query = "SELECT * FROM read_parquet(?)"
         df = conn.execute(query, [settings.S3_PATHS['mensuel']]).fetchdf()
+    # Aggregate by year_month to sum values from different sources
+    df = df.groupby('year_month', as_index=False)['monthly_consumption'].sum()
     return df
 
 

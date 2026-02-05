@@ -1,3 +1,3 @@
-je voudrais avoir "Date: xxxxx
-                "Consommation xx xxx MW"
+je voudrais avoir "Période: xxxxx
+                "Consommation: xx GWh"
                 

@@ -83,13 +83,20 @@ def lambda_handler(event, context):
         print(f"File consommation_france_puissance saved with {len(df_result)} rows.")
         print(f"Size of df_result: {len(df_result)}")
 
+        # Calculate energy (MWh) based on actual time step for each data point
+        df_result = df_result.sort_values("date_heure").reset_index(drop=True)
+        df_result["time_diff_hours"] = df_result["date_heure"].diff().dt.total_seconds() / 3600
+        # First row: use expected time step based on source (0.5h for Consolidated, 0.25h for Real-Time)
+        df_result.loc[0, "time_diff_hours"] = 0.5 if df_result.loc[0, "source"] == "Consolidated Data" else 0.25
+        # Cap time diff at 1 hour to avoid gaps inflating the energy
+        df_result["time_diff_hours"] = df_result["time_diff_hours"].clip(upper=1.0)
+        # Energy = Power (MW) × Time (hours)
+        df_result["energy_mwh"] = df_result["consommation"] * df_result["time_diff_hours"]
+
         df_result["year"] = df_result["date_heure"].dt.year
         df_result["month"] = df_result["date_heure"].dt.month
-        df_monthly = df_result.groupby(["year", "month", "source"])["consommation"].sum().reset_index()
-        df_monthly["monthly_consumption"] = df_monthly.apply(
-            lambda x: x["consommation"] / 2 if x["source"] == "Consolidated Data" else x["consommation"] / 4,
-            axis=1
-        )
+        df_monthly = df_result.groupby(["year", "month"])["energy_mwh"].sum().reset_index()
+        df_monthly.rename(columns={"energy_mwh": "monthly_consumption"}, inplace=True)
         df_monthly["year_month"] = df_monthly["year"].astype(str) + "-" + df_monthly["month"].astype(str).str.zfill(2)
 
         # 3. Save results to S3

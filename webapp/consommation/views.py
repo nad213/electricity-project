@@ -137,7 +137,7 @@ def create_line_chart(df, x_col, y_col, color=None, y_label='Valeur'):
     return fig.to_json()
 
 
-def create_bar_chart(df, x_col, y_col, color=None, tickangle=0):
+def create_bar_chart(df, x_col, y_col, color=None, tickangle=0, y_label='Consommation'):
     """
     Creates a standardized Plotly bar chart
 
@@ -147,6 +147,7 @@ def create_bar_chart(df, x_col, y_col, color=None, tickangle=0):
         y_col: Column name for y-axis
         color: Bar color (default: PRIMARY)
         tickangle: Angle for x-axis labels (default: 0)
+        y_label: Label for y-axis in hover tooltip
 
     Returns:
         HTML string of the chart
@@ -154,15 +155,26 @@ def create_bar_chart(df, x_col, y_col, color=None, tickangle=0):
     if color is None:
         color = Colors.PRIMARY
 
+    # Convert MWh to TWh
+    df = df.copy()
+    df[y_col] = df[y_col] / 1_000_000
+
     fig = px.bar(
         df,
         x=x_col,
         y=y_col,
         color_discrete_sequence=[color],
     )
+
+    # Custom hover template (French locale: space as thousands separator)
+    fig.update_layout(separators=", ")
+    fig.update_traces(
+        hovertemplate=f"Période: %{{x}}<br>{y_label}: %{{y:,.1f}} TWh<extra></extra>"
+    )
+
     fig.update_layout(
         xaxis_title_text='',
-        yaxis_title_text='MWh',
+        yaxis_title_text='TWh',
         margin=ChartConfig.MARGIN_DEFAULT,
         height=ChartConfig.BAR_CHART_HEIGHT,
         plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
