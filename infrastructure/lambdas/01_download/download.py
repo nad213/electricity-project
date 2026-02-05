@@ -44,10 +44,14 @@ def lambda_handler(event, context):
             buffer.write(chunk)
         buffer.seek(0)
 
-        # Upload the file to S3
+        # Upload the file to S3 (with data_processed metadata if available)
         s3_key = f"{S3_PREFIX}/{file_name}"
         s3 = boto3.client('s3')
-        s3.upload_fileobj(Fileobj=buffer, Bucket=S3_BUCKET, Key=s3_key)
+        extra_args = {}
+        data_processed = body.get('data_processed')
+        if data_processed:
+            extra_args['Metadata'] = {'data_processed': data_processed}
+        s3.upload_fileobj(Fileobj=buffer, Bucket=S3_BUCKET, Key=s3_key, ExtraArgs=extra_args)
 
         print(f"SUCCESS: File uploaded to s3://{S3_BUCKET}/{s3_key}")
 
