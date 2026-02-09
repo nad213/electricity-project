@@ -13,7 +13,7 @@ from .services import (
     get_echanges_date_range, get_echanges_pays, get_echanges_data
 )
 from .constants import (
-    Colors, ChartConfig,
+    Colors, ChartConfig, FILIERE_COLORS,
     get_production_colors_and_labels, get_filiere_columns
 )
 
@@ -324,6 +324,7 @@ def production(request):
         df_production,
         x_col='date_heure',
         y_col='production',
+        color=FILIERE_COLORS[filiere],
         y_label='Production'
     )
 
