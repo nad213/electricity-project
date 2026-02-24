@@ -69,3 +69,6 @@ CLAUDE.md
 # Logs
 *.log
 logs/
+
+# Local test scripts
+run_lambdas_local.py
