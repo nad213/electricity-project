@@ -78,8 +78,8 @@ def callback(request: HttpRequest) -> HttpResponse:
         return redirect('consommation:accueil')
 
     # Redirect to home or stored next URL
-    next_url = request.session.pop('next', 'accueil')
-    return redirect(next_url)
+    next_url = request.session.pop('next', None)
+    return redirect(next_url if next_url else 'consommation:accueil')
 
 
 def logout(request: HttpRequest) -> HttpResponse:
