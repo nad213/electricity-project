@@ -22,4 +22,5 @@ urlpatterns = [
     path('production/export-mensuel/', views.export_production_mensuel_csv, name='export_production_mensuel'),
     path('echanges/', views.echanges, name='echanges'),
     path('echanges/export/', views.export_echanges_csv, name='export_echanges'),
+    path('api/', views.api, name='api'),
 ]

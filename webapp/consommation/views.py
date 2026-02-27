@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpResponse, HttpResponseBadRequest
 from datetime import datetime, timedelta
 import plotly.express as px
@@ -541,3 +541,11 @@ def export_echanges_csv(request):
     # Export to CSV
     filename = f'echanges_{pays}_{start_date}_{end_date}.csv'
     return _export_to_csv(df, filename, ['date_heure', 'echange'])
+
+
+# ========== API ==========
+def api(request):
+    from .auth import is_authenticated
+    if not is_authenticated(request):
+        return redirect('consommation:login')
+    return render(request, 'consommation/api.html')

@@ -73,6 +73,16 @@
                                 <span class="nav-link-title">Echanges</span>
                             </a>
                         </li>
+                        {% if is_authenticated %}
+                        <li class="nav-item {% if request.resolver_match.url_name == 'api' %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'consommation:api' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="ti ti-api"></i>
+                                </span>
+                                <span class="nav-link-title">API</span>
+                            </a>
+                        </li>
+                        {% endif %}
                     </ul>
 
                     <!-- Auth section -->
