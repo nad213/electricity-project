@@ -83,14 +83,30 @@ resource "aws_iam_role_policy_attachment" "lambda_common_attach" {
 }
 
 # --------------------------------------------
-# Lambda Permission: Allow EventBridge to invoke csv_to_sqs
+# Lambda Permissions: Allow EventBridge to invoke csv_to_sqs
 # --------------------------------------------
-resource "aws_lambda_permission" "allow_cloudwatch" {
-  statement_id  = "AllowExecutionFromCloudWatch"
+resource "aws_lambda_permission" "allow_cloudwatch_1" {
+  statement_id  = "AllowExecutionFromCloudWatch1"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.csv_to_sqs.function_name
   principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.daily_trigger.arn
+  source_arn    = aws_cloudwatch_event_rule.daily_trigger_1.arn
+}
+
+resource "aws_lambda_permission" "allow_cloudwatch_2" {
+  statement_id  = "AllowExecutionFromCloudWatch2"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.csv_to_sqs.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.daily_trigger_2.arn
+}
+
+resource "aws_lambda_permission" "allow_cloudwatch_3" {
+  statement_id  = "AllowExecutionFromCloudWatch3"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.csv_to_sqs.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.daily_trigger_3.arn
 }
 
 

@@ -109,29 +109,43 @@ resource "aws_lambda_event_source_mapping" "sqs_trigger" {
 }
 
 #################################################
-# 00.9 CloudWatch Event Rule: Daily Trigger
+# 00.9 CloudWatch Event Rules: csv_to_sqs Triggers
 #################################################
-# Creates a CloudWatch Event Rule to trigger an event on a cron schedule.
-# This rule is set to trigger daily at 07:00 UTC.
+# 3 separate rules because each trigger uses different minutes.
 # Cron format: "cron(minutes hours day_of_month month day_of_week year)"
-# "*" means "all possible values" for that field.
 #################################################
-resource "aws_cloudwatch_event_rule" "daily_trigger" {
-  name                = "trigger-csv-to-sqs-daily"
-  schedule_expression = "cron(0 6,12,18 * * ? *)" # 3x daily at 06:00, 12:00, 18:00 UTC
+resource "aws_cloudwatch_event_rule" "daily_trigger_1" {
+  name                = "trigger-csv-to-sqs-0607"
+  schedule_expression = "cron(7 6 * * ? *)" # 06:07 UTC
+}
+
+resource "aws_cloudwatch_event_rule" "daily_trigger_2" {
+  name                = "trigger-csv-to-sqs-1219"
+  schedule_expression = "cron(19 12 * * ? *)" # 12:19 UTC
+}
+
+resource "aws_cloudwatch_event_rule" "daily_trigger_3" {
+  name                = "trigger-csv-to-sqs-1810"
+  schedule_expression = "cron(10 18 * * ? *)" # 18:10 UTC
 }
 
 #################################################
-# 00.10 CloudWatch Event Target: Rule Target
+# 00.10 CloudWatch Event Targets: csv_to_sqs
 #################################################
-# Associates the above CloudWatch rule with the "csv_to_sqs" Lambda function.
-# This means the Lambda will be invoked automatically according to the schedule.
-# - rule      : Reference to the CloudWatch rule defined above.
-# - target_id : Unique identifier for this target.
-# - arn       : ARN of the Lambda function to be triggered.
-#################################################
-resource "aws_cloudwatch_event_target" "trigger_csv_to_sqs" {
-  rule      = aws_cloudwatch_event_rule.daily_trigger.name
+resource "aws_cloudwatch_event_target" "trigger_csv_to_sqs_1" {
+  rule      = aws_cloudwatch_event_rule.daily_trigger_1.name
+  target_id = "csv_to_sqs"
+  arn       = aws_lambda_function.csv_to_sqs.arn
+}
+
+resource "aws_cloudwatch_event_target" "trigger_csv_to_sqs_2" {
+  rule      = aws_cloudwatch_event_rule.daily_trigger_2.name
+  target_id = "csv_to_sqs"
+  arn       = aws_lambda_function.csv_to_sqs.arn
+}
+
+resource "aws_cloudwatch_event_target" "trigger_csv_to_sqs_3" {
+  rule      = aws_cloudwatch_event_rule.daily_trigger_3.name
   target_id = "csv_to_sqs"
   arn       = aws_lambda_function.csv_to_sqs.arn
 }
