@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: electricity-app
+    name: electricity-app-recette
     runtime: python
     buildCommand: "./build.sh"
     startCommand: "cd webapp && gunicorn config.wsgi:application"

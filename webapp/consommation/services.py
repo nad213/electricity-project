@@ -4,6 +4,8 @@ from django.conf import settings
 from datetime import datetime, timedelta
 from contextlib import contextmanager
 
+from .constants import FILIERES
+
 
 def _validate_s3_credential(value, name):
     """
@@ -283,3 +285,72 @@ def get_echanges_data(start_date, end_date, pays='ech_physiques'):
     result['source'] = result['source'].map(source_map).fillna(result['source'])
 
     return result
+
+
+def get_today_dashboard_data():
+    """
+    Returns summary data for the homepage dashboard using the latest available day.
+
+    Returns a dict with:
+        date          : latest available date (date object)
+        avg_conso     : average consumption in MW (int)
+        conso_ts      : DataFrame with columns [date_heure, consommation]
+        production_mix: dict {filiere_key: avg_mw (int)}
+        total_production: sum of all filières (int)
+        avg_echanges  : average physical exchange balance in MW (int, positive=export)
+    Returns None if data is unavailable.
+    """
+    latest_day_subquery = "SELECT MAX(CAST(date_heure AS DATE)) FROM read_parquet(?)"
+
+    # 1. Consumption time series for the latest available day
+    with get_duckdb_connection() as conn:
+        path = settings.S3_PATHS['puissance']
+        query = f"""
+            SELECT date_heure, consommation
+            FROM read_parquet(?)
+            WHERE CAST(date_heure AS DATE) = ({latest_day_subquery})
+            ORDER BY date_heure
+        """
+        conso_ts = conn.execute(query, [path, path]).fetchdf()
+
+    if conso_ts.empty:
+        return None
+
+    latest_date = pd.to_datetime(conso_ts['date_heure']).max().date()
+    avg_conso = int(round(conso_ts['consommation'].mean()))
+
+    # 2. Production mix averages for the latest available day
+    filieres = list(FILIERES.keys())
+    filieres_sql = ', '.join([f"COALESCE(AVG({f}), 0) as {f}" for f in filieres])
+    with get_duckdb_connection() as conn:
+        path = settings.S3_PATHS['production']
+        query = f"""
+            SELECT {filieres_sql}
+            FROM read_parquet(?)
+            WHERE CAST(date_heure AS DATE) = ({latest_day_subquery})
+        """
+        prod_df = conn.execute(query, [path, path]).fetchdf()
+
+    production_mix = {f: int(round(float(prod_df[f].iloc[0]))) for f in filieres}
+    total_production = sum(production_mix.values())
+
+    # 3. Exchange balance for the latest available day
+    with get_duckdb_connection() as conn:
+        path = settings.S3_PATHS['echanges']
+        query = f"""
+            SELECT AVG(ech_physiques) as avg_ech
+            FROM read_parquet(?)
+            WHERE CAST(date_heure AS DATE) = ({latest_day_subquery})
+        """
+        ech_df = conn.execute(query, [path, path]).fetchdf()
+
+    avg_echanges = int(round(float(ech_df['avg_ech'].iloc[0])))
+
+    return {
+        'date': latest_date,
+        'avg_conso': avg_conso,
+        'conso_ts': conso_ts,
+        'production_mix': production_mix,
+        'total_production': total_production,
+        'avg_echanges': avg_echanges,
+    }

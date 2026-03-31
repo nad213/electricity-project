@@ -10,10 +10,11 @@ from .services import (
     get_date_range, get_puissance_data, get_annual_data, get_monthly_data,
     get_production_date_range, get_production_filieres, get_production_data,
     get_production_annual_data, get_production_monthly_data,
-    get_echanges_date_range, get_echanges_pays, get_echanges_data
+    get_echanges_date_range, get_echanges_pays, get_echanges_data,
+    get_today_dashboard_data,
 )
 from .constants import (
-    Colors, ChartConfig, FILIERE_COLORS,
+    Colors, ChartConfig, FILIERE_COLORS, FILIERES,
     get_production_colors_and_labels, get_filiere_columns
 )
 
@@ -235,11 +236,112 @@ def create_stacked_bar_chart(df, x_col, y_cols, colors, labels):
     return fig.to_json()
 
 
+def create_donut_chart(production_mix):
+    """
+    Creates a Plotly donut chart for the production mix by filière.
+
+    Args:
+        production_mix: dict {filiere_key: avg_mw}
+
+    Returns:
+        JSON string of the Plotly figure
+    """
+    labels = []
+    values = []
+    colors = []
+
+    for filiere, avg_mw in production_mix.items():
+        if avg_mw > 0:
+            labels.append(FILIERES[filiere])
+            values.append(avg_mw)
+            colors.append(FILIERE_COLORS[filiere])
+
+    fig = go.Figure(data=[go.Pie(
+        labels=labels,
+        values=values,
+        hole=0.6,
+        marker=dict(colors=colors, line=dict(color='rgba(0,0,0,0)', width=0)),
+        textinfo='percent',
+        hovertemplate='<b>%{label}</b><br>%{value:,.0f} MW<br>%{percent}<extra></extra>',
+    )])
+
+    fig.update_layout(
+        paper_bgcolor=ChartConfig.PAPER_COLOR,
+        plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
+        font=dict(color=ChartConfig.TEXT_COLOR, size=12),
+        margin=dict(l=10, r=10, t=10, b=10),
+        height=300,
+        showlegend=True,
+        legend=dict(
+            font=dict(color=ChartConfig.TEXT_COLOR, size=11),
+            bgcolor='rgba(0,0,0,0)',
+            orientation='v',
+            x=1.02,
+            y=0.5,
+            xanchor='left',
+            yanchor='middle',
+        ),
+    )
+
+    return fig.to_json()
+
+
+def create_mini_line_chart(df, x_col, y_col):
+    """
+    Creates a compact Plotly line chart for the homepage dashboard.
+
+    Returns:
+        JSON string of the Plotly figure
+    """
+    fig = px.line(df, x=x_col, y=y_col, color_discrete_sequence=[Colors.ACCENT])
+    fig.update_layout(separators=", ")
+    fig.update_traces(
+        hovertemplate="Date: %{x|%H:%M}<br>Consommation: %{y:,.0f} MW<extra></extra>"
+    )
+    fig.update_layout(
+        showlegend=False,
+        xaxis_title_text='',
+        yaxis_title_text='MW',
+        margin=dict(l=50, r=10, t=10, b=40),
+        height=300,
+        plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
+        paper_bgcolor=ChartConfig.PAPER_COLOR,
+        font=dict(color=ChartConfig.TEXT_COLOR),
+    )
+    fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
+    fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR, zerolinecolor=ChartConfig.GRID_COLOR)
+
+    return fig.to_json()
+
+
 def accueil(request):
     """
-    Home page - welcome page
+    Home page - welcome page with latest day dashboard data.
+    Falls back gracefully if S3 data is unavailable.
     """
-    return render(request, 'consommation/accueil.html')
+    context = {}
+    try:
+        data = get_today_dashboard_data()
+        if data:
+            graph_mix = create_donut_chart(data['production_mix'])
+            graph_conso_jour = create_mini_line_chart(
+                data['conso_ts'], x_col='date_heure', y_col='consommation'
+            )
+            context = {
+                'has_dashboard_data': True,
+                'dashboard_date': data['date'],
+                'avg_conso': f"{data['avg_conso']:,}".replace(',', '\u202f'),
+                'total_production': f"{data['total_production']:,}".replace(',', '\u202f'),
+                'avg_echanges': data['avg_echanges'],
+                'avg_echanges_display': f"{abs(data['avg_echanges']):,}".replace(',', '\u202f'),
+                'echanges_positif': data['avg_echanges'] >= 0,
+                'graph_mix': graph_mix,
+                'graph_conso_jour': graph_conso_jour,
+            }
+    except Exception:
+        pass
+
+    return render(request, 'consommation/accueil.html', context)
 
 
 # ========== Views ==========

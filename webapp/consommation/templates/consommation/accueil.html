@@ -28,6 +28,96 @@
     </div>
 </div>
 
+{% if has_dashboard_data %}
+<!-- Dashboard du jour -->
+<div class="row mb-2 align-items-center">
+    <div class="col-12">
+        <p class="text-muted mb-0" style="font-size: 0.8125rem;">
+            <i class="ti ti-calendar me-1"></i>
+            Dernières données disponibles — {{ dashboard_date|date:"d/m/Y" }}
+        </p>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row row-cards mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span class="stat-label">Consommation moyenne</span>
+                    <div class="stat-icon stat-icon-blue">
+                        <i class="ti ti-bolt"></i>
+                    </div>
+                </div>
+                <div class="stat-value">{{ avg_conso }} <span class="stat-unit">MW</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span class="stat-label">Production nationale</span>
+                    <div class="stat-icon stat-icon-amber">
+                        <i class="ti ti-building-factory"></i>
+                    </div>
+                </div>
+                <div class="stat-value">{{ total_production }} <span class="stat-unit">MW</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span class="stat-label">
+                        Solde échanges
+                        {% if echanges_positif %}
+                            <span class="badge badge-export ms-1">Export</span>
+                        {% else %}
+                            <span class="badge badge-import ms-1">Import</span>
+                        {% endif %}
+                    </span>
+                    <div class="stat-icon {% if echanges_positif %}stat-icon-green{% else %}stat-icon-red{% endif %}">
+                        <i class="ti ti-arrows-exchange"></i>
+                    </div>
+                </div>
+                <div class="stat-value {% if echanges_positif %}stat-value-green{% else %}stat-value-red{% endif %}">
+                    {% if echanges_positif %}+{% else %}-{% endif %}{{ avg_echanges_display }} <span class="stat-unit">MW</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row row-cards mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h3 class="card-title">Mix de production</h3>
+            </div>
+            <div class="card-body p-2">
+                <div id="chart-donut"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h3 class="card-title">Courbe de consommation du jour</h3>
+            </div>
+            <div class="card-body p-2">
+                <div id="chart-conso-jour"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="row row-cards">
     <div class="col-md-4">
         <a href="{% url 'consommation:index' %}" class="text-decoration-none text-reset d-block h-100">
@@ -95,5 +185,20 @@
         </div>
     </div>
 </div>
+
+{% if has_dashboard_data %}
+<script>
+(function() {
+    var plotConfig = {responsive: true};
+    var chartData;
+
+    chartData = JSON.parse('{{ graph_mix|escapejs }}');
+    Plotly.newPlot('chart-donut', chartData.data, chartData.layout, plotConfig);
+
+    chartData = JSON.parse('{{ graph_conso_jour|escapejs }}');
+    Plotly.newPlot('chart-conso-jour', chartData.data, chartData.layout, plotConfig);
+})();
+</script>
+{% endif %}
 
 {% endblock %}
