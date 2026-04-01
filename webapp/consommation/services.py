@@ -287,70 +287,104 @@ def get_echanges_data(start_date, end_date, pays='ech_physiques'):
     return result
 
 
-def get_today_dashboard_data():
+def get_dashboard_data():
     """
-    Returns summary data for the homepage dashboard using the latest available day.
+    Returns data for the homepage dashboard.
 
     Returns a dict with:
-        date          : latest available date (date object)
-        avg_conso     : average consumption in MW (int)
-        conso_ts      : DataFrame with columns [date_heure, consommation]
-        production_mix: dict {filiere_key: avg_mw (int)}
-        total_production: sum of all filières (int)
-        avg_echanges  : average physical exchange balance in MW (int, positive=export)
+        dashboard_date      : latest available date (date object)
+        peak_year_value     : peak consumption of current year (int MW)
+        peak_year_datetime  : datetime of that peak (datetime)
+        peak_all_value      : peak consumption over all history (int MW)
+        peak_all_datetime   : datetime of that peak (datetime)
+        conso_ts            : DataFrame [date_heure, consommation] for latest day
+        production_ts       : DataFrame [date_heure, nucleaire, ...] for latest day
+        production_mix_year : dict {filiere_key: mwh (float)} for current year
     Returns None if data is unavailable.
     """
     latest_day_subquery = "SELECT MAX(CAST(date_heure AS DATE)) FROM read_parquet(?)"
 
-    # 1. Consumption time series for the latest available day
+    # 1+2+3. Consumption queries (all on the same parquet file)
     with get_duckdb_connection() as conn:
         path = settings.S3_PATHS['puissance']
-        query = f"""
+
+        # Peak conso current year
+        peak_year_df = conn.execute("""
+            SELECT date_heure, consommation FROM read_parquet(?)
+            WHERE EXTRACT(YEAR FROM date_heure) = EXTRACT(YEAR FROM CURRENT_DATE)
+            ORDER BY consommation DESC LIMIT 1
+        """, [path]).fetchdf()
+
+        # Peak conso all history
+        peak_all_df = conn.execute("""
+            SELECT date_heure, consommation FROM read_parquet(?)
+            ORDER BY consommation DESC LIMIT 1
+        """, [path]).fetchdf()
+
+        # Consumption time series for the latest available day
+        conso_ts = conn.execute(f"""
             SELECT date_heure, consommation
             FROM read_parquet(?)
             WHERE CAST(date_heure AS DATE) = ({latest_day_subquery})
             ORDER BY date_heure
-        """
-        conso_ts = conn.execute(query, [path, path]).fetchdf()
+        """, [path, path]).fetchdf()
 
     if conso_ts.empty:
         return None
 
-    latest_date = pd.to_datetime(conso_ts['date_heure']).max().date()
-    avg_conso = int(round(conso_ts['consommation'].mean()))
+    dashboard_date = pd.to_datetime(conso_ts['date_heure']).max().date()
 
-    # 2. Production mix averages for the latest available day
+    peak_year_value = int(round(float(peak_year_df['consommation'].iloc[0])))
+    peak_year_datetime = pd.to_datetime(peak_year_df['date_heure'].iloc[0]).to_pydatetime()
+    peak_all_value = int(round(float(peak_all_df['consommation'].iloc[0])))
+    peak_all_datetime = pd.to_datetime(peak_all_df['date_heure'].iloc[0]).to_pydatetime()
+
+    # 4. Production time series for the latest available day (all filieres)
     filieres = list(FILIERES.keys())
-    filieres_sql = ', '.join([f"COALESCE(AVG({f}), 0) as {f}" for f in filieres])
+    filieres_sql = ', '.join(filieres)
     with get_duckdb_connection() as conn:
         path = settings.S3_PATHS['production']
-        query = f"""
-            SELECT {filieres_sql}
+        production_ts = conn.execute(f"""
+            SELECT date_heure, {filieres_sql}
             FROM read_parquet(?)
             WHERE CAST(date_heure AS DATE) = ({latest_day_subquery})
-        """
-        prod_df = conn.execute(query, [path, path]).fetchdf()
+            ORDER BY date_heure
+        """, [path, path]).fetchdf()
 
-    production_mix = {f: int(round(float(prod_df[f].iloc[0]))) for f in filieres}
-    total_production = sum(production_mix.values())
+    # 5. Production mix for current year (annual parquet first, fallback on detail)
+    production_mix_year = {}
+    try:
+        with get_duckdb_connection() as conn:
+            annual_df = conn.execute("""
+                SELECT * FROM read_parquet(?)
+                WHERE year = EXTRACT(YEAR FROM CURRENT_DATE)
+            """, [settings.S3_PATHS['production_annuel']]).fetchdf()
 
-    # 3. Exchange balance for the latest available day
-    with get_duckdb_connection() as conn:
-        path = settings.S3_PATHS['echanges']
-        query = f"""
-            SELECT AVG(ech_physiques) as avg_ech
-            FROM read_parquet(?)
-            WHERE CAST(date_heure AS DATE) = ({latest_day_subquery})
-        """
-        ech_df = conn.execute(query, [path, path]).fetchdf()
-
-    avg_echanges = int(round(float(ech_df['avg_ech'].iloc[0])))
+        if not annual_df.empty:
+            for f in filieres:
+                col = f"{f}_yearly_mwh"
+                production_mix_year[f] = float(annual_df[col].iloc[0]) if col in annual_df.columns else 0.0
+        else:
+            # Fallback: sum half-hourly MW values / 2 to get MWh
+            filieres_sum_sql = ', '.join([f"COALESCE(SUM({f}), 0) / 2.0 as {f}" for f in filieres])
+            with get_duckdb_connection() as conn:
+                path = settings.S3_PATHS['production']
+                fallback_df = conn.execute(f"""
+                    SELECT {filieres_sum_sql}
+                    FROM read_parquet(?)
+                    WHERE EXTRACT(YEAR FROM date_heure) = EXTRACT(YEAR FROM CURRENT_DATE)
+                """, [path]).fetchdf()
+            production_mix_year = {f: float(fallback_df[f].iloc[0]) for f in filieres}
+    except Exception:
+        production_mix_year = {f: 0.0 for f in filieres}
 
     return {
-        'date': latest_date,
-        'avg_conso': avg_conso,
+        'dashboard_date': dashboard_date,
+        'peak_year_value': peak_year_value,
+        'peak_year_datetime': peak_year_datetime,
+        'peak_all_value': peak_all_value,
+        'peak_all_datetime': peak_all_datetime,
         'conso_ts': conso_ts,
-        'production_mix': production_mix,
-        'total_production': total_production,
-        'avg_echanges': avg_echanges,
+        'production_ts': production_ts,
+        'production_mix_year': production_mix_year,
     }

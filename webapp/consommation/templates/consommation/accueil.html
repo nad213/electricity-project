@@ -29,8 +29,8 @@
 </div>
 
 {% if has_dashboard_data %}
-<!-- Dashboard du jour -->
-<div class="row mb-2 align-items-center">
+<!-- Date label -->
+<div class="row mb-3 align-items-center">
     <div class="col-12">
         <p class="text-muted mb-0" style="font-size: 0.8125rem;">
             <i class="ti ti-calendar me-1"></i>
@@ -39,72 +39,46 @@
     </div>
 </div>
 
-<!-- KPI Cards -->
-<div class="row row-cards mb-4">
-    <div class="col-md-4">
-        <div class="card stat-card">
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <span class="stat-label">Consommation moyenne</span>
-                    <div class="stat-icon stat-icon-blue">
-                        <i class="ti ti-bolt"></i>
-                    </div>
-                </div>
-                <div class="stat-value">{{ avg_conso }} <span class="stat-unit">MW</span></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card stat-card">
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <span class="stat-label">Production nationale</span>
-                    <div class="stat-icon stat-icon-amber">
-                        <i class="ti ti-building-factory"></i>
-                    </div>
-                </div>
-                <div class="stat-value">{{ total_production }} <span class="stat-unit">MW</span></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card stat-card">
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <span class="stat-label">
-                        Solde échanges
-                        {% if echanges_positif %}
-                            <span class="badge badge-export ms-1">Export</span>
-                        {% else %}
-                            <span class="badge badge-import ms-1">Import</span>
-                        {% endif %}
-                    </span>
-                    <div class="stat-icon {% if echanges_positif %}stat-icon-green{% else %}stat-icon-red{% endif %}">
-                        <i class="ti ti-arrows-exchange"></i>
-                    </div>
-                </div>
-                <div class="stat-value {% if echanges_positif %}stat-value-green{% else %}stat-value-red{% endif %}">
-                    {% if echanges_positif %}+{% else %}-{% endif %}{{ avg_echanges_display }} <span class="stat-unit">MW</span>
-                </div>
-            </div>
-        </div>
+<!-- Section Consommation -->
+<div class="row mb-2">
+    <div class="col-12">
+        <h2 style="font-size: 1.125rem; font-weight: 600; color: #FAFAFA; margin-bottom: 0.75rem;">
+            <i class="ti ti-bolt me-2" style="color: #22D3EE;"></i>Consommation
+        </h2>
     </div>
 </div>
 
-<!-- Charts -->
 <div class="row row-cards mb-4">
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-header">
-                <h3 class="card-title">Mix de production</h3>
-            </div>
-            <div class="card-body p-2">
-                <div id="chart-donut"></div>
+    <div class="col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span class="stat-label">Pic {{ current_year }}</span>
+                    <div class="stat-icon stat-icon-blue">
+                        <i class="ti ti-trending-up"></i>
+                    </div>
+                </div>
+                <div class="stat-value">{{ peak_year_value }} <span class="stat-unit">MW</span></div>
+                <small class="text-muted">{{ peak_year_date }} à {{ peak_year_time }}</small>
             </div>
         </div>
     </div>
+
+    <div class="col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span class="stat-label">Pic historique</span>
+                    <div class="stat-icon stat-icon-amber">
+                        <i class="ti ti-trophy"></i>
+                    </div>
+                </div>
+                <div class="stat-value">{{ peak_all_value }} <span class="stat-unit">MW</span></div>
+                <small class="text-muted">{{ peak_all_date }} à {{ peak_all_time }}</small>
+            </div>
+        </div>
+    </div>
+
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header">
@@ -112,6 +86,39 @@
             </div>
             <div class="card-body p-2">
                 <div id="chart-conso-jour"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section Production -->
+<div class="row mb-2">
+    <div class="col-12">
+        <h2 style="font-size: 1.125rem; font-weight: 600; color: #FAFAFA; margin-bottom: 0.75rem;">
+            <i class="ti ti-building-factory me-2" style="color: #FBBF24;"></i>Production
+        </h2>
+    </div>
+</div>
+
+<div class="row row-cards mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h3 class="card-title">Production du jour par filière</h3>
+            </div>
+            <div class="card-body p-2">
+                <div id="chart-production-jour"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h3 class="card-title">Mix énergétique {{ current_year }}</h3>
+            </div>
+            <div class="card-body p-2">
+                <div id="chart-mix-year"></div>
             </div>
         </div>
     </div>
@@ -192,11 +199,14 @@
     var plotConfig = {responsive: true};
     var chartData;
 
-    chartData = JSON.parse('{{ graph_mix|escapejs }}');
-    Plotly.newPlot('chart-donut', chartData.data, chartData.layout, plotConfig);
-
     chartData = JSON.parse('{{ graph_conso_jour|escapejs }}');
     Plotly.newPlot('chart-conso-jour', chartData.data, chartData.layout, plotConfig);
+
+    chartData = JSON.parse('{{ graph_production_jour|escapejs }}');
+    Plotly.newPlot('chart-production-jour', chartData.data, chartData.layout, plotConfig);
+
+    chartData = JSON.parse('{{ graph_mix_year|escapejs }}');
+    Plotly.newPlot('chart-mix-year', chartData.data, chartData.layout, plotConfig);
 })();
 </script>
 {% endif %}

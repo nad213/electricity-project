@@ -11,7 +11,7 @@ from .services import (
     get_production_date_range, get_production_filieres, get_production_data,
     get_production_annual_data, get_production_monthly_data,
     get_echanges_date_range, get_echanges_pays, get_echanges_data,
-    get_today_dashboard_data,
+    get_dashboard_data,
 )
 from .constants import (
     Colors, ChartConfig, FILIERE_COLORS, FILIERES,
@@ -236,12 +236,13 @@ def create_stacked_bar_chart(df, x_col, y_cols, colors, labels):
     return fig.to_json()
 
 
-def create_donut_chart(production_mix):
+def create_donut_chart(production_mix, unit='MW'):
     """
     Creates a Plotly donut chart for the production mix by filière.
 
     Args:
-        production_mix: dict {filiere_key: avg_mw}
+        production_mix: dict {filiere_key: value}
+        unit: unit string shown in hover (default 'MW', use 'MWh' for annual data)
 
     Returns:
         JSON string of the Plotly figure
@@ -250,10 +251,10 @@ def create_donut_chart(production_mix):
     values = []
     colors = []
 
-    for filiere, avg_mw in production_mix.items():
-        if avg_mw > 0:
+    for filiere, value in production_mix.items():
+        if value > 0:
             labels.append(FILIERES[filiere])
-            values.append(avg_mw)
+            values.append(value)
             colors.append(FILIERE_COLORS[filiere])
 
     fig = go.Figure(data=[go.Pie(
@@ -262,7 +263,7 @@ def create_donut_chart(production_mix):
         hole=0.6,
         marker=dict(colors=colors, line=dict(color='rgba(0,0,0,0)', width=0)),
         textinfo='percent',
-        hovertemplate='<b>%{label}</b><br>%{value:,.0f} MW<br>%{percent}<extra></extra>',
+        hovertemplate=f'<b>%{{label}}</b><br>%{{value:,.0f}} {unit}<br>%{{percent}}<extra></extra>',
     )])
 
     fig.update_layout(
@@ -314,6 +315,59 @@ def create_mini_line_chart(df, x_col, y_col):
     return fig.to_json()
 
 
+def create_stacked_area_chart(df, x_col, y_cols, colors, labels):
+    """
+    Creates a stacked area chart for intraday production by filière.
+
+    Args:
+        df     : DataFrame with x_col and y_cols columns
+        x_col  : name of the timestamp column
+        y_cols : list of filière column names (in stack order)
+        colors : dict {col: hex_color}
+        labels : dict {col: French label}
+
+    Returns:
+        JSON string of the Plotly figure
+    """
+    fig = go.Figure()
+    for col in y_cols:
+        if col not in df.columns:
+            continue
+        fig.add_trace(go.Scatter(
+            x=df[x_col],
+            y=df[col].fillna(0),
+            name=labels.get(col, col),
+            stackgroup='one',
+            mode='lines',
+            line=dict(width=0.5, color=colors.get(col, '#888')),
+            fillcolor=colors.get(col, '#888'),
+            hovertemplate=f'{labels.get(col, col)}: %{{y:,.0f}} MW<extra></extra>',
+        ))
+
+    fig.update_layout(
+        showlegend=True,
+        legend=dict(
+            orientation='h',
+            font=dict(color=ChartConfig.TEXT_COLOR, size=10),
+            bgcolor='rgba(0,0,0,0)',
+            x=0,
+            y=-0.2,
+        ),
+        xaxis_title_text='',
+        yaxis_title_text='MW',
+        margin=dict(l=50, r=10, t=10, b=60),
+        height=350,
+        plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
+        paper_bgcolor=ChartConfig.PAPER_COLOR,
+        font=dict(color=ChartConfig.TEXT_COLOR),
+        hovermode='x unified',
+    )
+    fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR, tickformat='%H:%M')
+    fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR, zerolinecolor=ChartConfig.GRID_COLOR)
+
+    return fig.to_json()
+
+
 def accueil(request):
     """
     Home page - welcome page with latest day dashboard data.
@@ -321,22 +375,34 @@ def accueil(request):
     """
     context = {}
     try:
-        data = get_today_dashboard_data()
+        data = get_dashboard_data()
         if data:
-            graph_mix = create_donut_chart(data['production_mix'])
+            filieres_list = list(FILIERES.keys())
             graph_conso_jour = create_mini_line_chart(
                 data['conso_ts'], x_col='date_heure', y_col='consommation'
             )
+            graph_production_jour = create_stacked_area_chart(
+                data['production_ts'],
+                x_col='date_heure',
+                y_cols=filieres_list,
+                colors=FILIERE_COLORS,
+                labels=FILIERES,
+            )
+            graph_mix_year = create_donut_chart(data['production_mix_year'], unit='MWh')
+
             context = {
                 'has_dashboard_data': True,
-                'dashboard_date': data['date'],
-                'avg_conso': f"{data['avg_conso']:,}".replace(',', '\u202f'),
-                'total_production': f"{data['total_production']:,}".replace(',', '\u202f'),
-                'avg_echanges': data['avg_echanges'],
-                'avg_echanges_display': f"{abs(data['avg_echanges']):,}".replace(',', '\u202f'),
-                'echanges_positif': data['avg_echanges'] >= 0,
-                'graph_mix': graph_mix,
+                'dashboard_date': data['dashboard_date'],
+                'current_year': data['peak_year_datetime'].year,
+                'peak_year_value': f"{data['peak_year_value']:,}".replace(',', '\u202f'),
+                'peak_year_date': data['peak_year_datetime'].strftime('%d/%m/%Y'),
+                'peak_year_time': data['peak_year_datetime'].strftime('%H:%M'),
+                'peak_all_value': f"{data['peak_all_value']:,}".replace(',', '\u202f'),
+                'peak_all_date': data['peak_all_datetime'].strftime('%d/%m/%Y'),
+                'peak_all_time': data['peak_all_datetime'].strftime('%H:%M'),
                 'graph_conso_jour': graph_conso_jour,
+                'graph_production_jour': graph_production_jour,
+                'graph_mix_year': graph_mix_year,
             }
     except Exception:
         pass
