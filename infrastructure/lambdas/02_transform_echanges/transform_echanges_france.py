@@ -4,6 +4,25 @@ import pandas as pd
 import boto3
 from datetime import datetime
 
+def merge_with_existing(s3, bucket, key, new_df, merge_key):
+    """
+    Merge new_df avec le fichier existant sur S3.
+    new_df a la priorité (updates), l'ancien comble les trous (données supprimées par ODRE).
+    """
+    try:
+        old_obj = s3.get_object(Bucket=bucket, Key=key)
+        old_df = pd.read_parquet(io.BytesIO(old_obj['Body'].read()))
+    except s3.exceptions.NoSuchKey:
+        return new_df
+
+    new_keys = set(new_df[merge_key].unique())
+    old_only = old_df[~old_df[merge_key].isin(new_keys)]
+    print(f"Merge {key}: {len(new_df)} new rows + {len(old_only)} preserved old rows")
+
+    result = pd.concat([new_df, old_only], ignore_index=True)
+    return result.sort_values(merge_key).reset_index(drop=True)
+
+
 def lambda_handler(event, context):
     S3_BUCKET = os.environ['BUCKET_NAME']
     S3_PREFIX_IN = '01_downloaded'
@@ -90,6 +109,7 @@ def lambda_handler(event, context):
         print(f"Size after filtering NULL rows: {len(df_result)}")
 
         # 3. Sauvegarder le fichier principal avec toutes les données
+        df_result = merge_with_existing(s3, S3_BUCKET, f"{S3_PREFIX_OUT}/echanges_france_detail.parquet", df_result, "date_heure")
         result_buffer = io.BytesIO()
         df_result.to_parquet(result_buffer, index=False)
         result_buffer.seek(0)
@@ -130,6 +150,7 @@ def lambda_handler(event, context):
         df_monthly["year_month"] = df_monthly["year"].astype(str) + "-" + df_monthly["month"].astype(str).str.zfill(2)
 
         # Sauvegarder l'agrégation mensuelle
+        df_monthly = merge_with_existing(s3, S3_BUCKET, f"{S3_PREFIX_OUT}/echanges_mensuels.parquet", df_monthly, "year_month")
         monthly_buffer = io.BytesIO()
         df_monthly.to_parquet(monthly_buffer, index=False)
         monthly_buffer.seek(0)
@@ -149,6 +170,7 @@ def lambda_handler(event, context):
         rename_dict = {col: col.replace("_mwh", "_yearly_mwh") for col in mwh_cols}
         df_yearly.rename(columns=rename_dict, inplace=True)
 
+        df_yearly = merge_with_existing(s3, S3_BUCKET, f"{S3_PREFIX_OUT}/echanges_annuels.parquet", df_yearly, "year")
         yearly_buffer = io.BytesIO()
         df_yearly.to_parquet(yearly_buffer, index=False)
         yearly_buffer.seek(0)

@@ -4,6 +4,25 @@ import pandas as pd
 import boto3
 from datetime import datetime
 
+def merge_with_existing(s3, bucket, key, new_df, merge_key):
+    """
+    Merge new_df avec le fichier existant sur S3.
+    new_df a la priorité (updates), l'ancien comble les trous (données supprimées par ODRE).
+    """
+    try:
+        old_obj = s3.get_object(Bucket=bucket, Key=key)
+        old_df = pd.read_parquet(io.BytesIO(old_obj['Body'].read()))
+    except s3.exceptions.NoSuchKey:
+        return new_df
+
+    new_keys = set(new_df[merge_key].unique())
+    old_only = old_df[~old_df[merge_key].isin(new_keys)]
+    print(f"Merge {key}: {len(new_df)} new rows + {len(old_only)} preserved old rows")
+
+    result = pd.concat([new_df, old_only], ignore_index=True)
+    return result.sort_values(merge_key).reset_index(drop=True)
+
+
 def lambda_handler(event, context):
     S3_BUCKET = os.environ['BUCKET_NAME']
     S3_PREFIX_IN = '01_downloaded'
@@ -72,6 +91,7 @@ def lambda_handler(event, context):
         df_result = pd.concat([df_cons_def_unique, df_tr_unique], ignore_index=True)
 
         # Save df_result
+        df_result = merge_with_existing(s3, S3_BUCKET, f"{S3_PREFIX_OUT}/consommation_france_puissance.parquet", df_result, "date_heure")
         result_buffer = io.BytesIO()
         df_result.to_parquet(result_buffer, index=False)
         result_buffer.seek(0)
@@ -81,7 +101,6 @@ def lambda_handler(event, context):
             Key=f"{S3_PREFIX_OUT}/consommation_france_puissance.parquet"
         )
         print(f"File consommation_france_puissance saved with {len(df_result)} rows.")
-        print(f"Size of df_result: {len(df_result)}")
 
         # Calculate energy (MWh): divide by 4 for Real-Time (15 min), by 2 for Consolidated (30 min)
         df_result["year"] = df_result["date_heure"].dt.year
@@ -99,8 +118,10 @@ def lambda_handler(event, context):
         df_monthly["year_month"] = df_monthly["year"].astype(str) + "-" + df_monthly["month"].astype(str).str.zfill(2)
 
         # 3. Save results to S3
+        df_monthly_out = df_monthly[["year_month", "monthly_consumption"]]
+        df_monthly_out = merge_with_existing(s3, S3_BUCKET, f"{S3_PREFIX_OUT}/consommation_mensuelle.parquet", df_monthly_out, "year_month")
         monthly_buffer = io.BytesIO()
-        df_monthly[["year_month", "monthly_consumption"]].to_parquet(monthly_buffer, index=False)
+        df_monthly_out.to_parquet(monthly_buffer, index=False)
         monthly_buffer.seek(0)
         s3.upload_fileobj(
             Fileobj=monthly_buffer,
@@ -110,6 +131,7 @@ def lambda_handler(event, context):
 
         df_yearly = df_monthly.groupby("year")["monthly_consumption"].sum().reset_index()
         df_yearly.rename(columns={"monthly_consumption": "yearly_consumption"}, inplace=True)
+        df_yearly = merge_with_existing(s3, S3_BUCKET, f"{S3_PREFIX_OUT}/consommation_annuelle.parquet", df_yearly, "year")
         yearly_buffer = io.BytesIO()
         df_yearly.to_parquet(yearly_buffer, index=False)
         yearly_buffer.seek(0)
