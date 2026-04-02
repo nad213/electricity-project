@@ -303,23 +303,27 @@ def get_dashboard_data():
     Returns None if data is unavailable.
     """
     latest_day_subquery = "SELECT MAX(CAST(date_heure AS DATE)) FROM read_parquet(?)"
+    filieres = list(FILIERES.keys())
+    filieres_sql = ', '.join(filieres)
+    filieres_sum_sql = ', '.join([f"COALESCE(SUM({f}), 0) / 2.0 as {f}" for f in filieres])
 
-    # 1+2+3. Consumption queries (all on the same parquet file)
+    puissance_path = settings.S3_PATHS['puissance']
+    production_path = settings.S3_PATHS['production']
+    production_annuel_path = settings.S3_PATHS['production_annuel']
+
     with get_duckdb_connection() as conn:
-        path = settings.S3_PATHS['puissance']
-
         # Peak conso current year
         peak_year_df = conn.execute("""
             SELECT date_heure, consommation FROM read_parquet(?)
             WHERE EXTRACT(YEAR FROM date_heure) = EXTRACT(YEAR FROM CURRENT_DATE)
             ORDER BY consommation DESC LIMIT 1
-        """, [path]).fetchdf()
+        """, [puissance_path]).fetchdf()
 
         # Peak conso all history
         peak_all_df = conn.execute("""
             SELECT date_heure, consommation FROM read_parquet(?)
             ORDER BY consommation DESC LIMIT 1
-        """, [path]).fetchdf()
+        """, [puissance_path]).fetchdf()
 
         # Consumption time series for the latest available day
         conso_ts = conn.execute(f"""
@@ -327,56 +331,47 @@ def get_dashboard_data():
             FROM read_parquet(?)
             WHERE CAST(date_heure AS DATE) = ({latest_day_subquery})
             ORDER BY date_heure
-        """, [path, path]).fetchdf()
+        """, [puissance_path, puissance_path]).fetchdf()
 
-    if conso_ts.empty:
-        return None
+        if conso_ts.empty:
+            return None
 
-    dashboard_date = pd.to_datetime(conso_ts['date_heure']).max().date()
-
-    peak_year_value = int(round(float(peak_year_df['consommation'].iloc[0])))
-    peak_year_datetime = pd.to_datetime(peak_year_df['date_heure'].iloc[0]).to_pydatetime()
-    peak_all_value = int(round(float(peak_all_df['consommation'].iloc[0])))
-    peak_all_datetime = pd.to_datetime(peak_all_df['date_heure'].iloc[0]).to_pydatetime()
-
-    # 4. Production time series for the latest available day (all filieres)
-    filieres = list(FILIERES.keys())
-    filieres_sql = ', '.join(filieres)
-    with get_duckdb_connection() as conn:
-        path = settings.S3_PATHS['production']
+        # Production time series for the latest available day (all filieres)
         production_ts = conn.execute(f"""
             SELECT date_heure, {filieres_sql}
             FROM read_parquet(?)
             WHERE CAST(date_heure AS DATE) = ({latest_day_subquery})
             ORDER BY date_heure
-        """, [path, path]).fetchdf()
+        """, [production_path, production_path]).fetchdf()
 
-    # 5. Production mix for current year (annual parquet first, fallback on detail)
-    production_mix_year = {}
-    try:
-        with get_duckdb_connection() as conn:
+        # Production mix for current year (annual parquet first, fallback on detail)
+        production_mix_year = {}
+        try:
             annual_df = conn.execute("""
                 SELECT * FROM read_parquet(?)
                 WHERE year = EXTRACT(YEAR FROM CURRENT_DATE)
-            """, [settings.S3_PATHS['production_annuel']]).fetchdf()
+            """, [production_annuel_path]).fetchdf()
 
-        if not annual_df.empty:
-            for f in filieres:
-                col = f"{f}_yearly_mwh"
-                production_mix_year[f] = float(annual_df[col].iloc[0]) if col in annual_df.columns else 0.0
-        else:
-            # Fallback: sum half-hourly MW values / 2 to get MWh
-            filieres_sum_sql = ', '.join([f"COALESCE(SUM({f}), 0) / 2.0 as {f}" for f in filieres])
-            with get_duckdb_connection() as conn:
-                path = settings.S3_PATHS['production']
+            if not annual_df.empty:
+                for f in filieres:
+                    col = f"{f}_yearly_mwh"
+                    production_mix_year[f] = float(annual_df[col].iloc[0]) if col in annual_df.columns else 0.0
+            else:
+                # Fallback: sum half-hourly MW values / 2 to get MWh
                 fallback_df = conn.execute(f"""
                     SELECT {filieres_sum_sql}
                     FROM read_parquet(?)
                     WHERE EXTRACT(YEAR FROM date_heure) = EXTRACT(YEAR FROM CURRENT_DATE)
-                """, [path]).fetchdf()
-            production_mix_year = {f: float(fallback_df[f].iloc[0]) for f in filieres}
-    except Exception:
-        production_mix_year = {f: 0.0 for f in filieres}
+                """, [production_path]).fetchdf()
+                production_mix_year = {f: float(fallback_df[f].iloc[0]) for f in filieres}
+        except Exception:
+            production_mix_year = {f: 0.0 for f in filieres}
+
+    dashboard_date = pd.to_datetime(conso_ts['date_heure']).max().date()
+    peak_year_value = int(round(float(peak_year_df['consommation'].iloc[0])))
+    peak_year_datetime = pd.to_datetime(peak_year_df['date_heure'].iloc[0]).to_pydatetime()
+    peak_all_value = int(round(float(peak_all_df['consommation'].iloc[0])))
+    peak_all_datetime = pd.to_datetime(peak_all_df['date_heure'].iloc[0]).to_pydatetime()
 
     return {
         'dashboard_date': dashboard_date,
