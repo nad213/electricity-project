@@ -238,7 +238,7 @@ def create_stacked_bar_chart(df, x_col, y_cols, colors, labels):
 
 def create_donut_chart(production_mix, unit='MW'):
     """
-    Creates a Plotly donut chart for the production mix by filière.
+    Creates a Plotly horizontal bar chart for the production mix by filière.
 
     Args:
         production_mix: dict {filiere_key: value}
@@ -247,23 +247,27 @@ def create_donut_chart(production_mix, unit='MW'):
     Returns:
         JSON string of the Plotly figure
     """
-    labels = []
-    values = []
-    colors = []
+    items = [
+        (FILIERES[f], v, FILIERE_COLORS[f])
+        for f, v in production_mix.items()
+        if v > 0
+    ]
+    items.sort(key=lambda x: x[1])
 
-    for filiere, value in production_mix.items():
-        if value > 0:
-            labels.append(FILIERES[filiere])
-            values.append(value)
-            colors.append(FILIERE_COLORS[filiere])
+    total = sum(v for _, v, _ in items)
+    labels = [label for label, _, _ in items]
+    values = [v for _, v, _ in items]
+    colors = [c for _, _, c in items]
 
-    fig = go.Figure(data=[go.Pie(
-        labels=labels,
-        values=values,
-        hole=0.6,
-        marker=dict(colors=colors, line=dict(color='rgba(0,0,0,0)', width=0)),
-        textinfo='percent',
-        hovertemplate=f'<b>%{{label}}</b><br>%{{value:,.0f}} {unit}<br>%{{percent}}<extra></extra>',
+    fig = go.Figure(data=[go.Bar(
+        x=values,
+        y=labels,
+        orientation='h',
+        marker=dict(color=colors),
+        text=[f'{v/total:.0%}' for v in values],
+        textposition='inside',
+        insidetextanchor='middle',
+        hovertemplate=f'<b>%{{y}}</b><br>%{{x:,.0f}} {unit}<br>%{{text}}<extra></extra>',
     )])
 
     fig.update_layout(
@@ -272,15 +276,14 @@ def create_donut_chart(production_mix, unit='MW'):
         font=dict(color=ChartConfig.TEXT_COLOR, size=12),
         margin=dict(l=10, r=10, t=10, b=10),
         height=300,
-        showlegend=True,
-        legend=dict(
-            font=dict(color=ChartConfig.TEXT_COLOR, size=11),
-            bgcolor='rgba(0,0,0,0)',
-            orientation='v',
-            x=1.02,
-            y=0.5,
-            xanchor='left',
-            yanchor='middle',
+        showlegend=False,
+        xaxis=dict(
+            showgrid=False,
+            showticklabels=False,
+            zeroline=False,
+        ),
+        yaxis=dict(
+            tickfont=dict(size=11),
         ),
     )
 
