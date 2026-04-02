@@ -247,44 +247,34 @@ def create_donut_chart(production_mix, unit='MW'):
     Returns:
         JSON string of the Plotly figure
     """
-    items = [
-        (FILIERES[f], v, FILIERE_COLORS[f])
-        for f, v in production_mix.items()
-        if v > 0
-    ]
-    items.sort(key=lambda x: x[1])
+    total = sum(v for v in production_mix.values() if v > 0)
+    labels = []
+    values = []
+    colors = []
+    texts = []
 
-    total = sum(v for _, v, _ in items)
-    labels = [label for label, _, _ in items]
-    values = [v for _, v, _ in items]
-    colors = [c for _, _, c in items]
+    for filiere, value in production_mix.items():
+        if value > 0:
+            labels.append(FILIERES[filiere])
+            values.append(value)
+            colors.append(FILIERE_COLORS[filiere])
+            texts.append(f'{FILIERES[filiere]}<br>{value/total:.0%}')
 
-    fig = go.Figure(data=[go.Bar(
-        x=values,
-        y=labels,
-        orientation='h',
-        marker=dict(color=colors),
-        text=[f'{v/total:.0%}' for v in values],
-        textposition='inside',
-        insidetextanchor='middle',
-        hovertemplate=f'<b>%{{y}}</b><br>%{{x:,.0f}} {unit}<br>%{{text}}<extra></extra>',
+    fig = go.Figure(data=[go.Treemap(
+        labels=labels,
+        values=values,
+        parents=[''] * len(labels),
+        text=texts,
+        textinfo='text',
+        marker=dict(colors=colors),
+        hovertemplate=f'<b>%{{label}}</b><br>%{{value:,.0f}} {unit}<br>%{{percentRoot:.0%}}<extra></extra>',
     )])
 
     fig.update_layout(
         paper_bgcolor=ChartConfig.PAPER_COLOR,
-        plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
-        font=dict(color=ChartConfig.TEXT_COLOR, size=12),
-        margin=dict(l=10, r=10, t=10, b=10),
+        font=dict(color='#ffffff', size=12),
+        margin=dict(l=0, r=0, t=0, b=0),
         height=300,
-        showlegend=False,
-        xaxis=dict(
-            showgrid=False,
-            showticklabels=False,
-            zeroline=False,
-        ),
-        yaxis=dict(
-            tickfont=dict(size=11),
-        ),
     )
 
     return fig.to_json()
