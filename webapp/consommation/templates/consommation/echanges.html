@@ -31,6 +31,8 @@
                         Télécharger CSV
                     </a>
                 </div>
+
+                {% include 'partials/_data_source.html' with collapse_id="src-echanges" source="ODRE – Données éco2mix RTE, échanges commerciaux aux frontières" calcul="Flux physiques d'échanges commerciaux par pas de 30 minutes (MW). Valeurs positives = import, négatives = export." %}
             </div>
         </div>
     </div>

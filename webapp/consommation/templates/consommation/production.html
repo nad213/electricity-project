@@ -36,6 +36,8 @@
                         Télécharger CSV
                     </a>
                 </div>
+
+                {% include 'partials/_data_source.html' with collapse_id="src-production" source="ODRE – Données éco2mix RTE, production par filière" calcul="Puissance de production instantanée par filière, moyennée sur des pas de 30 minutes (MW)" %}
             </div>
         </div>
     </div>
@@ -98,6 +100,8 @@
                         </div>
                     </div>
                 </div>
+
+                {% include 'partials/_data_source.html' with collapse_id="src-production-energie" source="ODRE – Données éco2mix RTE consolidées" calcul="Somme de l'énergie produite par filière, agrégée par mois et par année (GWh)" %}
             </div>
         </div>
     </div>

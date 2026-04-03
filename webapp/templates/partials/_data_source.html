@@ -1,0 +1,10 @@
+<div class="mt-2">
+    <a data-bs-toggle="collapse" href="#{{ collapse_id }}" class="text-muted small text-decoration-none" role="button" aria-expanded="false">
+        <i class="ti ti-info-circle me-1"></i>Source et méthodologie
+    </a>
+    <div class="collapse" id="{{ collapse_id }}">
+        <div class="text-muted small mt-1 ps-1 border-start border-2">
+            <strong>Source :</strong> {{ source }}{% if calcul %}<br><strong>Règle de calcul :</strong> {{ calcul }}{% endif %}
+        </div>
+    </div>
+</div>

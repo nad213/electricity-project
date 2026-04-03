@@ -35,6 +35,8 @@
                         Télécharger CSV
                     </a>
                 </div>
+
+                {% include 'partials/_data_source.html' with collapse_id="src-puissance" source="ODRE – Données éco2mix RTE, puissance consommée brute" calcul="Puissance instantanée moyennée sur des pas de 30 minutes (MW)" %}
             </div>
         </div>
     </div>
@@ -95,6 +97,8 @@
                         </div>
                     </div>
                 </div>
+
+                {% include 'partials/_data_source.html' with collapse_id="src-energie" source="ODRE – Données éco2mix RTE consolidées" calcul="Somme de l'énergie consommée agrégée par mois et par année (GWh)" %}
             </div>
         </div>
     </div>
