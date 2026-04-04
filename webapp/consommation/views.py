@@ -347,6 +347,11 @@ def create_stacked_area_chart(df, x_col, y_cols, colors, labels):
         paper_bgcolor=ChartConfig.PAPER_COLOR,
         font=dict(color=ChartConfig.TEXT_COLOR),
         hovermode='x unified',
+        hoverlabel=dict(
+            bgcolor='#1E293B',
+            bordercolor='#475569',
+            font=dict(color='#F1F5F9', size=11),
+        ),
     )
     fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR, tickformat='%H:%M')
     fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR, zerolinecolor=ChartConfig.GRID_COLOR)
