@@ -338,17 +338,10 @@ def create_stacked_area_chart(df, x_col, y_cols, colors, labels):
         ))
 
     fig.update_layout(
-        showlegend=True,
-        legend=dict(
-            orientation='h',
-            font=dict(color=ChartConfig.TEXT_COLOR, size=10),
-            bgcolor='rgba(0,0,0,0)',
-            x=0,
-            y=-0.2,
-        ),
+        showlegend=False,
         xaxis_title_text='',
         yaxis_title_text='MW',
-        margin=dict(l=50, r=10, t=10, b=60),
+        margin=dict(l=50, r=10, t=10, b=10),
         height=350,
         plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
         paper_bgcolor=ChartConfig.PAPER_COLOR,
