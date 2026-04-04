@@ -112,12 +112,12 @@ resource "aws_lambda_permission" "allow_cloudwatch_3" {
 
 
 # --------------------------------------------
-# Lambda Permission: Allow EventBridge to invoke transform_all
+# Lambda Permission: Allow EventBridge to invoke transform_odre_eco2mix
 # --------------------------------------------
-resource "aws_lambda_permission" "allow_cloudwatch_transform_all" {
-  statement_id  = "AllowExecutionFromCloudWatchTransformAll"
+resource "aws_lambda_permission" "allow_cloudwatch_transform_odre_eco2mix" {
+  statement_id  = "AllowExecutionFromCloudWatchTransformOdreEco2mix"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.transform_all.function_name
+  function_name = aws_lambda_function.transform_odre_eco2mix.function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.daily_trigger_transform.arn
 }

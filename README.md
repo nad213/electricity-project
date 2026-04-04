@@ -45,11 +45,10 @@ Django Web App
 
 - **S3 Bucket** : Stockage des données brutes (CSV) et transformées (Parquet)
 - **SQS Queue** : Queue de téléchargement
-- **3 Lambda Functions** :
+- **Lambda Functions** :
   - `00_csv_to_sqs` : Initialise les téléchargements
   - `01_downloader` : Télécharge les fichiers CSV
-  - `02_transform_conso_france` : Transforme les données de consommation
-  - `02_transform_production_france` : Transforme les données de production
+  - `02_transform_odre_eco2mix` : Transforme les données eCO2mix (conso, production, échanges)
 - **CloudWatch Events** : Déclencheurs quotidiens (cron)
 
 ### Déploiement infrastructure

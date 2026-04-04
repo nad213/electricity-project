@@ -43,17 +43,17 @@ resource "aws_lambda_function" "downloader" {
 }
 
 #################################################
-# 02. TRANSFORM ALL LAMBDA (02_transform_all)
+# 02. TRANSFORM ODRE ECO2MIX LAMBDA (02_transform_odre_eco2mix)
 #################################################
-resource "aws_lambda_function" "transform_all" {
+resource "aws_lambda_function" "transform_odre_eco2mix" {
   layers = [
     "arn:aws:lambda:eu-west-3:336392948345:layer:AWSSDKPandas-Python39:33"
   ]
-  filename         = "../lambdas/02_transform/transform_all.zip"
-  source_code_hash = filebase64sha256("../lambdas/02_transform/transform_all.zip")
-  function_name    = "02_transform_all"
+  filename         = "../lambdas/02_transform_odre_eco2mix/transform_odre_eco2mix.zip"
+  source_code_hash = filebase64sha256("../lambdas/02_transform_odre_eco2mix/transform_odre_eco2mix.zip")
+  function_name    = "02_transform_odre_eco2mix"
   role             = aws_iam_role.lambda_common_role.arn
-  handler          = "transform_all.lambda_handler"
+  handler          = "transform_odre_eco2mix.lambda_handler"
   runtime          = "python3.9"
   timeout          = 300
   memory_size      = 2048
@@ -123,7 +123,7 @@ resource "aws_cloudwatch_event_target" "trigger_csv_to_sqs_3" {
 }
 
 #################################################
-# CloudWatch Event Rule: Daily Trigger for transform_all
+# CloudWatch Event Rule: Daily Trigger for transform_odre_eco2mix
 #################################################
 resource "aws_cloudwatch_event_rule" "daily_trigger_transform" {
   name                = "trigger-transform-all-daily"
@@ -131,10 +131,10 @@ resource "aws_cloudwatch_event_rule" "daily_trigger_transform" {
 }
 
 #################################################
-# CloudWatch Event Target: Rule Target for transform_all
+# CloudWatch Event Target: Rule Target for transform_odre_eco2mix
 #################################################
-resource "aws_cloudwatch_event_target" "trigger_transform_all" {
+resource "aws_cloudwatch_event_target" "trigger_transform_odre_eco2mix" {
   rule      = aws_cloudwatch_event_rule.daily_trigger_transform.name
-  target_id = "transform_all"
-  arn       = aws_lambda_function.transform_all.arn
+  target_id = "transform_odre_eco2mix"
+  arn       = aws_lambda_function.transform_odre_eco2mix.arn
 }
