@@ -43,6 +43,7 @@ resource "aws_iam_policy" "lambda_common_policy" {
         Resource = [
           "${aws_s3_bucket.elecshiny_bucket.arn}/99_params/filelist.csv",
           "${aws_s3_bucket.elecshiny_bucket.arn}/01_downloaded/*",
+          "${aws_s3_bucket.elecshiny_bucket.arn}/02_clean/*",
           "${aws_s3_bucket.elecshiny_bucket.arn}/logs/*"
         ]
 
@@ -111,34 +112,12 @@ resource "aws_lambda_permission" "allow_cloudwatch_3" {
 
 
 # --------------------------------------------
-# Lambda Permission: Allow EventBridge to invoke transform_conso_france
+# Lambda Permission: Allow EventBridge to invoke transform_all
 # --------------------------------------------
-resource "aws_lambda_permission" "allow_cloudwatch_transform" {
-  statement_id  = "AllowExecutionFromCloudWatchTransform"
+resource "aws_lambda_permission" "allow_cloudwatch_transform_all" {
+  statement_id  = "AllowExecutionFromCloudWatchTransformAll"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.transform_conso_france.function_name
+  function_name = aws_lambda_function.transform_all.function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.daily_trigger_transform.arn
-}
-
-# --------------------------------------------
-# Lambda Permission: Allow EventBridge to invoke transform_production_france
-# --------------------------------------------
-resource "aws_lambda_permission" "allow_cloudwatch_transform_production" {
-  statement_id  = "AllowExecutionFromCloudWatchTransformProduction"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.transform_production_france.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.daily_trigger_transform_production.arn
-}
-
-# --------------------------------------------
-# Lambda Permission: Allow EventBridge to invoke transform_echanges_france
-# --------------------------------------------
-resource "aws_lambda_permission" "allow_cloudwatch_transform_echanges" {
-  statement_id  = "AllowExecutionFromCloudWatchTransformEchanges"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.transform_echanges_france.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.daily_trigger_transform_echanges.arn
 }

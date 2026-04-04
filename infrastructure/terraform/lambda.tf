@@ -43,45 +43,17 @@ resource "aws_lambda_function" "downloader" {
 }
 
 #################################################
-# 02. TRANSFORM CONSO-FRANCE LAMBDA (02_transform_conso-france)
+# 02. TRANSFORM ALL LAMBDA (02_transform_all)
 #################################################
-# 02.1 Lambda Function: 02_transform_conso_france
-# --------------------------------------------
-resource "aws_lambda_function" "transform_conso_france" {
+resource "aws_lambda_function" "transform_all" {
   layers = [
     "arn:aws:lambda:eu-west-3:336392948345:layer:AWSSDKPandas-Python39:33"
   ]
-  filename         = "../lambdas/02_transform_conso/transform_conso_france.zip"
-  source_code_hash = filebase64sha256("../lambdas/02_transform_conso/transform_conso_france.zip")
-  function_name    = "02_transform_conso_france"
+  filename         = "../lambdas/02_transform/transform_all.zip"
+  source_code_hash = filebase64sha256("../lambdas/02_transform/transform_all.zip")
+  function_name    = "02_transform_all"
   role             = aws_iam_role.lambda_common_role.arn
-  handler          = "transform_conso_france.lambda_handler"
-  runtime          = "python3.9"
-  timeout          = 300
-  memory_size      = 2048
-  #source_code_hash = filebase64sha256("lambda/02_transform/transform_conso_france.zip")
-
-  environment {
-    variables = {
-      BUCKET_NAME = aws_s3_bucket.elecshiny_bucket.bucket
-    }
-  }
-}
-
-#################################################
-# 02. TRANSFORM PRODUCTION-FRANCE LAMBDA (02_transform_production-france)
-#################################################
-# 02.2 Lambda Function: 02_transform_production_france
-# --------------------------------------------
-resource "aws_lambda_function" "transform_production_france" {
-  layers = [
-    "arn:aws:lambda:eu-west-3:336392948345:layer:AWSSDKPandas-Python39:33"
-  ]
-  filename         = "../lambdas/02_transform_production/transform_production_france.zip"
-  source_code_hash = filebase64sha256("../lambdas/02_transform_production/transform_production_france.zip")
-  function_name    = "02_transform_production_france"
-  role             = aws_iam_role.lambda_common_role.arn
-  handler          = "transform_production_france.lambda_handler"
+  handler          = "transform_all.lambda_handler"
   runtime          = "python3.9"
   timeout          = 300
   memory_size      = 2048
@@ -151,77 +123,18 @@ resource "aws_cloudwatch_event_target" "trigger_csv_to_sqs_3" {
 }
 
 #################################################
-# CloudWatch Event Rule: Daily Trigger for transform_conso_france
+# CloudWatch Event Rule: Daily Trigger for transform_all
 #################################################
 resource "aws_cloudwatch_event_rule" "daily_trigger_transform" {
-  name                = "trigger-transform-conso-france-daily"
+  name                = "trigger-transform-all-daily"
   schedule_expression = "cron(0 7,13,19 * * ? *)" # 3x daily at 07:00, 13:00, 19:00 UTC
 }
 
 #################################################
-# CloudWatch Event Target: Rule Target for transform_conso_france
+# CloudWatch Event Target: Rule Target for transform_all
 #################################################
-resource "aws_cloudwatch_event_target" "trigger_transform_conso_france" {
+resource "aws_cloudwatch_event_target" "trigger_transform_all" {
   rule      = aws_cloudwatch_event_rule.daily_trigger_transform.name
-  target_id = "transform_conso_france"
-  arn       = aws_lambda_function.transform_conso_france.arn
-}
-
-#################################################
-# CloudWatch Event Rule: Daily Trigger for transform_production_france
-#################################################
-resource "aws_cloudwatch_event_rule" "daily_trigger_transform_production" {
-  name                = "trigger-transform-production-france-daily"
-  schedule_expression = "cron(0 7,13,19 * * ? *)" # 3x daily at 07:00, 13:00, 19:00 UTC
-}
-
-#################################################
-# CloudWatch Event Target: Rule Target for transform_production_france
-#################################################
-resource "aws_cloudwatch_event_target" "trigger_transform_production_france" {
-  rule      = aws_cloudwatch_event_rule.daily_trigger_transform_production.name
-  target_id = "transform_production_france"
-  arn       = aws_lambda_function.transform_production_france.arn
-}
-
-#################################################
-# 02. TRANSFORM ECHANGES-FRANCE LAMBDA (02_transform_echanges_france)
-#################################################
-# 02.3 Lambda Function: 02_transform_echanges_france
-# --------------------------------------------
-resource "aws_lambda_function" "transform_echanges_france" {
-  layers = [
-    "arn:aws:lambda:eu-west-3:336392948345:layer:AWSSDKPandas-Python39:33"
-  ]
-  filename         = "../lambdas/02_transform_echanges/transform_echanges_france.zip"
-  source_code_hash = filebase64sha256("../lambdas/02_transform_echanges/transform_echanges_france.zip")
-  function_name    = "02_transform_echanges_france"
-  role             = aws_iam_role.lambda_common_role.arn
-  handler          = "transform_echanges_france.lambda_handler"
-  runtime          = "python3.9"
-  timeout          = 300
-  memory_size      = 2048
-
-  environment {
-    variables = {
-      BUCKET_NAME = aws_s3_bucket.elecshiny_bucket.bucket
-    }
-  }
-}
-
-#################################################
-# CloudWatch Event Rule: Daily Trigger for transform_echanges_france
-#################################################
-resource "aws_cloudwatch_event_rule" "daily_trigger_transform_echanges" {
-  name                = "trigger-transform-echanges-france-daily"
-  schedule_expression = "cron(0 7,13,19 * * ? *)" # 3x daily at 07:00, 13:00, 19:00 UTC
-}
-
-#################################################
-# CloudWatch Event Target: Rule Target for transform_echanges_france
-#################################################
-resource "aws_cloudwatch_event_target" "trigger_transform_echanges_france" {
-  rule      = aws_cloudwatch_event_rule.daily_trigger_transform_echanges.name
-  target_id = "transform_echanges_france"
-  arn       = aws_lambda_function.transform_echanges_france.arn
+  target_id = "transform_all"
+  arn       = aws_lambda_function.transform_all.arn
 }
