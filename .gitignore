@@ -73,3 +73,6 @@ logs/
 
 # Local test scripts
 run_lambdas_local.py
+
+# Claude Code spec
+spec

@@ -66,6 +66,39 @@ resource "aws_lambda_function" "transform_odre_eco2mix" {
 }
 
 
+#################################################
+# 03. SCRAPE RTE PRODUCTION LAMBDA
+#################################################
+resource "aws_lambda_function" "scrape_rte_production" {
+  layers = [
+    "arn:aws:lambda:eu-west-3:336392948345:layer:AWSSDKPandas-Python39:33"
+  ]
+  filename         = "../lambdas/03_scrape_rte_production/scrape_rte_production.zip"
+  source_code_hash = filebase64sha256("../lambdas/03_scrape_rte_production/scrape_rte_production.zip")
+  function_name    = "03_scrape_rte_production"
+  role             = aws_iam_role.lambda_common_role.arn
+  handler          = "scrape_rte_production.lambda_handler"
+  runtime          = "python3.9"
+  timeout          = 120
+  memory_size      = 512
+
+  environment {
+    variables = {
+      BUCKET_NAME = aws_s3_bucket.elecshiny_bucket.bucket
+    }
+  }
+}
+
+resource "aws_cloudwatch_event_rule" "daily_trigger_rte_production" {
+  name                = "trigger-scrape-rte-production-daily"
+  schedule_expression = "cron(0 7 * * ? *)" # Daily at 07:00 UTC
+}
+
+resource "aws_cloudwatch_event_target" "trigger_scrape_rte_production" {
+  rule      = aws_cloudwatch_event_rule.daily_trigger_rte_production.name
+  target_id = "scrape_rte_production"
+  arn       = aws_lambda_function.scrape_rte_production.arn
+}
 
 # --------------------------------------------
 # Event Source Mapping: SQS -> Downloader Lambda

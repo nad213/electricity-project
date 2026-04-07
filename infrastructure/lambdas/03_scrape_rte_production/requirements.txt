@@ -1,0 +1,1 @@
+# pandas is provided by the AWSSDKPandas-Python39 Lambda layer
