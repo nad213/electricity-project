@@ -1,0 +1,3 @@
+url,file_name
+https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/eco2mix-national-tr/exports/parquet?lang=fr&timezone=Europe%2FBerlin,eco2mix-national-tr.parquet
+https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/eco2mix-national-cons-def/exports/parquet?lang=fr&timezone=Europe%2FBerlin,eco2mix-national-cons-def.parquet
