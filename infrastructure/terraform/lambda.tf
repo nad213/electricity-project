@@ -3,14 +3,14 @@
 #################################################
 resource "aws_lambda_function" "odre_eco2mix" {
   layers = [
-    "arn:aws:lambda:eu-west-3:336392948345:layer:AWSSDKPandas-Python39:33"
+    "arn:aws:lambda:eu-west-3:336392948345:layer:AWSSDKPandas-Python312:13"
   ]
   filename         = "../lambdas/01_odre_eco2mix/odre_eco2mix.zip"
   source_code_hash = filebase64sha256("../lambdas/01_odre_eco2mix/odre_eco2mix.zip")
   function_name    = "01_odre_eco2mix"
   role             = aws_iam_role.lambda_common_role.arn
   handler          = "odre_eco2mix.lambda_handler"
-  runtime          = "python3.9"
+  runtime          = "python3.12"
   timeout          = 300
   memory_size      = 2048
 
@@ -60,14 +60,14 @@ resource "aws_cloudwatch_event_target" "trigger_odre_3" {
 #################################################
 resource "aws_lambda_function" "scrape_rte_production" {
   layers = [
-    "arn:aws:lambda:eu-west-3:336392948345:layer:AWSSDKPandas-Python39:33"
+    "arn:aws:lambda:eu-west-3:336392948345:layer:AWSSDKPandas-Python312:13"
   ]
   filename         = "../lambdas/02_scrape_rte_production/scrape_rte_production.zip"
   source_code_hash = filebase64sha256("../lambdas/02_scrape_rte_production/scrape_rte_production.zip")
   function_name    = "02_scrape_rte_production"
   role             = aws_iam_role.lambda_common_role.arn
   handler          = "scrape_rte_production.lambda_handler"
-  runtime          = "python3.9"
+  runtime          = "python3.12"
   timeout          = 120
   memory_size      = 512
 
