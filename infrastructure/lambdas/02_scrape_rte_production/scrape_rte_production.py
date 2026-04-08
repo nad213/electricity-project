@@ -214,8 +214,8 @@ def lambda_handler(event, context):
         print(f"Synthèse: {len(synthese_blob)} filières: {list(synthese_blob.keys())}")
         df_m, df_y = build_production_dataframes(synthese_blob)
         uploads += [
-            ("02_clean/rte_production_mensuelle.parquet", df_m),
-            ("02_clean/rte_production_annuelle.parquet", df_y),
+            ("01_downloaded/portail_analyse_et_donnees/rte_production_mensuelle.parquet", df_m),
+            ("01_downloaded/portail_analyse_et_donnees/rte_production_annuelle.parquet", df_y),
         ]
 
         # --- Éolien ---
@@ -227,14 +227,14 @@ def lambda_handler(event, context):
         if eol_prod:
             df_m, df_y = build_production_dataframes(eol_prod)
             uploads += [
-                ("02_clean/rte_eolien_production_mensuelle.parquet", df_m),
-                ("02_clean/rte_eolien_production_annuelle.parquet", df_y),
+                ("01_downloaded/portail_analyse_et_donnees/rte_eolien_production_mensuelle.parquet", df_m),
+                ("01_downloaded/portail_analyse_et_donnees/rte_eolien_production_annuelle.parquet", df_y),
             ]
 
         eol_parc = next((b for b in eolien_blobs if b is not eol_prod and _has_quarterly(b)), None)
         if eol_parc:
             df = build_parc_installe_dataframe(eol_parc)
-            uploads.append(("02_clean/rte_eolien_parc_installe.parquet", df))
+            uploads.append(("01_downloaded/portail_analyse_et_donnees/rte_eolien_parc_installe.parquet", df))
 
         # --- Solaire ---
         print(f"Fetching {SOLAIRE_URL}")
@@ -245,21 +245,21 @@ def lambda_handler(event, context):
         if sol_prod:
             df_m, df_y = build_production_dataframes(sol_prod)
             uploads += [
-                ("02_clean/rte_solaire_production_mensuelle.parquet", df_m),
-                ("02_clean/rte_solaire_production_annuelle.parquet", df_y),
+                ("01_downloaded/portail_analyse_et_donnees/rte_solaire_production_mensuelle.parquet", df_m),
+                ("01_downloaded/portail_analyse_et_donnees/rte_solaire_production_annuelle.parquet", df_y),
             ]
 
         sol_parc = next((b for b in solaire_blobs if b is not sol_prod and _has_quarterly(b)), None)
         if sol_parc:
             df = build_parc_installe_dataframe(sol_parc)
-            uploads.append(("02_clean/rte_solaire_parc_installe.parquet", df))
+            uploads.append(("01_downloaded/portail_analyse_et_donnees/rte_solaire_parc_installe.parquet", df))
 
         sol_fc = _find_blob(solaire_blobs, key_contains="facteur")
         if sol_fc:
             df_m, df_y = build_facteur_charge_dataframes(sol_fc)
             uploads += [
-                ("02_clean/rte_solaire_facteur_charge_mensuel.parquet", df_m),
-                ("02_clean/rte_solaire_facteur_charge_annuel.parquet", df_y),
+                ("01_downloaded/portail_analyse_et_donnees/rte_solaire_facteur_charge_mensuel.parquet", df_m),
+                ("01_downloaded/portail_analyse_et_donnees/rte_solaire_facteur_charge_annuel.parquet", df_y),
             ]
 
         # --- Upload S3 ---

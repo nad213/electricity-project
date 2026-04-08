@@ -34,7 +34,7 @@ def download_files(s3, bucket):
         for chunk in response.iter_content(chunk_size=8192):
             buffer.write(chunk)
         buffer.seek(0)
-        s3_key = f"01_downloaded/{file_name}"
+        s3_key = f"01_downloaded/odre/{file_name}"
         s3.upload_fileobj(Fileobj=buffer, Bucket=bucket, Key=s3_key)
         print(f"SUCCESS: Uploaded to s3://{bucket}/{s3_key}")
 
@@ -356,7 +356,7 @@ def transform_echanges(s3, bucket, prefix_out, df_tr_full, df_cons_def_full):
 
 def lambda_handler(event, context):
     S3_BUCKET = os.environ['BUCKET_NAME']
-    S3_PREFIX_IN = '01_downloaded'
+    S3_PREFIX_IN = '01_downloaded/odre'
     S3_PREFIX_OUT = '02_clean'
     s3 = boto3.client('s3')
 
