@@ -1,5 +1,5 @@
 # --------------------------------------------
-# Common IAM Role for Lambdas (csv_to_sqs and 01_downloader)
+# Common IAM Role for Lambdas
 # --------------------------------------------
 resource "aws_iam_role" "lambda_common_role" {
   name = "lambda_common_role"
@@ -14,25 +14,14 @@ resource "aws_iam_role" "lambda_common_role" {
 }
 
 # --------------------------------------------
-# Common IAM Policy for SQS and S3
+# Common IAM Policy for S3 and CloudWatch Logs
 # --------------------------------------------
 resource "aws_iam_policy" "lambda_common_policy" {
   name        = "lambda_common_policy"
-  description = "Allows Lambdas to interact with SQS and S3 for the download workflow"
+  description = "Allows Lambdas to interact with S3 for the ETL pipeline"
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
-      # SQS Permissions (send, receive, delete messages, and read queue attributes)
-      {
-        Effect = "Allow",
-        Action = [
-          "sqs:SendMessage",
-          "sqs:ReceiveMessage",
-          "sqs:DeleteMessage",
-          "sqs:GetQueueAttributes"
-        ],
-        Resource = aws_sqs_queue.download_queue.arn
-      },
       # S3 Permissions (read source files and logs)
       {
         Effect = "Allow",
@@ -41,12 +30,10 @@ resource "aws_iam_policy" "lambda_common_policy" {
           "s3:HeadObject"
         ],
         Resource = [
-          "${aws_s3_bucket.elecshiny_bucket.arn}/99_params/filelist.csv",
           "${aws_s3_bucket.elecshiny_bucket.arn}/01_downloaded/*",
           "${aws_s3_bucket.elecshiny_bucket.arn}/02_clean/*",
           "${aws_s3_bucket.elecshiny_bucket.arn}/logs/*"
         ]
-
       },
       # S3 Permissions (write downloaded files, clean data, and logs)
       {
@@ -55,7 +42,6 @@ resource "aws_iam_policy" "lambda_common_policy" {
           "s3:PutObject"
         ],
         Resource = [
-          "${aws_s3_bucket.elecshiny_bucket.arn}/99_params/filelist.csv",
           "${aws_s3_bucket.elecshiny_bucket.arn}/01_downloaded/*",
           "${aws_s3_bucket.elecshiny_bucket.arn}/02_clean/*",
           "${aws_s3_bucket.elecshiny_bucket.arn}/logs/*"
@@ -84,42 +70,30 @@ resource "aws_iam_role_policy_attachment" "lambda_common_attach" {
 }
 
 # --------------------------------------------
-# Lambda Permissions: Allow EventBridge to invoke csv_to_sqs
+# Lambda Permissions: Allow EventBridge to invoke odre_eco2mix
 # --------------------------------------------
-resource "aws_lambda_permission" "allow_cloudwatch_1" {
-  statement_id  = "AllowExecutionFromCloudWatch1"
+resource "aws_lambda_permission" "allow_cloudwatch_odre_1" {
+  statement_id  = "AllowExecutionFromCloudWatchOdre1"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.csv_to_sqs.function_name
+  function_name = aws_lambda_function.odre_eco2mix.function_name
   principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.daily_trigger_1.arn
+  source_arn    = aws_cloudwatch_event_rule.daily_trigger_odre_1.arn
 }
 
-resource "aws_lambda_permission" "allow_cloudwatch_2" {
-  statement_id  = "AllowExecutionFromCloudWatch2"
+resource "aws_lambda_permission" "allow_cloudwatch_odre_2" {
+  statement_id  = "AllowExecutionFromCloudWatchOdre2"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.csv_to_sqs.function_name
+  function_name = aws_lambda_function.odre_eco2mix.function_name
   principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.daily_trigger_2.arn
+  source_arn    = aws_cloudwatch_event_rule.daily_trigger_odre_2.arn
 }
 
-resource "aws_lambda_permission" "allow_cloudwatch_3" {
-  statement_id  = "AllowExecutionFromCloudWatch3"
+resource "aws_lambda_permission" "allow_cloudwatch_odre_3" {
+  statement_id  = "AllowExecutionFromCloudWatchOdre3"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.csv_to_sqs.function_name
+  function_name = aws_lambda_function.odre_eco2mix.function_name
   principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.daily_trigger_3.arn
-}
-
-
-# --------------------------------------------
-# Lambda Permission: Allow EventBridge to invoke transform_odre_eco2mix
-# --------------------------------------------
-resource "aws_lambda_permission" "allow_cloudwatch_transform_odre_eco2mix" {
-  statement_id  = "AllowExecutionFromCloudWatchTransformOdreEco2mix"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.transform_odre_eco2mix.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.daily_trigger_transform.arn
+  source_arn    = aws_cloudwatch_event_rule.daily_trigger_odre_3.arn
 }
 
 # --------------------------------------------

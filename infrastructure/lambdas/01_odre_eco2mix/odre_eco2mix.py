@@ -1,14 +1,52 @@
 import os
 import io
-import pandas as pd
+import csv
+import requests
 import boto3
+import pandas as pd
 from datetime import datetime
 
+ODRE_FILES = [
+    {
+        "url": "https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/eco2mix-national-tr/exports/parquet?lang=fr&timezone=Europe%2FBerlin",
+        "file_name": "eco2mix-national-tr.parquet",
+    },
+    {
+        "url": "https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/eco2mix-national-cons-def/exports/parquet?lang=fr&timezone=Europe%2FBerlin",
+        "file_name": "eco2mix-national-cons-def.parquet",
+    },
+]
+
+
+# ---------------------------------------------------------------------------
+# Download
+# ---------------------------------------------------------------------------
+
+def download_files(s3, bucket):
+    """Telecharge les fichiers ODRE et les stocke dans 01_downloaded/."""
+    for entry in ODRE_FILES:
+        url = entry["url"]
+        file_name = entry["file_name"]
+        print(f"INFO: Downloading {file_name} from {url}")
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        buffer = io.BytesIO()
+        for chunk in response.iter_content(chunk_size=8192):
+            buffer.write(chunk)
+        buffer.seek(0)
+        s3_key = f"01_downloaded/{file_name}"
+        s3.upload_fileobj(Fileobj=buffer, Bucket=bucket, Key=s3_key)
+        print(f"SUCCESS: Uploaded to s3://{bucket}/{s3_key}")
+
+
+# ---------------------------------------------------------------------------
+# Transform helpers
+# ---------------------------------------------------------------------------
 
 def merge_with_existing(s3, bucket, key, new_df, merge_key):
     """
     Merge new_df avec le fichier existant sur S3.
-    new_df a la priorité (updates), l'ancien comble les trous (données supprimées par ODRE).
+    new_df a la priorite (updates), l'ancien comble les trous (donnees supprimees par ODRE).
     """
     try:
         old_obj = s3.get_object(Bucket=bucket, Key=key)
@@ -35,7 +73,7 @@ def load_source_files(s3, bucket, prefix_in):
 
 
 def log_sources(s3, bucket, df_tr, df_def, tr_key, cons_def_key):
-    """Logue les métadonnées des fichiers source dans logs/download_log.csv."""
+    """Logue les metadonnees des fichiers source dans logs/download_log.csv."""
     log_entries = []
     for fname, df_src, s3_key in [
         ("eco2mix-national-tr.parquet", df_tr, tr_key),
@@ -67,7 +105,7 @@ def log_sources(s3, bucket, df_tr, df_def, tr_key, cons_def_key):
 
 
 def transform_conso(s3, bucket, prefix_out, df_tr_full, df_cons_def_full):
-    """Transforme les données de consommation et écrit 3 fichiers parquet."""
+    """Transforme les donnees de consommation et ecrit 3 fichiers parquet."""
     df_tr = df_tr_full[["date_heure", "consommation"]].dropna().copy()
     df_cons_def = df_cons_def_full[["date_heure", "consommation"]].dropna().copy()
     print(f"[conso] df_tr: {len(df_tr)} rows, df_cons_def: {len(df_cons_def)} rows")
@@ -122,7 +160,7 @@ def transform_conso(s3, bucket, prefix_out, df_tr_full, df_cons_def_full):
 
 
 def transform_production(s3, bucket, prefix_out, df_tr_full, df_cons_def_full):
-    """Transforme les données de production par filière et écrit 3 fichiers parquet."""
+    """Transforme les donnees de production par filiere et ecrit 3 fichiers parquet."""
     PRODUCTION_COLUMNS = [
         "date_heure",
         "nucleaire", "charbon", "gaz", "fioul", "eolien", "solaire", "hydraulique", "bioenergies",
@@ -218,7 +256,7 @@ def transform_production(s3, bucket, prefix_out, df_tr_full, df_cons_def_full):
 
 
 def transform_echanges(s3, bucket, prefix_out, df_tr_full, df_cons_def_full):
-    """Transforme les données d'échanges commerciaux et écrit 3 fichiers parquet."""
+    """Transforme les donnees d'echanges commerciaux et ecrit 3 fichiers parquet."""
     EXCHANGE_COLUMNS = [
         "date_heure",
         "ech_physiques",
@@ -312,6 +350,10 @@ def transform_echanges(s3, bucket, prefix_out, df_tr_full, df_cons_def_full):
     print(f"[echanges] echanges_annuels saved with {len(df_yearly)} rows.")
 
 
+# ---------------------------------------------------------------------------
+# Handler
+# ---------------------------------------------------------------------------
+
 def lambda_handler(event, context):
     S3_BUCKET = os.environ['BUCKET_NAME']
     S3_PREFIX_IN = '01_downloaded'
@@ -319,6 +361,8 @@ def lambda_handler(event, context):
     s3 = boto3.client('s3')
 
     try:
+        download_files(s3, S3_BUCKET)
+
         df_tr_full, df_cons_def_full, tr_key, cons_def_key = load_source_files(s3, S3_BUCKET, S3_PREFIX_IN)
         log_sources(s3, S3_BUCKET, df_tr_full, df_cons_def_full, tr_key, cons_def_key)
         transform_conso(s3, S3_BUCKET, S3_PREFIX_OUT, df_tr_full, df_cons_def_full)
@@ -327,10 +371,10 @@ def lambda_handler(event, context):
 
         return {
             'statusCode': 200,
-            'body': f"All transforms completed. Files in s3://{S3_BUCKET}/{S3_PREFIX_OUT}/"
+            'body': f"All steps completed. Files in s3://{S3_BUCKET}/{S3_PREFIX_OUT}/"
         }
     except Exception as e:
         return {
             'statusCode': 500,
-            'body': f"Error during processing: {str(e)}"
+            'body': f"Error: {str(e)}"
         }
