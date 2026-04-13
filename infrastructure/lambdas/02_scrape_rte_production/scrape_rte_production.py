@@ -52,19 +52,6 @@ def _get_inner(fdata):
     return data.get("filiere") or data.get("global") or {}
 
 
-def _nature_from_status(fdata, year_str, month_str):
-    data_status = fdata.get("dataStatus", {})
-    uncompleted_year = fdata.get("uncompletedYear", {})
-    month_entry = data_status.get(year_str, {}).get(month_str.zfill(2), {})
-    statut = month_entry.get("statut", "") if isinstance(month_entry, dict) else ""
-    if statut == "definitive":
-        return "Données Consolidées"
-    if statut:
-        return "Données Provisoires"
-    is_uncompleted = uncompleted_year.get(year_str, False) if isinstance(uncompleted_year, dict) else False
-    return "Données Provisoires" if is_uncompleted else "Données Consolidées"
-
-
 def build_production_dataframes(blob):
     """Builds monthly and yearly production DataFrames from a production JSON blob."""
     monthly_rows, yearly_rows = [], []
@@ -80,23 +67,22 @@ def build_production_dataframes(blob):
                 monthly_rows.append({
                     "date": f"{year_str}-{month_str.zfill(2)}",
                     "filiere": label,
-                    "valeur_twh": float(value) if value is not None else None,
-                    "nature": _nature_from_status(fdata, year_str, month_str),
+                    "valeur_mwh": float(value) * 1_000_000 if value is not None else None,
                 })
         for year_str, value in inner.get("yearlyData", {}).items():
             if value is not None:
                 yearly_rows.append({
                     "annee": int(year_str),
                     "filiere": label,
-                    "valeur_twh": float(value),
+                    "valeur_mwh": float(value) * 1_000_000,
                 })
     df_m = (
         pd.DataFrame(monthly_rows).sort_values(["date", "filiere"]).reset_index(drop=True)
-        if monthly_rows else pd.DataFrame(columns=["date", "filiere", "valeur_twh", "nature"])
+        if monthly_rows else pd.DataFrame(columns=["date", "filiere", "valeur_mwh"])
     )
     df_y = (
         pd.DataFrame(yearly_rows).sort_values(["annee", "filiere"]).reset_index(drop=True)
-        if yearly_rows else pd.DataFrame(columns=["annee", "filiere", "valeur_twh"])
+        if yearly_rows else pd.DataFrame(columns=["annee", "filiere", "valeur_mwh"])
     )
     return df_m, df_y
 
