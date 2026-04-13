@@ -236,6 +236,17 @@ def lambda_handler(event, context):
             df = build_parc_installe_dataframe(eol_parc)
             uploads.append(("01_downloaded/portail_analyse_et_donnees/rte_eolien_parc_installe.parquet", df))
 
+        eol_fc = _find_blob(eolien_blobs, key_contains="facteur")
+        if eol_fc:
+            # Les noms ("Facteur de charge max/moyen") sont génériques — on utilise les clés
+            # pour conserver la distinction terrestre/en mer
+            eol_fc_keyed = {k.split("_", 1)[-1]: {**v, "name": None} for k, v in eol_fc.items() if isinstance(v, dict)}
+            df_m, df_y = build_facteur_charge_dataframes(eol_fc_keyed)
+            uploads += [
+                ("01_downloaded/portail_analyse_et_donnees/rte_eolien_facteur_charge_mensuel.parquet", df_m),
+                ("01_downloaded/portail_analyse_et_donnees/rte_eolien_facteur_charge_annuel.parquet", df_y),
+            ]
+
         # --- Solaire ---
         print(f"Fetching {SOLAIRE_URL}")
         solaire_blobs = fetch_all_page_json(SOLAIRE_URL)
