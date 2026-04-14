@@ -34,6 +34,13 @@ S3_PATHS = {
     'echanges': os.getenv('S3_PATH_ECHANGES'),
 }
 
+# Local Parquet cache (see consommation/data_cache.py)
+# Directory where Parquet files are downloaded from S3.  /tmp is ephemeral on
+# Render (cleared on each deploy), which is intentional — clean slate on boot.
+PARQUET_CACHE_DIR = os.getenv('PARQUET_CACHE_DIR', '/tmp/parquet_cache')
+# How often (seconds) to re-check S3 ETags for freshness.  Default: 1 hour.
+PARQUET_CACHE_CHECK_TTL = int(os.getenv('PARQUET_CACHE_CHECK_TTL', '3600'))
+
 # Auth0 Configuration
 AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN', '')
 AUTH0_CLIENT_ID = os.getenv('AUTH0_CLIENT_ID', '')

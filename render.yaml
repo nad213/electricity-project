@@ -28,3 +28,14 @@ services:
         sync: false
       - key: S3_PATH_PRODUCTION
         sync: false
+      - key: S3_PATH_PRODUCTION_ANNUEL
+        sync: false
+      - key: S3_PATH_PRODUCTION_MENSUEL
+        sync: false
+      - key: S3_PATH_ECHANGES
+        sync: false
+      # How often the web service re-checks S3 ETags (seconds). Default: 3600.
+      # Set to a value slightly above your ETL run interval so fresh data is
+      # picked up within one TTL cycle after each nightly run.
+      - key: PARQUET_CACHE_CHECK_TTL
+        value: "3600"
