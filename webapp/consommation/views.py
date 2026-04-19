@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from datetime import datetime, timedelta
+import json
 import plotly.express as px
 import plotly.graph_objects as go
 import csv
@@ -444,6 +445,13 @@ def index(request):
         tickangle=45
     )
     
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'charts': {
+            'chart-puissance': json.loads(graph_puissance),
+            'chart-annuel': json.loads(graph_annuel),
+            'chart-mensuel': json.loads(graph_mensuel),
+        }})
+
     context = {
         'titre': 'Consommation',
         'min_date': min_date,
@@ -514,6 +522,13 @@ def production(request):
         labels=labels
     )
 
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'charts': {
+            'chart-production': json.loads(graph_production),
+            'chart-production-annuel': json.loads(graph_production_annuel),
+            'chart-production-mensuel': json.loads(graph_production_mensuel),
+        }})
+
     context = {
         'titre': 'Production',
         'min_date': min_date,
@@ -557,6 +572,11 @@ def echanges(request):
         y_col='echange',
         y_label='Échange'
     )
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'charts': {
+            'chart-echanges': json.loads(graph_echanges),
+        }})
 
     context = {
         'titre': 'Échanges commerciaux',
