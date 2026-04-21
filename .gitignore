@@ -67,6 +67,9 @@ DEPLOY.md
 CLAUDE.md
 **/CLAUDE.md
 
+# Wiki local (non versionné)
+wiki/
+
 # Logs
 *.log
 logs/

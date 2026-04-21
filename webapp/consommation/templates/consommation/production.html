@@ -107,6 +107,26 @@
     </div>
 </div>
 
+<!-- Installed Capacity Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Parc Installé Éolien et Solaire (MW)</h3>
+            </div>
+            <div class="card-body">
+                <div class="text-muted mb-3">
+                    Capacité installée mensuelle déduite des données RTE : production divisée par le facteur de charge et les heures du mois.
+                </div>
+                <div class="chart-container">
+                    <div id="chart-parc-installe"></div>
+                </div>
+                {% include 'partials/_data_source.html' with collapse_id="src-parc-installe" source="RTE – Portail Analyse et Données (production mensuelle + facteur de charge)" calcul="Parc installé (MW) = Production (MWh) / (Facteur de charge × Heures du mois)" %}
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Render charts client-side
 (function() {
@@ -121,6 +141,9 @@
 
     chartData = JSON.parse('{{ graph_production_mensuel|escapejs }}');
     Plotly.newPlot('chart-production-mensuel', chartData.data, chartData.layout, plotConfig);
+
+    chartData = JSON.parse('{{ graph_parc_installe|escapejs }}');
+    Plotly.newPlot('chart-parc-installe', chartData.data, chartData.layout, plotConfig);
 })();
 
 // Handle tab switching to ensure Plotly charts resize properly

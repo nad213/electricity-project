@@ -297,6 +297,49 @@ def get_echanges_data(start_date, end_date, pays='ech_physiques'):
     return result
 
 
+def get_parc_installe_data():
+    """
+    Computes monthly installed capacity (MW) for wind (onshore/offshore) and solar.
+    Derived from: parc_mw = production_mwh / (capacity_factor * hours_in_month)
+    """
+    eol_prod_path = data_cache.get_local_path('rte_eolien_production')
+    eol_fc_path = data_cache.get_local_path('rte_eolien_facteur_charge')
+    sol_prod_path = data_cache.get_local_path('rte_solaire_production')
+    sol_fc_path = data_cache.get_local_path('rte_solaire_facteur_charge')
+
+    with get_duckdb_connection(eol_prod_path, eol_fc_path, sol_prod_path, sol_fc_path) as conn:
+        eol_df = conn.execute("""
+            SELECT
+                p.date,
+                p.filiere,
+                p.valeur_mwh / (fc.facteur_charge_pct / 100.0
+                    * day(last_day(strptime(p.date || '-01', '%Y-%m-%d'))) * 24) AS parc_mw
+            FROM read_parquet(?) p
+            JOIN read_parquet(?) fc
+                ON p.date = fc.date
+                AND p.filiere = regexp_replace(fc.type, ' - Facteur de charge moyen', '')
+            WHERE p.filiere IN ('Eolien terrestre', 'Eolien en mer')
+              AND fc.facteur_charge_pct > 0
+            ORDER BY p.date, p.filiere
+        """, [eol_prod_path, eol_fc_path]).fetchdf()
+
+        sol_df = conn.execute("""
+            SELECT
+                p.date,
+                'Solaire' AS filiere,
+                p.valeur_mwh / (fc.facteur_charge_pct / 100.0
+                    * day(last_day(strptime(p.date || '-01', '%Y-%m-%d'))) * 24) AS parc_mw
+            FROM read_parquet(?) p
+            JOIN read_parquet(?) fc ON p.date = fc.date
+            WHERE p.filiere = 'Production solaire'
+              AND fc.facteur_charge_pct > 0
+            ORDER BY p.date
+        """, [sol_prod_path, sol_fc_path]).fetchdf()
+
+    df = pd.concat([eol_df, sol_df], ignore_index=True)
+    return df.sort_values('date').reset_index(drop=True)
+
+
 def get_dashboard_data():
     """
     Returns data for the homepage dashboard.

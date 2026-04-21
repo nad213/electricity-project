@@ -12,10 +12,10 @@ from .services import (
     get_production_date_range, get_production_filieres, get_production_data,
     get_production_annual_data, get_production_monthly_data,
     get_echanges_date_range, get_echanges_pays, get_echanges_data,
-    get_dashboard_data,
+    get_dashboard_data, get_parc_installe_data,
 )
 from .constants import (
-    Colors, ChartConfig, FILIERE_COLORS, FILIERES,
+    Colors, ChartConfig, ProductionColors, FILIERE_COLORS, FILIERES,
     get_production_colors_and_labels, get_filiere_columns
 )
 
@@ -309,6 +309,47 @@ def create_mini_line_chart(df, x_col, y_col):
     return fig.to_json()
 
 
+def create_parc_installe_chart(df):
+    """
+    Creates a multi-line chart of monthly installed capacity (MW) by filière.
+    df must have columns: date, filiere, parc_mw
+    """
+    filiere_colors = {
+        'Eolien terrestre': ProductionColors.EOLIEN,
+        'Eolien en mer': '#06D6A0',
+        'Solaire': ProductionColors.SOLAIRE,
+    }
+
+    fig = go.Figure()
+    for filiere in df['filiere'].unique():
+        sub = df[df['filiere'] == filiere].sort_values('date')
+        fig.add_trace(go.Scatter(
+            x=sub['date'],
+            y=sub['parc_mw'].round(0),
+            name=filiere,
+            mode='lines',
+            line=dict(color=filiere_colors.get(filiere, Colors.PRIMARY), width=2),
+            hovertemplate=f'{filiere}: %{{y:,.0f}} MW<extra></extra>',
+        ))
+
+    fig.update_layout(
+        separators=', ',
+        xaxis_title_text='',
+        yaxis_title_text='MW',
+        margin=ChartConfig.MARGIN_WITH_LEGEND,
+        height=ChartConfig.LINE_CHART_HEIGHT,
+        plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
+        paper_bgcolor=ChartConfig.PAPER_COLOR,
+        font=dict(color=ChartConfig.TEXT_COLOR),
+        legend=dict(orientation='h', x=0.5, y=-0.2, xanchor='center'),
+        hovermode='x unified',
+    )
+    fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
+    fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR, zerolinecolor=ChartConfig.GRID_COLOR)
+
+    return fig.to_json()
+
+
 def create_stacked_area_chart(df, x_col, y_cols, colors, labels):
     """
     Creates a stacked area chart for intraday production by filière.
@@ -499,6 +540,10 @@ def production(request):
     df_annual = get_production_annual_data()
     df_monthly = get_production_monthly_data()
 
+    # Load installed capacity data
+    df_parc = get_parc_installe_data()
+    graph_parc_installe = create_parc_installe_chart(df_parc)
+
     # Get colors and labels from centralized constants (cached)
     colors, labels = get_production_colors_and_labels()
 
@@ -527,6 +572,7 @@ def production(request):
             'chart-production': json.loads(graph_production),
             'chart-production-annuel': json.loads(graph_production_annuel),
             'chart-production-mensuel': json.loads(graph_production_mensuel),
+            'chart-parc-installe': json.loads(graph_parc_installe),
         }})
 
     context = {
@@ -540,6 +586,7 @@ def production(request):
         'graph_production': graph_production,
         'graph_production_annuel': graph_production_annuel,
         'graph_production_mensuel': graph_production_mensuel,
+        'graph_parc_installe': graph_parc_installe,
     }
 
     return render(request, 'consommation/production.html', context)

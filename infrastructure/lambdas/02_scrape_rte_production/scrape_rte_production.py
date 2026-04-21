@@ -5,7 +5,6 @@ import boto3
 import pandas as pd
 import urllib.request
 
-SYNTHESE_URL = "https://analysesetdonnees.rte-france.com/production/synthese"
 EOLIEN_URL = "https://analysesetdonnees.rte-france.com/production/eolien"
 SOLAIRE_URL = "https://analysesetdonnees.rte-france.com/production/solaire"
 
@@ -52,9 +51,9 @@ def _get_inner(fdata):
     return data.get("filiere") or data.get("global") or {}
 
 
-def build_production_dataframes(blob):
-    """Builds monthly and yearly production DataFrames from a production JSON blob."""
-    monthly_rows, yearly_rows = [], []
+def build_production_mensuelle(blob):
+    """Builds monthly production DataFrame from a production JSON blob."""
+    rows = []
     for key, fdata in blob.items():
         if not isinstance(fdata, dict):
             continue
@@ -64,75 +63,20 @@ def build_production_dataframes(blob):
             if not isinstance(months, dict):
                 continue
             for month_str, value in months.items():
-                monthly_rows.append({
+                rows.append({
                     "date": f"{year_str}-{month_str.zfill(2)}",
                     "filiere": label,
                     "valeur_mwh": float(value) * 1_000_000 if value is not None else None,
                 })
-        for year_str, value in inner.get("yearlyData", {}).items():
-            if value is not None:
-                yearly_rows.append({
-                    "annee": int(year_str),
-                    "filiere": label,
-                    "valeur_mwh": float(value) * 1_000_000,
-                })
-    df_m = (
-        pd.DataFrame(monthly_rows).sort_values(["date", "filiere"]).reset_index(drop=True)
-        if monthly_rows else pd.DataFrame(columns=["date", "filiere", "valeur_mwh"])
-    )
-    df_y = (
-        pd.DataFrame(yearly_rows).sort_values(["annee", "filiere"]).reset_index(drop=True)
-        if yearly_rows else pd.DataFrame(columns=["annee", "filiere", "valeur_mwh"])
-    )
-    return df_m, df_y
-
-
-def build_parc_installe_dataframe(blob):
-    """Builds a quarterly installed capacity DataFrame (GW)."""
-    rows = []
-    for key, fdata in blob.items():
-        if not isinstance(fdata, dict):
-            continue
-        label = fdata.get("name") or key.split("_", 1)[-1]
-        inner = _get_inner(fdata)
-        quarterly = inner.get("quarterlyData", {})
-        # Structure: {T1: {year: val}, ...} ou {year: {T1: val}, ...}
-        first_key = next(iter(quarterly), None)
-        if first_key and str(first_key).startswith("T"):
-            # Clé externe = trimestre, clé interne = année
-            for trimestre, years_dict in quarterly.items():
-                if not isinstance(years_dict, dict):
-                    continue
-                for year_str, value in years_dict.items():
-                    if value is not None:
-                        rows.append({
-                            "annee": int(year_str),
-                            "trimestre": trimestre,
-                            "filiere": label,
-                            "valeur_gw": float(value),
-                        })
-        else:
-            # Clé externe = année, clé interne = trimestre
-            for year_str, quarters_dict in quarterly.items():
-                if not isinstance(quarters_dict, dict):
-                    continue
-                for trimestre, value in quarters_dict.items():
-                    if value is not None:
-                        rows.append({
-                            "annee": int(year_str),
-                            "trimestre": trimestre,
-                            "filiere": label,
-                            "valeur_gw": float(value),
-                        })
     return (
-        pd.DataFrame(rows).sort_values(["annee", "trimestre", "filiere"]).reset_index(drop=True)
-        if rows else pd.DataFrame(columns=["annee", "trimestre", "filiere", "valeur_gw"])
+        pd.DataFrame(rows).sort_values(["date", "filiere"]).reset_index(drop=True)
+        if rows else pd.DataFrame(columns=["date", "filiere", "valeur_mwh"])
     )
 
 
-def build_facteur_charge_dataframes(blob):
-    """Builds monthly and yearly capacity factor DataFrames (%)."""
-    monthly_rows, yearly_rows = [], []
+def build_facteur_charge_mensuel(blob):
+    """Builds monthly capacity factor DataFrame (%)."""
+    rows = []
     for key, fdata in blob.items():
         if not isinstance(fdata, dict):
             continue
@@ -143,27 +87,15 @@ def build_facteur_charge_dataframes(blob):
                 continue
             for month_str, value in months.items():
                 if value is not None:
-                    monthly_rows.append({
+                    rows.append({
                         "date": f"{year_str}-{month_str.zfill(2)}",
                         "type": label,
                         "facteur_charge_pct": float(value),
                     })
-        for year_str, value in inner.get("yearlyData", {}).items():
-            if value is not None:
-                yearly_rows.append({
-                    "annee": int(year_str),
-                    "type": label,
-                    "facteur_charge_pct": float(value),
-                })
-    df_m = (
-        pd.DataFrame(monthly_rows).sort_values(["date", "type"]).reset_index(drop=True)
-        if monthly_rows else pd.DataFrame(columns=["date", "type", "facteur_charge_pct"])
+    return (
+        pd.DataFrame(rows).sort_values(["date", "type"]).reset_index(drop=True)
+        if rows else pd.DataFrame(columns=["date", "type", "facteur_charge_pct"])
     )
-    df_y = (
-        pd.DataFrame(yearly_rows).sort_values(["annee", "type"]).reset_index(drop=True)
-        if yearly_rows else pd.DataFrame(columns=["annee", "type", "facteur_charge_pct"])
-    )
-    return df_m, df_y
 
 
 def _find_blob(blobs, key_prefix=None, key_contains=None):
@@ -177,33 +109,12 @@ def _find_blob(blobs, key_prefix=None, key_contains=None):
     return None
 
 
-def _has_quarterly(blob):
-    """Returns True if any entry in the blob contains quarterlyData."""
-    for fdata in blob.values():
-        if not isinstance(fdata, dict):
-            continue
-        if "quarterlyData" in _get_inner(fdata):
-            return True
-    return False
-
-
 def lambda_handler(event, context):
     S3_BUCKET = os.environ["BUCKET_NAME"]
     s3 = boto3.client("s3")
     uploads = []
 
     try:
-        # --- Synthèse (toutes filières, agrégé) ---
-        print(f"Fetching {SYNTHESE_URL}")
-        synthese_blobs = fetch_all_page_json(SYNTHESE_URL)
-        synthese_blob = synthese_blobs[0] if synthese_blobs else {}
-        print(f"Synthèse: {len(synthese_blob)} filières: {list(synthese_blob.keys())}")
-        df_m, df_y = build_production_dataframes(synthese_blob)
-        uploads += [
-            ("01_downloaded/portail_analyse_et_donnees/rte_production_mensuelle.parquet", df_m),
-            ("01_downloaded/portail_analyse_et_donnees/rte_production_annuelle.parquet", df_y),
-        ]
-
         # --- Éolien ---
         print(f"Fetching {EOLIEN_URL}")
         eolien_blobs = fetch_all_page_json(EOLIEN_URL)
@@ -211,24 +122,16 @@ def lambda_handler(event, context):
 
         eol_prod = _find_blob(eolien_blobs, key_prefix="01_Eolien")
         if eol_prod:
-            df_m, df_y = build_production_dataframes(eol_prod)
-            uploads += [
-                ("01_downloaded/portail_analyse_et_donnees/rte_eolien_production_mensuelle.parquet", df_m),
-                ("01_downloaded/portail_analyse_et_donnees/rte_eolien_production_annuelle.parquet", df_y),
-            ]
-
-        eol_parc = next((b for b in eolien_blobs if b is not eol_prod and _has_quarterly(b)), None)
-        if eol_parc:
-            df = build_parc_installe_dataframe(eol_parc)
-            uploads.append(("01_downloaded/portail_analyse_et_donnees/rte_eolien_parc_installe.parquet", df))
+            df = build_production_mensuelle(eol_prod)
+            uploads.append(("01_downloaded/portail_analyse_et_donnees/rte_eolien_production_mensuelle.parquet", df))
 
         eol_fc = _find_blob(eolien_blobs, key_contains="facteur")
         if eol_fc:
             # Les noms ("Facteur de charge max/moyen") sont génériques — on utilise les clés
             # pour conserver la distinction terrestre/en mer
             eol_fc_keyed = {k.split("_", 1)[-1]: {**v, "name": None} for k, v in eol_fc.items() if isinstance(v, dict)}
-            df_m, _ = build_facteur_charge_dataframes(eol_fc_keyed)
-            uploads.append(("01_downloaded/portail_analyse_et_donnees/rte_eolien_facteur_charge_mensuel.parquet", df_m))
+            df = build_facteur_charge_mensuel(eol_fc_keyed)
+            uploads.append(("01_downloaded/portail_analyse_et_donnees/rte_eolien_facteur_charge_mensuel.parquet", df))
 
         # --- Solaire ---
         print(f"Fetching {SOLAIRE_URL}")
@@ -237,24 +140,13 @@ def lambda_handler(event, context):
 
         sol_prod = _find_blob(solaire_blobs, key_prefix="01_Solaire")
         if sol_prod:
-            df_m, df_y = build_production_dataframes(sol_prod)
-            uploads += [
-                ("01_downloaded/portail_analyse_et_donnees/rte_solaire_production_mensuelle.parquet", df_m),
-                ("01_downloaded/portail_analyse_et_donnees/rte_solaire_production_annuelle.parquet", df_y),
-            ]
-
-        sol_parc = next((b for b in solaire_blobs if b is not sol_prod and _has_quarterly(b)), None)
-        if sol_parc:
-            df = build_parc_installe_dataframe(sol_parc)
-            uploads.append(("01_downloaded/portail_analyse_et_donnees/rte_solaire_parc_installe.parquet", df))
+            df = build_production_mensuelle(sol_prod)
+            uploads.append(("01_downloaded/portail_analyse_et_donnees/rte_solaire_production_mensuelle.parquet", df))
 
         sol_fc = _find_blob(solaire_blobs, key_contains="facteur")
         if sol_fc:
-            df_m, df_y = build_facteur_charge_dataframes(sol_fc)
-            uploads += [
-                ("01_downloaded/portail_analyse_et_donnees/rte_solaire_facteur_charge_mensuel.parquet", df_m),
-                ("01_downloaded/portail_analyse_et_donnees/rte_solaire_facteur_charge_annuel.parquet", df_y),
-            ]
+            df = build_facteur_charge_mensuel(sol_fc)
+            uploads.append(("01_downloaded/portail_analyse_et_donnees/rte_solaire_facteur_charge_mensuel.parquet", df))
 
         # --- Upload S3 ---
         saved = []
