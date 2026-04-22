@@ -14,7 +14,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">Courbe de Puissance France (MW)</h3>
+                <h3 class="card-title">Courbe de Consommation France (MW)</h3>
             </div>
             <div class="card-body">
                 <div class="text-muted mb-3">
@@ -36,7 +36,19 @@
                     </a>
                 </div>
 
-                {% include 'partials/_data_source.html' with collapse_id="src-puissance" source="ODRE – Données éco2mix RTE, puissance consommée brute" calcul="Puissance instantanée moyennée sur des pas de 30 minutes (MW)" %}
+                <div class="mt-2">
+                    <a data-bs-toggle="collapse" href="#src-puissance" class="text-muted small text-decoration-none" role="button" aria-expanded="false">
+                        <i class="ti ti-info-circle me-1"></i>Source et méthodologie
+                    </a>
+                    <div class="collapse" id="src-puissance">
+                        <div class="text-muted small mt-1 ps-1 border-start border-2">
+                            <strong>Source :</strong><br>
+                            <a href="https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/information/" class="text-muted" target="_blank">https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/information/</a><br>
+                            <a href="https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr" class="text-muted" target="_blank">https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr</a><br><br>
+                            <strong>Méthodologie :</strong> Les données de consommation sont récupérées des 2 fichiers mentionnés plus haut. La granularité temporelle peut varier entre ces fichiers (données au pas 30 min pour les données du fichier « Définitif » et au pas 15 min pour les données du fichier « Temps réel »). Les données sont affichées telles qu'elles, sans aucune modification.
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
