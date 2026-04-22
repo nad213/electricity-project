@@ -106,3 +106,14 @@ resource "aws_lambda_permission" "allow_cloudwatch_scrape_rte_production" {
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.daily_trigger_rte_production.arn
 }
+
+# --------------------------------------------
+# Lambda Permission: Allow EventBridge to invoke rte_pmax
+# --------------------------------------------
+resource "aws_lambda_permission" "allow_cloudwatch_rte_pmax" {
+  statement_id  = "AllowExecutionFromCloudWatchRtePmax"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.rte_pmax.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.daily_trigger_rte_pmax.arn
+}

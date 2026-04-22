@@ -28,6 +28,7 @@ jobs:
         run: |
           bash zip_lambda.sh 01
           bash zip_lambda.sh 02
+          bash zip_lambda.sh 03
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3

@@ -88,3 +88,38 @@ resource "aws_cloudwatch_event_target" "trigger_scrape_rte_production" {
   target_id = "scrape_rte_production"
   arn       = aws_lambda_function.scrape_rte_production.arn
 }
+
+
+#################################################
+# 03. RTE PMAX LAMBDA
+#################################################
+resource "aws_lambda_function" "rte_pmax" {
+  layers = [
+    "arn:aws:lambda:eu-west-3:336392948345:layer:AWSSDKPandas-Python312:13"
+  ]
+  filename         = "../lambdas/03_rte_pmax/rte_pmax.zip"
+  source_code_hash = filebase64sha256("../lambdas/03_rte_pmax/rte_pmax.zip")
+  function_name    = "03_rte_pmax"
+  role             = aws_iam_role.lambda_common_role.arn
+  handler          = "rte_pmax.lambda_handler"
+  runtime          = "python3.12"
+  timeout          = 60
+  memory_size      = 256
+
+  environment {
+    variables = {
+      BUCKET_NAME = aws_s3_bucket.elecshiny_bucket.bucket
+    }
+  }
+}
+
+resource "aws_cloudwatch_event_rule" "daily_trigger_rte_pmax" {
+  name                = "trigger-rte-pmax-daily"
+  schedule_expression = "cron(5 7 * * ? *)" # Daily at 07:05 UTC
+}
+
+resource "aws_cloudwatch_event_target" "trigger_rte_pmax" {
+  rule      = aws_cloudwatch_event_rule.daily_trigger_rte_pmax.name
+  target_id = "rte_pmax"
+  arn       = aws_lambda_function.rte_pmax.arn
+}
