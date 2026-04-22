@@ -454,8 +454,8 @@ body {
     position: sticky;
     top: 80px;
     width: 130px;
-    padding-right: 1rem;
-    border-right: 1px solid var(--border);
+    padding-left: 1rem;
+    border-left: 1px solid var(--border);
 }
 
 .page-nav-label {

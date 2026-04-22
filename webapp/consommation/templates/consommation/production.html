@@ -10,32 +10,8 @@
 {% block content %}
 <div class="row">
 
-    <!-- Sticky sidebar nav -->
-    <div class="col-lg-auto d-none d-lg-block">
-        <nav id="page-nav" class="page-nav-sidebar">
-            <p class="page-nav-label">Sur cette page</p>
-            <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a class="nav-link active" href="#section-courbe">
-                        <i class="ti ti-chart-line me-2"></i>Courbe de production
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#section-energie">
-                        <i class="ti ti-stack-2 me-2"></i>Énergie par filière
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#section-parc">
-                        <i class="ti ti-wind me-2"></i>Parc installé
-                    </a>
-                </li>
-            </ul>
-        </nav>
-    </div>
-
     <!-- Main content -->
-    <div class="col" style="min-width: 0">
+    <div class="col-12 col-lg-10">
         <!-- Courbe de production -->
         <div class="row mb-4" id="section-courbe">
             <div class="col-12">
@@ -149,6 +125,29 @@
 
     </div>
 
+    <!-- Sticky sidebar nav -->
+    <div class="col-lg-2 d-none d-lg-block">
+        <nav id="page-nav" class="page-nav-sidebar">
+            <p class="page-nav-label">Sur cette page</p>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#section-courbe">
+                        <i class="ti ti-chart-line me-2"></i>Courbe de production
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#section-energie">
+                        <i class="ti ti-stack-2 me-2"></i>Énergie par filière
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#section-parc">
+                        <i class="ti ti-wind me-2"></i>Parc installé
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
 
 </div>
 
