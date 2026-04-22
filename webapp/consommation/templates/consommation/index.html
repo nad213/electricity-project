@@ -8,124 +8,151 @@
 {% endblock %}
 
 {% block content %}
-
-<!-- Power Section -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Courbe de Consommation France (MW)</h3>
-            </div>
-            <div class="card-body">
-                <div class="text-muted mb-3">
-                    Le graphique ci-dessous affiche la courbe de puissance consommée brute, en MW.
-                </div>
-
-                {% include 'partials/_date_filter_form.html' %}
-
-                <!-- Power Chart -->
-                <div class="chart-container">
-                    <div id="chart-puissance"></div>
-                </div>
-
-                <!-- Download button -->
-                <div class="mt-3 text-end">
-                    <a href="{% url 'consommation:export_puissance' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}" class="btn btn-outline-primary btn-sm">
-                        <i class="ti ti-download me-1"></i>
-                        Télécharger CSV
-                    </a>
-                </div>
-
-                <div class="mt-2">
-                    <a data-bs-toggle="collapse" href="#src-puissance" class="text-muted small text-decoration-none" role="button" aria-expanded="false">
-                        <i class="ti ti-info-circle me-1"></i>Source et méthodologie
-                    </a>
-                    <div class="collapse" id="src-puissance">
-                        <div class="text-muted small mt-1 ps-1 border-start border-2">
-                            <strong>Source :</strong><br>
-                            <a href="https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/" class="text-muted" target="_blank">https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/</a><br>
-                            <a href="https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr" class="text-muted" target="_blank">https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr</a><br><br>
-                            <strong>Méthodologie :</strong> Les données de consommation sont récupérées des 2 fichiers mentionnés plus haut. La granularité temporelle peut varier entre ces fichiers (données au pas 30 min pour les données du fichier « Définitif » et au pas 15 min pour les données du fichier « Temps réel »). Les données sont affichées telles qu'elles, sans aucune modification.
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Energy Section -->
 <div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Énergie Consommée en France (TWh)</h3>
-            </div>
-            <div class="card-body">
-                <div class="text-muted mb-3">
-                    Données mensuelles et annuelles d'énergie consommée en France.
-                </div>
 
-                <!-- Tabs -->
-                <ul class="nav nav-tabs mb-3" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="annuel-tab" data-bs-toggle="tab" data-bs-target="#annuel" type="button" role="tab" aria-controls="annuel" aria-selected="true">
-                            <i class="ti ti-calendar-stats me-2"></i>
-                            Annuel
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="mensuel-tab" data-bs-toggle="tab" data-bs-target="#mensuel" type="button" role="tab" aria-controls="mensuel" aria-selected="false">
-                            <i class="ti ti-calendar-month me-2"></i>
-                            Mensuel
-                        </button>
-                    </li>
-                </ul>
+    <!-- Main content -->
+    <div class="col-12 col-lg-10">
 
-                <div class="tab-content">
-                    <div class="tab-pane fade show active" id="annuel" role="tabpanel" aria-labelledby="annuel-tab">
-                        <div class="chart-container">
-                            <div id="chart-annuel"></div>
+        <!-- Power Section -->
+        <div class="row mb-4" id="section-courbe">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Courbe de Consommation France (MW)</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-muted mb-3">
+                            Le graphique ci-dessous affiche la courbe de puissance consommée brute, en MW.
                         </div>
+
+                        {% include 'partials/_date_filter_form.html' %}
+
+                        <!-- Power Chart -->
+                        <div class="chart-container">
+                            <div id="chart-puissance"></div>
+                        </div>
+
                         <!-- Download button -->
                         <div class="mt-3 text-end">
-                            <a href="{% url 'consommation:export_annuel' %}" class="btn btn-outline-primary btn-sm">
+                            <a href="{% url 'consommation:export_puissance' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}" class="btn btn-outline-primary btn-sm">
                                 <i class="ti ti-download me-1"></i>
                                 Télécharger CSV
                             </a>
                         </div>
-                    </div>
 
-                    <div class="tab-pane fade" id="mensuel" role="tabpanel" aria-labelledby="mensuel-tab">
-                        <div class="chart-container">
-                            <div id="chart-mensuel"></div>
-                        </div>
-                        <!-- Download button -->
-                        <div class="mt-3 text-end">
-                            <a href="{% url 'consommation:export_mensuel' %}" class="btn btn-outline-primary btn-sm">
-                                <i class="ti ti-download me-1"></i>
-                                Télécharger CSV
+                        <div class="mt-2">
+                            <a data-bs-toggle="collapse" href="#src-puissance" class="text-muted small text-decoration-none" role="button" aria-expanded="false">
+                                <i class="ti ti-info-circle me-1"></i>Source et méthodologie
                             </a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-2">
-                    <a data-bs-toggle="collapse" href="#src-energie" class="text-muted small text-decoration-none" role="button" aria-expanded="false">
-                        <i class="ti ti-info-circle me-1"></i>Source et méthodologie
-                    </a>
-                    <div class="collapse" id="src-energie">
-                        <div class="text-muted small mt-1 ps-1 border-start border-2">
-                            <strong>Source :</strong><br>
-                            <a href="https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/information/" class="text-muted" target="_blank">https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/information/</a><br>
-                            <a href="https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr" class="text-muted" target="_blank">https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr</a><br><br>
-                            <strong>Méthodologie :</strong> Les données de consommation sont récupérées des 2 fichiers mentionnés plus haut. Le passage de puissance (MW) à énergie (MWh/TWh) se fait en sommant les puissances et en divisant par 4 (lorsque les données proviennent du fichier « Temps Réel ») ou par 2 (lorsque les données proviennent du fichier « Définitif »).
+                            <div class="collapse" id="src-puissance">
+                                <div class="text-muted small mt-1 ps-1 border-start border-2">
+                                    <strong>Source :</strong><br>
+                                    <a href="https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/" class="text-muted" target="_blank">https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/</a><br>
+                                    <a href="https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr" class="text-muted" target="_blank">https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr</a><br><br>
+                                    <strong>Méthodologie :</strong> Les données de consommation sont récupérées des 2 fichiers mentionnés plus haut. La granularité temporelle peut varier entre ces fichiers (données au pas 30 min pour les données du fichier « Définitif » et au pas 15 min pour les données du fichier « Temps réel »). Les données sont affichées telles qu'elles, sans aucune modification.
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Energy Section -->
+        <div class="row" id="section-energie">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Énergie Consommée en France (TWh)</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-muted mb-3">
+                            Données mensuelles et annuelles d'énergie consommée en France.
+                        </div>
+
+                        <!-- Tabs -->
+                        <ul class="nav nav-tabs mb-3" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="annuel-tab" data-bs-toggle="tab" data-bs-target="#annuel" type="button" role="tab" aria-controls="annuel" aria-selected="true">
+                                    <i class="ti ti-calendar-stats me-2"></i>
+                                    Annuel
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="mensuel-tab" data-bs-toggle="tab" data-bs-target="#mensuel" type="button" role="tab" aria-controls="mensuel" aria-selected="false">
+                                    <i class="ti ti-calendar-month me-2"></i>
+                                    Mensuel
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="annuel" role="tabpanel" aria-labelledby="annuel-tab">
+                                <div class="chart-container">
+                                    <div id="chart-annuel"></div>
+                                </div>
+                                <!-- Download button -->
+                                <div class="mt-3 text-end">
+                                    <a href="{% url 'consommation:export_annuel' %}" class="btn btn-outline-primary btn-sm">
+                                        <i class="ti ti-download me-1"></i>
+                                        Télécharger CSV
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade" id="mensuel" role="tabpanel" aria-labelledby="mensuel-tab">
+                                <div class="chart-container">
+                                    <div id="chart-mensuel"></div>
+                                </div>
+                                <!-- Download button -->
+                                <div class="mt-3 text-end">
+                                    <a href="{% url 'consommation:export_mensuel' %}" class="btn btn-outline-primary btn-sm">
+                                        <i class="ti ti-download me-1"></i>
+                                        Télécharger CSV
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-2">
+                            <a data-bs-toggle="collapse" href="#src-energie" class="text-muted small text-decoration-none" role="button" aria-expanded="false">
+                                <i class="ti ti-info-circle me-1"></i>Source et méthodologie
+                            </a>
+                            <div class="collapse" id="src-energie">
+                                <div class="text-muted small mt-1 ps-1 border-start border-2">
+                                    <strong>Source :</strong><br>
+                                    <a href="https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/information/" class="text-muted" target="_blank">https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/information/</a><br>
+                                    <a href="https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr" class="text-muted" target="_blank">https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr</a><br><br>
+                                    <strong>Méthodologie :</strong> Les données de consommation sont récupérées des 2 fichiers mentionnés plus haut. Le passage de puissance (MW) à énergie (MWh/TWh) se fait en sommant les puissances et en divisant par 4 (lorsque les données proviennent du fichier « Temps Réel ») ou par 2 (lorsque les données proviennent du fichier « Définitif »).
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
+
+    <!-- Sticky sidebar nav -->
+    <div class="col-lg-2 d-none d-lg-block">
+        <nav id="page-nav" class="page-nav-sidebar">
+            <p class="page-nav-label">Sur cette page</p>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#section-courbe">
+                        <i class="ti ti-chart-line me-2"></i>Courbe de consommation
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#section-energie">
+                        <i class="ti ti-chart-bar me-2"></i>Énergie consommée
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
 </div>
 
 <script>
@@ -150,5 +177,23 @@ document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(button => {
         window.dispatchEvent(new Event('resize'));
     });
 });
+
+// Scrollspy via IntersectionObserver
+(function() {
+    var sections = document.querySelectorAll('#section-courbe, #section-energie');
+    var navLinks = document.querySelectorAll('#page-nav .nav-link');
+
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                navLinks.forEach(function(link) { link.classList.remove('active'); });
+                var active = document.querySelector('#page-nav a[href="#' + entry.target.id + '"]');
+                if (active) active.classList.add('active');
+            }
+        });
+    }, { rootMargin: '-15% 0px -70% 0px' });
+
+    sections.forEach(function(section) { observer.observe(section); });
+})();
 </script>
 {% endblock %}
