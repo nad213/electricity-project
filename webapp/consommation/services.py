@@ -340,6 +340,39 @@ def get_parc_installe_data():
     return df.sort_values('date').reset_index(drop=True)
 
 
+_PMAX_TO_FILIERE = {
+    'Nucléaire': 'nucleaire',
+    'Gaz': 'gaz',
+    'Charbon': 'charbon',
+    'Fioul': 'fioul',
+    'Bioénergies': 'bioenergies',
+    'Solaire': 'solaire',
+    'Éolien': 'eolien',
+    'Énergies marines': 'eolien',
+    "Hydraulique fil de l'eau": 'hydraulique',
+    'Hydraulique STEP': 'hydraulique',
+    'Hydraulique lacs': 'hydraulique',
+}
+
+
+def get_parc_pmax():
+    """Puissance max installée par filière (MW), mappée sur FILIERES."""
+    path = data_cache.get_local_path('rte_pmax')
+    result = {f: 0.0 for f in FILIERES}
+    try:
+        with get_duckdb_connection(path) as conn:
+            df = conn.execute(
+                "SELECT filiere, puissance_max_mw FROM read_parquet(?)", [path]
+            ).fetchdf()
+        for _, row in df.iterrows():
+            key = _PMAX_TO_FILIERE.get(row['filiere'])
+            if key:
+                result[key] += float(row['puissance_max_mw'])
+    except Exception:
+        pass
+    return result
+
+
 def get_dashboard_data():
     """
     Returns data for the homepage dashboard.
@@ -426,6 +459,8 @@ def get_dashboard_data():
     peak_all_value = int(round(float(peak_all_df['consommation'].iloc[0])))
     peak_all_datetime = pd.to_datetime(peak_all_df['date_heure'].iloc[0]).to_pydatetime()
 
+    parc_pmax = get_parc_pmax()
+
     return {
         'dashboard_date': dashboard_date,
         'peak_year_value': peak_year_value,
@@ -435,4 +470,5 @@ def get_dashboard_data():
         'conso_ts': conso_ts,
         'production_ts': production_ts,
         'production_mix_year': production_mix_year,
+        'parc_pmax': parc_pmax,
     }

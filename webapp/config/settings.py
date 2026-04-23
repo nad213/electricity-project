@@ -36,6 +36,7 @@ S3_PATHS = {
     'rte_eolien_facteur_charge': os.getenv('S3_PATH_RTE_EOLIEN_FACTEUR_CHARGE'),
     'rte_solaire_production': os.getenv('S3_PATH_RTE_SOLAIRE_PRODUCTION'),
     'rte_solaire_facteur_charge': os.getenv('S3_PATH_RTE_SOLAIRE_FACTEUR_CHARGE'),
+    'rte_pmax': os.getenv('S3_PATH_RTE_PMAX'),
 }
 
 # Local Parquet cache (see consommation/data_cache.py)

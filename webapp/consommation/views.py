@@ -281,6 +281,51 @@ def create_donut_chart(production_mix, unit='MW'):
     return fig.to_json()
 
 
+def create_parc_prod_sankey(parc_mw, prod_mwh):
+    """Sankey parc installé (MW) ↔ production annuelle (MWh), par filière."""
+    filieres = [f for f in FILIERES if parc_mw.get(f, 0) > 0 and prod_mwh.get(f, 0) > 0]
+    if not filieres:
+        return go.Figure().to_json()
+
+    total_parc = sum(parc_mw[f] for f in filieres)
+    total_prod = sum(prod_mwh[f] for f in filieres)
+
+    left_labels = [
+        f"{FILIERES[f]} — {parc_mw[f]/1000:.1f} GW ({parc_mw[f]/total_parc*100:.1f} %)"
+        for f in filieres
+    ]
+    right_labels = [
+        f"{FILIERES[f]} — {prod_mwh[f]/1e6:.1f} TWh ({prod_mwh[f]/total_prod*100:.1f} %)"
+        for f in filieres
+    ]
+    n = len(filieres)
+
+    fig = go.Figure(go.Sankey(
+        arrangement='snap',
+        node=dict(
+            label=left_labels + right_labels,
+            color=[FILIERE_COLORS[f] for f in filieres] * 2,
+            pad=12,
+            thickness=18,
+            line=dict(color='rgba(0,0,0,0)', width=0),
+        ),
+        link=dict(
+            source=list(range(n)),
+            target=list(range(n, 2 * n)),
+            value=[prod_mwh[f] for f in filieres],
+            color=[FILIERE_COLORS[f] + '55' for f in filieres],
+        ),
+    ))
+    fig.update_layout(
+        height=ChartConfig.LINE_CHART_HEIGHT,
+        margin=ChartConfig.MARGIN_NO_LEGEND,
+        paper_bgcolor=ChartConfig.PAPER_COLOR,
+        plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
+        font=dict(color=ChartConfig.TEXT_COLOR, size=12),
+    )
+    return fig.to_json()
+
+
 def create_mini_line_chart(df, x_col, y_col):
     """
     Creates a compact Plotly line chart for the homepage dashboard.
@@ -422,6 +467,7 @@ def accueil(request):
                 labels=FILIERES,
             )
             graph_mix_year = create_donut_chart(data['production_mix_year'], unit='MWh')
+            graph_sankey = create_parc_prod_sankey(data['parc_pmax'], data['production_mix_year'])
 
             context = {
                 'has_dashboard_data': True,
@@ -436,6 +482,7 @@ def accueil(request):
                 'graph_conso_jour': graph_conso_jour,
                 'graph_production_jour': graph_production_jour,
                 'graph_mix_year': graph_mix_year,
+                'graph_sankey': graph_sankey,
             }
     except Exception:
         pass
