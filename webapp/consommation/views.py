@@ -313,7 +313,14 @@ def create_parc_prod_sankey(parc_mw, prod_mwh):
             source=list(range(n)),
             target=list(range(n, 2 * n)),
             value=[prod_mwh[f] for f in filieres],
-            color=[FILIERE_COLORS[f] + '55' for f in filieres],
+            color=[
+                'rgba({},{},{},0.4)'.format(
+                    int(FILIERE_COLORS[f][1:3], 16),
+                    int(FILIERE_COLORS[f][3:5], 16),
+                    int(FILIERE_COLORS[f][5:7], 16),
+                )
+                for f in filieres
+            ],
         ),
     ))
     fig.update_layout(
