@@ -267,7 +267,7 @@ def create_parc_prod_sankey(parc_mw, prod_mwh):
     left_segs = build_segments(parc_frac)
     right_segs = build_segments(prod_frac)
 
-    BAR_W = 0.08
+    BAR_W = 0.14
     LX0, LX1 = 0.0, BAR_W
     RX0, RX1 = 1.0 - BAR_W, 1.0
     GAP = 0.004  # léger espace entre barre et lien
