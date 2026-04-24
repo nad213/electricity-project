@@ -285,7 +285,7 @@ def create_parc_prod_sankey(parc_mw, prod_mwh):
 
         # Trapèze reliant le segment gauche au segment droit
         # Mélange vers blanc pour obtenir une teinte claire/pastel
-        alpha = 0.25
+        alpha = 0.50
         mr = int(r * alpha + 255 * (1 - alpha))
         mg = int(g * alpha + 255 * (1 - alpha))
         mb = int(b * alpha + 255 * (1 - alpha))
