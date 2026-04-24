@@ -282,13 +282,25 @@ def create_donut_chart(production_mix, unit='MW'):
 
 
 def create_parc_prod_sankey(parc_mw, prod_mwh):
-    """Sankey parc installé (MW) ↔ production annuelle (MWh), par filière."""
+    """Sankey parc installé (MW) ↔ production annuelle (MWh), par filière.
+
+    Les nœuds gauches sont dimensionnés par parc_mw (proportion MW installés)
+    et les nœuds droits par prod_mwh (proportion TWh produits), grâce à une
+    normalisation indépendante et des liens fantômes transparents qui absorbent
+    ou injectent le différentiel.
+    """
     filieres = [f for f in FILIERES if parc_mw.get(f, 0) > 0 and prod_mwh.get(f, 0) > 0]
     if not filieres:
         return go.Figure().to_json()
 
+    n = len(filieres)
     total_parc = sum(parc_mw[f] for f in filieres)
     total_prod = sum(prod_mwh[f] for f in filieres)
+
+    # Normaliser les deux séries indépendamment sur une même échelle commune
+    SCALE = 1000
+    parc_norm = {f: parc_mw[f] / total_parc * SCALE for f in filieres}
+    prod_norm = {f: prod_mwh[f] / total_prod * SCALE for f in filieres}
 
     left_labels = [
         f"{FILIERES[f]} — {parc_mw[f]/1000:.1f} GW ({parc_mw[f]/total_parc*100:.1f} %)"
@@ -298,29 +310,62 @@ def create_parc_prod_sankey(parc_mw, prod_mwh):
         f"{FILIERES[f]} — {prod_mwh[f]/1e6:.1f} TWh ({prod_mwh[f]/total_prod*100:.1f} %)"
         for f in filieres
     ]
-    n = len(filieres)
+
+    # Indices : 0..n-1 gauche (parc), n..2n-1 droite (prod),
+    # 2n = ghost source, 2n+1 = ghost sink (nœuds transparents)
+    ghost_source = 2 * n
+    ghost_sink = 2 * n + 1
+    node_labels = left_labels + right_labels + ['', '']
+    node_colors = (
+        [FILIERE_COLORS[f] for f in filieres]
+        + [FILIERE_COLORS[f] for f in filieres]
+        + ['rgba(0,0,0,0)', 'rgba(0,0,0,0)']
+    )
+
+    link_sources, link_targets, link_values, link_colors = [], [], [], []
+
+    for i, f in enumerate(filieres):
+        pn = parc_norm[f]
+        tn = prod_norm[f]
+        fc = FILIERE_COLORS[f]
+        color_rgba = f'rgba({int(fc[1:3],16)},{int(fc[3:5],16)},{int(fc[5:7],16)},0.45)'
+        transparent = 'rgba(0,0,0,0)'
+
+        # Flux visible entre la filière gauche et la filière droite
+        real_val = min(pn, tn)
+        link_sources.append(i)
+        link_targets.append(n + i)
+        link_values.append(real_val)
+        link_colors.append(color_rgba)
+
+        # Excédent de parc → nœud fantôme (rend le nœud gauche plus grand)
+        if pn > tn:
+            link_sources.append(i)
+            link_targets.append(ghost_sink)
+            link_values.append(pn - tn)
+            link_colors.append(transparent)
+
+        # Excédent de prod depuis nœud fantôme (rend le nœud droit plus grand)
+        if tn > pn:
+            link_sources.append(ghost_source)
+            link_targets.append(n + i)
+            link_values.append(tn - pn)
+            link_colors.append(transparent)
 
     fig = go.Figure(go.Sankey(
         arrangement='snap',
         node=dict(
-            label=left_labels + right_labels,
-            color=[FILIERE_COLORS[f] for f in filieres] * 2,
+            label=node_labels,
+            color=node_colors,
             pad=12,
             thickness=18,
             line=dict(color='rgba(0,0,0,0)', width=0),
         ),
         link=dict(
-            source=list(range(n)),
-            target=list(range(n, 2 * n)),
-            value=[prod_mwh[f] for f in filieres],
-            color=[
-                'rgba({},{},{},0.4)'.format(
-                    int(FILIERE_COLORS[f][1:3], 16),
-                    int(FILIERE_COLORS[f][3:5], 16),
-                    int(FILIERE_COLORS[f][5:7], 16),
-                )
-                for f in filieres
-            ],
+            source=link_sources,
+            target=link_targets,
+            value=link_values,
+            color=link_colors,
         ),
     ))
     fig.update_layout(
