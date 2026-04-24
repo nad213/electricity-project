@@ -284,12 +284,11 @@ def create_parc_prod_sankey(parc_mw, prod_mwh):
         rb, rt = right_segs[f]
 
         # Trapèze reliant le segment gauche au segment droit
-        # Mélange opaque avec le fond (#1E293B) pour éviter l'assombrissement sur fond sombre
-        alpha = 0.45
-        br, bg_, bb = 30, 41, 59  # #1E293B
-        mr = int(r * alpha + br * (1 - alpha))
-        mg = int(g * alpha + bg_ * (1 - alpha))
-        mb = int(b * alpha + bb * (1 - alpha))
+        # Mélange vers blanc pour obtenir une teinte claire/pastel
+        alpha = 0.25
+        mr = int(r * alpha + 255 * (1 - alpha))
+        mg = int(g * alpha + 255 * (1 - alpha))
+        mb = int(b * alpha + 255 * (1 - alpha))
         shapes.append(dict(
             type='path',
             path=(
