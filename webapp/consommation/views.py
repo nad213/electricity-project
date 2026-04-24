@@ -292,7 +292,7 @@ def create_parc_prod_sankey(parc_mw, prod_mwh):
                 f'L {RX0 - GAP:.4f} {rt:.6f} '
                 f'L {RX0 - GAP:.4f} {rb:.6f} Z'
             ),
-            fillcolor=f'rgba({r},{g},{b},0.35)',
+            fillcolor=f'rgba({r},{g},{b},0.20)',
             line=dict(color='rgba(0,0,0,0)', width=0),
             layer='below',
             xref='x', yref='y',
