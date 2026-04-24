@@ -453,7 +453,7 @@ body {
 .page-nav-sidebar {
     position: sticky;
     top: 80px;
-    width: 130px;
+    width: 110px;
     padding-left: 1rem;
     border-left: 1px solid var(--border);
 }
