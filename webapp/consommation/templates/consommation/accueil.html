@@ -113,19 +113,6 @@
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header">
-                <h3 class="card-title">Mix énergétique {{ current_year }}</h3>
-            </div>
-            <div class="card-body p-2">
-                <div id="chart-mix-year"></div>
-            </div>
-        </div>
-    </div>
-</div>
-<!-- Section Parc vs Production (Sankey) -->
-<div class="row row-cards mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
                 <h3 class="card-title">Parc installé vs production — {{ current_year }}</h3>
             </div>
             <div class="card-body p-2">
@@ -148,9 +135,6 @@
 
     chartData = JSON.parse('{{ graph_production_jour|escapejs }}');
     Plotly.newPlot('chart-production-jour', chartData.data, chartData.layout, plotConfig);
-
-    chartData = JSON.parse('{{ graph_mix_year|escapejs }}');
-    Plotly.newPlot('chart-mix-year', chartData.data, chartData.layout, plotConfig);
 
     chartData = JSON.parse('{{ graph_sankey|escapejs }}');
     Plotly.newPlot('chart-parc-prod-sankey', chartData.data, chartData.layout, plotConfig);

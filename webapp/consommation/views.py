@@ -237,49 +237,6 @@ def create_stacked_bar_chart(df, x_col, y_cols, colors, labels):
     return fig.to_json()
 
 
-def create_donut_chart(production_mix, unit='MW'):
-    """
-    Creates a Plotly horizontal bar chart for the production mix by filière.
-
-    Args:
-        production_mix: dict {filiere_key: value}
-        unit: unit string shown in hover (default 'MW', use 'MWh' for annual data)
-
-    Returns:
-        JSON string of the Plotly figure
-    """
-    total = sum(v for v in production_mix.values() if v > 0)
-    labels = []
-    values = []
-    colors = []
-    texts = []
-
-    for filiere, value in production_mix.items():
-        if value > 0:
-            labels.append(FILIERES[filiere])
-            values.append(value)
-            colors.append(FILIERE_COLORS[filiere])
-            texts.append(f'{FILIERES[filiere]}<br>{value/total:.0%}')
-
-    fig = go.Figure(data=[go.Treemap(
-        labels=labels,
-        values=values,
-        parents=[''] * len(labels),
-        text=texts,
-        textinfo='text',
-        marker=dict(colors=colors),
-        hovertemplate=f'<b>%{{label}}</b><br>%{{value:,.0f}} {unit}<br>%{{percentRoot:.0%}}<extra></extra>',
-    )])
-
-    fig.update_layout(
-        paper_bgcolor=ChartConfig.PAPER_COLOR,
-        font=dict(color='#ffffff', size=12),
-        margin=dict(l=0, r=0, t=0, b=0),
-        height=300,
-    )
-
-    return fig.to_json()
-
 
 def create_parc_prod_sankey(parc_mw, prod_mwh):
     """Diagramme parc installé (MW) ↔ production annuelle (MWh), par filière.
@@ -591,7 +548,6 @@ def accueil(request):
                 colors=FILIERE_COLORS,
                 labels=FILIERES,
             )
-            graph_mix_year = create_donut_chart(data['production_mix_year'], unit='MWh')
             graph_sankey = create_parc_prod_sankey(data['parc_pmax'], data['production_mix_year'])
 
             context = {
@@ -606,7 +562,6 @@ def accueil(request):
                 'peak_all_time': data['peak_all_datetime'].strftime('%H:%M'),
                 'graph_conso_jour': graph_conso_jour,
                 'graph_production_jour': graph_production_jour,
-                'graph_mix_year': graph_mix_year,
                 'graph_sankey': graph_sankey,
             }
     except Exception:
