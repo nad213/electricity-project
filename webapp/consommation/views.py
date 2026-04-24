@@ -284,6 +284,12 @@ def create_parc_prod_sankey(parc_mw, prod_mwh):
         rb, rt = right_segs[f]
 
         # Trapèze reliant le segment gauche au segment droit
+        # Mélange opaque avec le fond (#1E293B) pour éviter l'assombrissement sur fond sombre
+        alpha = 0.30
+        br, bg_, bb = 30, 41, 59  # #1E293B
+        mr = int(r * alpha + br * (1 - alpha))
+        mg = int(g * alpha + bg_ * (1 - alpha))
+        mb = int(b * alpha + bb * (1 - alpha))
         shapes.append(dict(
             type='path',
             path=(
@@ -292,7 +298,7 @@ def create_parc_prod_sankey(parc_mw, prod_mwh):
                 f'L {RX0 - GAP:.4f} {rt:.6f} '
                 f'L {RX0 - GAP:.4f} {rb:.6f} Z'
             ),
-            fillcolor=f'rgba({r},{g},{b},0.12)',
+            fillcolor=f'rgb({mr},{mg},{mb})',
             line=dict(color='rgba(0,0,0,0)', width=0),
             layer='below',
             xref='x', yref='y',
