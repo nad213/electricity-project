@@ -285,7 +285,7 @@ def create_parc_prod_sankey(parc_mw, prod_mwh):
 
         # Trapèze reliant le segment gauche au segment droit
         # Mélange opaque avec le fond (#1E293B) pour éviter l'assombrissement sur fond sombre
-        alpha = 0.15
+        alpha = 0.45
         br, bg_, bb = 30, 41, 59  # #1E293B
         mr = int(r * alpha + br * (1 - alpha))
         mg = int(g * alpha + bg_ * (1 - alpha))
