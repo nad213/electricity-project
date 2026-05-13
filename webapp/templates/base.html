@@ -82,6 +82,14 @@
                                 <span class="nav-link-title">API</span>
                             </a>
                         </li>
+                        <li class="nav-item {% if request.resolver_match.url_name == 'chat' %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'consommation:chat' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="ti ti-messages"></i>
+                                </span>
+                                <span class="nav-link-title">Chat</span>
+                            </a>
+                        </li>
                         {% endif %}
                     </ul>
 

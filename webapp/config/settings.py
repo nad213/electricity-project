@@ -51,6 +51,11 @@ AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN', '')
 AUTH0_CLIENT_ID = os.getenv('AUTH0_CLIENT_ID', '')
 AUTH0_CLIENT_SECRET = os.getenv('AUTH0_CLIENT_SECRET', '')
 
+# Chatbot (Anthropic API)
+ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY', '')
+CHAT_MODEL = os.getenv('CHAT_MODEL', 'claude-haiku-4-5-20251001')
+CHAT_MAX_TURNS = int(os.getenv('CHAT_MAX_TURNS', '30'))
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 

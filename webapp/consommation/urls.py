@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import auth_views
+from . import chat_views
 
 app_name = 'consommation'
 
@@ -9,6 +10,10 @@ urlpatterns = [
     path('login/', auth_views.login, name='login'),
     path('callback/', auth_views.callback, name='callback'),
     path('logout/', auth_views.logout, name='logout'),
+
+    # Chatbot
+    path('chat/', chat_views.chat_page, name='chat'),
+    path('chat/message/', chat_views.chat_message, name='chat_message'),
 
     # App routes
     path('', views.accueil, name='accueil'),
