@@ -203,6 +203,88 @@ def get_production_data(start_date, end_date, filiere='nucleaire'):
     return result
 
 
+def get_consommation_peaks(start_date, end_date, n=5, direction='max'):
+    """
+    Top-N peaks (or troughs) of consumption with their exact datetime.
+    Used by the chatbot to answer "pic / record / minimum" questions without
+    downsampling.
+    """
+    if direction not in ('max', 'min'):
+        raise ValueError("direction doit être 'max' ou 'min'")
+    n = max(1, min(int(n), 20))
+    order = 'DESC' if direction == 'max' else 'ASC'
+
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+    path = data_cache.get_local_path('puissance')
+    with get_duckdb_connection(path) as conn:
+        query = f"""
+            SELECT date_heure, consommation AS value
+            FROM read_parquet(?)
+            WHERE date_heure BETWEEN ? AND ?
+              AND consommation IS NOT NULL
+            ORDER BY consommation {order}
+            LIMIT ?;
+        """
+        return conn.execute(
+            query, [path, start_str, f"{end_str} 23:59:59", n]
+        ).fetchdf()
+
+
+def get_production_peaks(filiere, start_date, end_date, n=5, direction='max'):
+    """Top-N peaks (or troughs) of production for a given filière."""
+    if direction not in ('max', 'min'):
+        raise ValueError("direction doit être 'max' ou 'min'")
+    valid_filieres = list(get_production_filieres().keys())
+    if filiere not in valid_filieres:
+        raise ValueError(f"Filière invalide. Choisissez parmi: {', '.join(valid_filieres)}")
+    n = max(1, min(int(n), 20))
+    order = 'DESC' if direction == 'max' else 'ASC'
+
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+    path = data_cache.get_local_path('production')
+    with get_duckdb_connection(path) as conn:
+        query = f"""
+            SELECT date_heure, {filiere} AS value
+            FROM read_parquet(?)
+            WHERE date_heure BETWEEN ? AND ?
+              AND {filiere} IS NOT NULL
+            ORDER BY {filiere} {order}
+            LIMIT ?;
+        """
+        return conn.execute(
+            query, [path, start_str, f"{end_str} 23:59:59", n]
+        ).fetchdf()
+
+
+def get_echanges_peaks(pays, start_date, end_date, n=5, direction='max'):
+    """Top-N peaks (or troughs) of cross-border exchanges for a given country."""
+    if direction not in ('max', 'min'):
+        raise ValueError("direction doit être 'max' ou 'min'")
+    valid_pays = list(get_echanges_pays().keys())
+    if pays not in valid_pays:
+        raise ValueError(f"Pays invalide. Choisissez parmi: {', '.join(valid_pays)}")
+    n = max(1, min(int(n), 20))
+    order = 'DESC' if direction == 'max' else 'ASC'
+
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+    path = data_cache.get_local_path('echanges')
+    with get_duckdb_connection(path) as conn:
+        query = f"""
+            SELECT date_heure, {pays} AS value
+            FROM read_parquet(?)
+            WHERE date_heure BETWEEN ? AND ?
+              AND {pays} IS NOT NULL
+            ORDER BY {pays} {order}
+            LIMIT ?;
+        """
+        return conn.execute(
+            query, [path, start_str, f"{end_str} 23:59:59", n]
+        ).fetchdf()
+
+
 def get_production_annual_data():
     """
     Loads annual production data aggregated by sector from S3

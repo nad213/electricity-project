@@ -28,6 +28,8 @@ Règles :
 - Pour les filières de production : nucleaire, hydraulique, eolien, solaire, gaz, charbon, fioul, bioenergies.
 - Pour les pays d'échange : ech_physiques (solde total), ech_comm_angleterre, ech_comm_espagne, ech_comm_italie, ech_comm_suisse, ech_comm_allemagne_belgique. Un solde négatif = exportation, positif = importation.
 - Quand tu présentes des séries de chiffres, utilise des tableaux markdown lisibles.
+- Pour les questions de type « pic / record / maximum / minimum » sur une période, appelle TOUJOURS `get_peak` (pas `get_consommation`/`get_production` en raw — qui downsample et perdent le datetime exact).
+- La granularité `raw` est limitée à 31 jours. Au-delà, utilise `daily` ou `get_peak`.
 - Si une demande est ambiguë, pose une courte question avant d'appeler un tool."""
 
 
@@ -83,6 +85,23 @@ TOOLS = [
         "description": "Photo du jour : dernière journée disponible (conso et production demi-horaires), pic de conso de l'année et historique, mix de production de l'année en cours.",
         "input_schema": {"type": "object", "properties": {}, "required": []},
     },
+    {
+        "name": "get_peak",
+        "description": "Top-N valeurs extrêmes (max ou min) avec leur datetime exact, sur une période. À utiliser pour toute question 'pic / record / maximum / minimum' au lieu de get_consommation/get_production en granularity raw (plus précis, pas de downsampling).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "dataset": {"type": "string", "enum": ["consommation", "production", "echanges"]},
+                "filiere": {"type": "string", "enum": ["nucleaire", "hydraulique", "eolien", "solaire", "gaz", "charbon", "fioul", "bioenergies"], "description": "Requis si dataset=production."},
+                "pays": {"type": "string", "enum": ["ech_physiques", "ech_comm_angleterre", "ech_comm_espagne", "ech_comm_italie", "ech_comm_suisse", "ech_comm_allemagne_belgique"], "description": "Requis si dataset=echanges."},
+                "start": {"type": "string", "description": "Date début ISO YYYY-MM-DD."},
+                "end": {"type": "string", "description": "Date fin ISO YYYY-MM-DD."},
+                "direction": {"type": "string", "enum": ["max", "min"], "description": "Sens du tri. Défaut 'max'."},
+                "n": {"type": "integer", "description": "Nombre de résultats (1-20). Défaut 5."},
+            },
+            "required": ["dataset", "start", "end"],
+        },
+    },
 ]
 
 
@@ -90,6 +109,7 @@ TOOLS = [
 
 _MAX_ROWS = 150
 _SAMPLE_SIZE = 30
+_MAX_RAW_DAYS = 31
 
 
 def _isoformat(v):
@@ -169,6 +189,8 @@ def _tool_get_consommation(args: dict) -> dict:
     start, end = _parse_dates(args)
     if not start or not end:
         return {"error": "start et end sont requis pour granularity raw/daily"}
+    if g == "raw" and (end - start).days > _MAX_RAW_DAYS:
+        return {"error": f"Période trop longue pour granularity=raw ({(end - start).days} jours > {_MAX_RAW_DAYS}). Utilise granularity='daily' pour agréger, ou le tool 'get_peak' pour les extrêmes."}
     df = services.get_puissance_data(start, end)
     if df.empty:
         return {"rows_total": 0, "data": [], "unit": "MW"}
@@ -203,6 +225,8 @@ def _tool_get_production(args: dict) -> dict:
     start, end = _parse_dates(args)
     if not start or not end:
         return {"error": "start et end sont requis pour granularity raw/daily"}
+    if g == "raw" and (end - start).days > _MAX_RAW_DAYS:
+        return {"error": f"Période trop longue pour granularity=raw ({(end - start).days} jours > {_MAX_RAW_DAYS}). Utilise granularity='daily' pour agréger, ou le tool 'get_peak' pour les extrêmes."}
     df = services.get_production_data(start, end, filiere=filiere)
     if df.empty:
         return {"rows_total": 0, "data": [], "unit": "MW"}
@@ -219,6 +243,8 @@ def _tool_get_echanges(args: dict) -> dict:
     start, end = _parse_dates(args)
     if not start or not end:
         return {"error": "start et end sont requis"}
+    if g == "raw" and (end - start).days > _MAX_RAW_DAYS:
+        return {"error": f"Période trop longue pour granularity=raw ({(end - start).days} jours > {_MAX_RAW_DAYS}). Utilise granularity='daily' pour agréger, ou le tool 'get_peak' pour les extrêmes."}
     df = services.get_echanges_data(start, end, pays=pays)
     if df.empty:
         return {"rows_total": 0, "data": [], "unit": "MW"}
@@ -245,12 +271,49 @@ def _tool_get_dashboard() -> dict:
     }
 
 
+def _tool_get_peak(args: dict) -> dict:
+    dataset = args["dataset"]
+    direction = args.get("direction", "max")
+    n = args.get("n", 5)
+    start, end = _parse_dates(args)
+    if not start or not end:
+        return {"error": "start et end sont requis"}
+
+    if dataset == "consommation":
+        df = services.get_consommation_peaks(start, end, n=n, direction=direction)
+    elif dataset == "production":
+        filiere = args.get("filiere")
+        if not filiere:
+            return {"error": "filiere requise pour dataset=production"}
+        df = services.get_production_peaks(filiere, start, end, n=n, direction=direction)
+    elif dataset == "echanges":
+        pays = args.get("pays")
+        if not pays:
+            return {"error": "pays requis pour dataset=echanges"}
+        df = services.get_echanges_peaks(pays, start, end, n=n, direction=direction)
+    else:
+        return {"error": f"dataset {dataset} inconnu"}
+
+    if df.empty:
+        return {"rows_total": 0, "rows": [], "unit": "MW"}
+    return {
+        "unit": "MW",
+        "direction": direction,
+        "rows_total": len(df),
+        "rows": [
+            {"date_heure": _isoformat(r["date_heure"]), "value": float(r["value"])}
+            for r in df.to_dict(orient="records")
+        ],
+    }
+
+
 _DISPATCH = {
     "get_overview": lambda args: _tool_get_overview(),
     "get_consommation": _tool_get_consommation,
     "get_production": _tool_get_production,
     "get_echanges": _tool_get_echanges,
     "get_dashboard": lambda args: _tool_get_dashboard(),
+    "get_peak": _tool_get_peak,
 }
 
 
