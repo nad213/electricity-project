@@ -6,6 +6,7 @@ import logging
 
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
 from .auth import is_authenticated
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 @require_GET
+@ensure_csrf_cookie
 def chat_page(request):
     if not is_authenticated(request):
         return redirect("consommation:login")
