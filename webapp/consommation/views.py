@@ -567,6 +567,12 @@ def accueil(request):
             )
             graph_sankey = create_parc_prod_sankey(data['parc_pmax'], data['production_mix_year'])
 
+            DECARBONEES = ('nucleaire', 'hydraulique', 'bioenergies', 'solaire', 'eolien')
+            mix = data['production_mix_year']
+            total_mwh = sum(mix.values())
+            decarbonees_mwh = sum(mix.get(f, 0.0) for f in DECARBONEES)
+            pct_decarbonee = (decarbonees_mwh / total_mwh * 100) if total_mwh > 0 else 0.0
+
             context = {
                 'has_dashboard_data': True,
                 'dashboard_date': data['dashboard_date'],
@@ -577,6 +583,8 @@ def accueil(request):
                 'peak_all_value': f"{data['peak_all_value']:,}".replace(',', '\u202f'),
                 'peak_all_date': data['peak_all_datetime'].strftime('%d/%m/%Y'),
                 'peak_all_time': data['peak_all_datetime'].strftime('%H:%M'),
+                'pct_decarbonee': f"{pct_decarbonee:.1f}".replace('.', ','),
+                'decarbonees_twh': f"{decarbonees_mwh / 1_000_000:.1f}".replace('.', ','),
                 'graph_conso_jour': graph_conso_jour,
                 'graph_production_jour': graph_production_jour,
                 'graph_sankey': graph_sankey,

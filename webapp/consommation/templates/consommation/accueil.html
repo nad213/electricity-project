@@ -99,8 +99,23 @@
 </div>
 
 <div class="row row-cards mb-4">
+    <div class="col-md-3 d-flex flex-column gap-3">
+        <div class="card stat-card flex-grow-1">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span class="stat-label">Part décarbonée {{ current_year }}</span>
+                    <div class="stat-icon stat-icon-green">
+                        <i class="ti ti-leaf"></i>
+                    </div>
+                </div>
+                <div class="stat-value">{{ pct_decarbonee }} <span class="stat-unit">%</span></div>
+                <small class="text-muted">Nucléaire + hydro + éolien + solaire + bioénergies — {{ decarbonees_twh }} TWh</small>
+            </div>
+        </div>
+    </div>
+
     <div class="col-md-9">
-        <div class="card">
+        <div class="card h-100">
             <div class="card-header">
                 <h3 class="card-title">Production du jour par filière</h3>
             </div>
