@@ -112,6 +112,21 @@
                 <small class="text-muted">Nucléaire + hydro + éolien + solaire + bioénergies — {{ decarbonees_twh }} TWh</small>
             </div>
         </div>
+
+        {% if parc_enr_delta_pct %}
+        <div class="card stat-card flex-grow-1">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span class="stat-label">Parc éolien + solaire</span>
+                    <div class="stat-icon stat-icon-blue">
+                        <i class="ti {% if parc_enr_delta_positive %}ti-trending-up{% else %}ti-trending-down{% endif %}"></i>
+                    </div>
+                </div>
+                <div class="stat-value {% if parc_enr_delta_positive %}stat-value-green{% else %}stat-value-red{% endif %}">{{ parc_enr_delta_pct }} <span class="stat-unit">%</span></div>
+                <small class="text-muted">{{ parc_enr_now_gw }} GW en {{ parc_enr_mois_label }} vs {{ parc_enr_prev_gw }} GW un an plus tôt</small>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <div class="col-md-9">

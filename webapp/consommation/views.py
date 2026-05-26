@@ -573,6 +573,29 @@ def accueil(request):
             decarbonees_mwh = sum(mix.get(f, 0.0) for f in DECARBONEES)
             pct_decarbonee = (decarbonees_mwh / total_mwh * 100) if total_mwh > 0 else 0.0
 
+            parc_enr_ctx = {}
+            try:
+                df_parc = get_parc_installe_data()
+                parc_by_month = df_parc.groupby('date')['parc_mw'].sum().sort_index()
+                latest = parc_by_month.index[-1]
+                y, m = latest.split('-')
+                prev = f"{int(y) - 1}-{m}"
+                if prev in parc_by_month.index:
+                    parc_now_gw = parc_by_month.iloc[-1] / 1000
+                    parc_prev_gw = parc_by_month[prev] / 1000
+                    delta_pct = (parc_now_gw - parc_prev_gw) / parc_prev_gw * 100
+                    mois_fr = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin',
+                               'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
+                    parc_enr_ctx = {
+                        'parc_enr_delta_pct': f"{'+' if delta_pct >= 0 else ''}{delta_pct:.1f}".replace('.', ','),
+                        'parc_enr_now_gw': f"{parc_now_gw:.1f}".replace('.', ','),
+                        'parc_enr_prev_gw': f"{parc_prev_gw:.1f}".replace('.', ','),
+                        'parc_enr_mois_label': f"{mois_fr[int(m) - 1]} {y}",
+                        'parc_enr_delta_positive': delta_pct >= 0,
+                    }
+            except Exception:
+                pass
+
             context = {
                 'has_dashboard_data': True,
                 'dashboard_date': data['dashboard_date'],
@@ -585,6 +608,7 @@ def accueil(request):
                 'peak_all_time': data['peak_all_datetime'].strftime('%H:%M'),
                 'pct_decarbonee': f"{pct_decarbonee:.1f}".replace('.', ','),
                 'decarbonees_twh': f"{decarbonees_mwh / 1_000_000:.1f}".replace('.', ','),
+                **parc_enr_ctx,
                 'graph_conso_jour': graph_conso_jour,
                 'graph_production_jour': graph_production_jour,
                 'graph_sankey': graph_sankey,
