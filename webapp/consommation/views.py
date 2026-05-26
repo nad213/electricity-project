@@ -575,24 +575,37 @@ def accueil(request):
 
             parc_enr_ctx = {}
             try:
-                df_parc = get_parc_installe_data()
-                parc_by_month = df_parc.groupby('date')['parc_mw'].sum().sort_index()
-                latest = parc_by_month.index[-1]
-                y, m = latest.split('-')
-                prev = f"{int(y) - 1}-{m}"
-                if prev in parc_by_month.index:
-                    parc_now_gw = parc_by_month.iloc[-1] / 1000
-                    parc_prev_gw = parc_by_month[prev] / 1000
-                    delta_pct = (parc_now_gw - parc_prev_gw) / parc_prev_gw * 100
-                    mois_fr = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin',
-                               'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
-                    parc_enr_ctx = {
-                        'parc_enr_delta_pct': f"{'+' if delta_pct >= 0 else ''}{delta_pct:.1f}".replace('.', ','),
-                        'parc_enr_now_gw': f"{parc_now_gw:.1f}".replace('.', ','),
-                        'parc_enr_prev_gw': f"{parc_prev_gw:.1f}".replace('.', ','),
-                        'parc_enr_mois_label': f"{mois_fr[int(m) - 1]} {y}",
-                        'parc_enr_delta_positive': delta_pct >= 0,
-                    }
+                df_parc = get_parc_installe_data().copy()
+                df_parc['groupe'] = df_parc['filiere'].map({
+                    'Eolien terrestre': 'eolien',
+                    'Eolien en mer': 'eolien',
+                    'Solaire': 'solaire',
+                })
+                parc_by_month = (df_parc.groupby(['date', 'groupe'])['parc_mw']
+                                          .sum()
+                                          .unstack('groupe')
+                                          .sort_index())
+                if len(parc_by_month) >= 13:
+                    latest = parc_by_month.index[-1]
+                    y, m = latest.split('-')
+                    prev = f"{int(y) - 1}-{m}"
+                    if prev in parc_by_month.index and 'eolien' in parc_by_month.columns and 'solaire' in parc_by_month.columns:
+                        def _fmt_pct(now, before):
+                            d = (now - before) / before * 100
+                            return f"{'+' if d >= 0 else ''}{d:.1f}".replace('.', ','), d >= 0
+                        now_row = parc_by_month.loc[latest]
+                        prev_row = parc_by_month.loc[prev]
+                        eol_pct, eol_pos = _fmt_pct(now_row['eolien'], prev_row['eolien'])
+                        sol_pct, sol_pos = _fmt_pct(now_row['solaire'], prev_row['solaire'])
+                        parc_enr_ctx = {
+                            'parc_eolien_delta': eol_pct,
+                            'parc_eolien_positive': eol_pos,
+                            'parc_eolien_gw': f"{now_row['eolien'] / 1000:.1f}".replace('.', ','),
+                            'parc_solaire_delta': sol_pct,
+                            'parc_solaire_positive': sol_pos,
+                            'parc_solaire_gw': f"{now_row['solaire'] / 1000:.1f}".replace('.', ','),
+                            'parc_enr_mois_label': f"{latest} vs {prev}",
+                        }
             except Exception:
                 pass
 

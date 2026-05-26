@@ -113,17 +113,30 @@
             </div>
         </div>
 
-        {% if parc_enr_delta_pct %}
+        {% if parc_eolien_delta %}
         <div class="card stat-card flex-grow-1">
             <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between mb-3">
-                    <span class="stat-label">Parc éolien + solaire</span>
+                    <span class="stat-label">Parc EnR sur 12 mois</span>
                     <div class="stat-icon stat-icon-blue">
-                        <i class="ti {% if parc_enr_delta_positive %}ti-trending-up{% else %}ti-trending-down{% endif %}"></i>
+                        <i class="ti ti-wind"></i>
                     </div>
                 </div>
-                <div class="stat-value {% if parc_enr_delta_positive %}stat-value-green{% else %}stat-value-red{% endif %}">{{ parc_enr_delta_pct }} <span class="stat-unit">%</span></div>
-                <small class="text-muted">{{ parc_enr_now_gw }} GW en {{ parc_enr_mois_label }} vs {{ parc_enr_prev_gw }} GW un an plus tôt</small>
+                <div class="d-flex justify-content-between align-items-baseline mb-2">
+                    <span class="text-muted" style="font-size: 0.875rem;">Éolien</span>
+                    <span>
+                        <strong class="{% if parc_eolien_positive %}stat-value-green{% else %}stat-value-red{% endif %}">{{ parc_eolien_delta }} %</strong>
+                        <span class="text-muted ms-2">{{ parc_eolien_gw }} GW</span>
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-baseline mb-2">
+                    <span class="text-muted" style="font-size: 0.875rem;">Solaire</span>
+                    <span>
+                        <strong class="{% if parc_solaire_positive %}stat-value-green{% else %}stat-value-red{% endif %}">{{ parc_solaire_delta }} %</strong>
+                        <span class="text-muted ms-2">{{ parc_solaire_gw }} GW</span>
+                    </span>
+                </div>
+                <small class="text-muted">{{ parc_enr_mois_label }}</small>
             </div>
         </div>
         {% endif %}
