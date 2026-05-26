@@ -443,7 +443,7 @@ def create_mini_line_chart(df, x_col, y_col):
 
 def create_parc_installe_chart(df):
     """
-    Creates a multi-line chart of monthly installed capacity (MW) by filière.
+    Stacked monthly bar chart of installed capacity (GW) by filière.
     df must have columns: date, filiere, parc_mw
     """
     filiere_colors = {
@@ -451,23 +451,30 @@ def create_parc_installe_chart(df):
         'Eolien en mer': '#06D6A0',
         'Solaire': ProductionColors.SOLAIRE,
     }
+    stack_order = ['Eolien terrestre', 'Eolien en mer', 'Solaire']
 
     fig = go.Figure()
-    for filiere in df['filiere'].unique():
+    for filiere in stack_order:
         sub = df[df['filiere'] == filiere].sort_values('date')
-        fig.add_trace(go.Scatter(
+        if sub.empty:
+            continue
+        fig.add_trace(go.Bar(
             x=sub['date'],
-            y=sub['parc_mw'].round(0),
+            y=(sub['parc_mw'] / 1000).round(2),
             name=filiere,
-            mode='lines',
-            line=dict(color=filiere_colors.get(filiere, Colors.PRIMARY), width=2),
-            hovertemplate=f'{filiere}: %{{y:,.0f}} MW<extra></extra>',
+            marker=dict(
+                color=filiere_colors.get(filiere, Colors.PRIMARY),
+                line=dict(width=0),
+            ),
+            hovertemplate=f'{filiere}: %{{y:,.1f}} GW<extra></extra>',
         ))
 
     fig.update_layout(
+        barmode='stack',
+        bargap=0.05,
         separators=', ',
         xaxis_title_text='',
-        yaxis_title_text='MW',
+        yaxis_title_text='GW',
         margin=ChartConfig.MARGIN_WITH_LEGEND,
         height=ChartConfig.LINE_CHART_HEIGHT,
         plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
@@ -475,6 +482,11 @@ def create_parc_installe_chart(df):
         font=dict(color=ChartConfig.TEXT_COLOR),
         legend=dict(orientation='h', x=0.5, y=-0.2, xanchor='center'),
         hovermode='x unified',
+        hoverlabel=dict(
+            bgcolor='#1E293B',
+            bordercolor='#475569',
+            font=dict(color='#F1F5F9', size=11),
+        ),
     )
     fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
     fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR, zerolinecolor=ChartConfig.GRID_COLOR)
