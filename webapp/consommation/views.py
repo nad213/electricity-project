@@ -604,7 +604,6 @@ def accueil(request):
                             'parc_solaire_delta': sol_pct,
                             'parc_solaire_positive': sol_pos,
                             'parc_solaire_gw': f"{now_row['solaire'] / 1000:.1f}".replace('.', ','),
-                            'parc_enr_mois_label': f"{latest} vs {prev}",
                         }
             except Exception:
                 pass
