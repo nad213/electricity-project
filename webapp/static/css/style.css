@@ -296,21 +296,14 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 1.5rem;
+    background-color: var(--surface-hover);
+    color: var(--text-secondary);
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.icon-box-blue {
+.feature-card:hover .icon-box {
     background-color: var(--accent-glow-strong);
     color: var(--accent);
-}
-
-.icon-box-green {
-    background-color: rgba(16, 185, 129, 0.15);
-    color: #10B981;
-}
-
-.icon-box-orange {
-    background-color: var(--amber-glow);
-    color: var(--amber);
 }
 
 /* ========== Stat Cards (homepage dashboard) ========== */

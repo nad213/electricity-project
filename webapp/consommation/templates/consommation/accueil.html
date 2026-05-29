@@ -9,20 +9,21 @@
 <div class="row mb-4">
     <div class="col-12">
         <div class="card welcome-card">
-            <div class="card-body py-5" style="padding-left: 3rem; padding-right: 3rem;">
-                <div class="d-flex align-items-center mb-3">
-                    <i class="ti ti-bolt" style="font-size: 2rem; color: #22D3EE;"></i>
+            <div class="card-body py-4" style="padding-left: 3rem; padding-right: 3rem;">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                    <h1 class="mb-0 d-flex align-items-center" style="font-size: 1.75rem; font-weight: 700; letter-spacing: -0.03em; color: #FAFAFA;">
+                        ElecFlow
+                    </h1>
+                    {% if has_dashboard_data %}
+                    <p class="text-muted mb-0" style="font-size: 0.8125rem;">
+                        <i class="ti ti-calendar me-1"></i>
+                        Dernières données disponibles — {{ dashboard_date|date:"d/m/Y" }}
+                    </p>
+                    {% endif %}
                 </div>
-                <h1 class="mb-2" style="font-size: 2.25rem; font-weight: 700; letter-spacing: -0.03em; color: #FAFAFA;">
-                    ElecFlow
-                </h1>
-                <p style="font-size: 1.125rem; color: #A1A1AA; max-width: 600px; margin-bottom: 2rem;">
-                    Visualisez les données de consommation, production et échanges électriques en France.
+                <p style="font-size: 1.0625rem; color: #A1A1AA; max-width: 600px; margin-bottom: 0;">
+                    Visualisez les données de consommation, production et échanges électriques en France. Cette page en présente les principaux indicateurs ; le détail est disponible dans chaque rubrique.
                 </p>
-                <a href="{% url 'consommation:index' %}" class="btn btn-primary">
-                    <i class="ti ti-chart-line me-1"></i>
-                    Explorer les données
-                </a>
             </div>
         </div>
     </div>
@@ -30,11 +31,11 @@
 
 <!-- Fonctionnalités -->
 <div class="row row-cards mb-4">
-    <div class="col-md-4">
+    <div class="col-12 col-md">
         <a href="{% url 'consommation:index' %}" class="text-decoration-none">
             <div class="card feature-card h-100">
                 <div class="card-body">
-                    <div class="icon-box icon-box-blue mb-3">
+                    <div class="icon-box mb-3">
                         <i class="ti ti-chart-line"></i>
                     </div>
                     <h3 class="mb-1" style="font-size: 1rem; font-weight: 600; color: #FAFAFA;">Consommation</h3>
@@ -45,26 +46,26 @@
             </div>
         </a>
     </div>
-    <div class="col-md-4">
+    <div class="col-12 col-md">
         <a href="{% url 'consommation:production' %}" class="text-decoration-none">
             <div class="card feature-card h-100">
                 <div class="card-body">
-                    <div class="icon-box icon-box-orange mb-3">
+                    <div class="icon-box mb-3">
                         <i class="ti ti-building-factory"></i>
                     </div>
                     <h3 class="mb-1" style="font-size: 1rem; font-weight: 600; color: #FAFAFA;">Production</h3>
                     <p class="text-muted mb-0" style="font-size: 0.875rem;">
-                        Explorez le mix énergétique par filière : nucléaire, éolien, solaire, hydraulique…
+                        Explorez le mix énergétique par filière.
                     </p>
                 </div>
             </div>
         </a>
     </div>
-    <div class="col-md-4">
+    <div class="col-12 col-md">
         <a href="{% url 'consommation:echanges' %}" class="text-decoration-none">
             <div class="card feature-card h-100">
                 <div class="card-body">
-                    <div class="icon-box icon-box-green mb-3">
+                    <div class="icon-box mb-3">
                         <i class="ti ti-arrows-exchange"></i>
                     </div>
                     <h3 class="mb-1" style="font-size: 1rem; font-weight: 600; color: #FAFAFA;">Échanges</h3>
@@ -75,24 +76,44 @@
             </div>
         </a>
     </div>
-</div>
-
-{% if has_dashboard_data %}
-<!-- Date label -->
-<div class="row mb-3 align-items-center">
-    <div class="col-12">
-        <p class="text-muted mb-0" style="font-size: 0.8125rem;">
-            <i class="ti ti-calendar me-1"></i>
-            Dernières données disponibles — {{ dashboard_date|date:"d/m/Y" }}
-        </p>
+    <div class="col-12 col-md">
+        <a href="{% url 'consommation:api' %}" class="text-decoration-none">
+            <div class="card feature-card h-100">
+                <div class="card-body">
+                    <div class="icon-box mb-3">
+                        <i class="ti ti-api"></i>
+                    </div>
+                    <h3 class="mb-1" style="font-size: 1rem; font-weight: 600; color: #FAFAFA;">API</h3>
+                    <p class="text-muted mb-0" style="font-size: 0.875rem;">
+                        Accédez aux données électriques via l'API pour vos propres analyses.
+                    </p>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-12 col-md">
+        <a href="{% url 'consommation:chat' %}" class="text-decoration-none">
+            <div class="card feature-card h-100">
+                <div class="card-body">
+                    <div class="icon-box mb-3">
+                        <i class="ti ti-messages"></i>
+                    </div>
+                    <h3 class="mb-1" style="font-size: 1rem; font-weight: 600; color: #FAFAFA;">Chat</h3>
+                    <p class="text-muted mb-0" style="font-size: 0.875rem;">
+                        Interrogez les données électriques en langage naturel grâce à l'assistant.
+                    </p>
+                </div>
+            </div>
+        </a>
     </div>
 </div>
 
+{% if has_dashboard_data %}
 <!-- Section Consommation -->
 <div class="row mb-2">
     <div class="col-12">
-        <h2 style="font-size: 1.125rem; font-weight: 600; color: #FAFAFA; margin-bottom: 0.75rem;">
-            <i class="ti ti-bolt me-2" style="color: #22D3EE;"></i>Consommation
+        <h2 style="font-size: 1.125rem; font-weight: 600; color: #FAFAFA; margin-bottom: 0.75rem; border-left: 3px solid #22D3EE; padding-left: 0.75rem;">
+            Consommation
         </h2>
     </div>
 </div>
@@ -116,7 +137,7 @@
             <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between mb-3">
                     <span class="stat-label">Pointe historique</span>
-                    <div class="stat-icon stat-icon-amber">
+                    <div class="stat-icon stat-icon-blue">
                         <i class="ti ti-trophy"></i>
                     </div>
                 </div>
@@ -141,8 +162,8 @@
 <!-- Section Production -->
 <div class="row mb-2">
     <div class="col-12">
-        <h2 style="font-size: 1.125rem; font-weight: 600; color: #FAFAFA; margin-bottom: 0.75rem;">
-            <i class="ti ti-building-factory me-2" style="color: #FBBF24;"></i>Production
+        <h2 style="font-size: 1.125rem; font-weight: 600; color: #FAFAFA; margin-bottom: 0.75rem; border-left: 3px solid #FBBF24; padding-left: 0.75rem;">
+            Production
         </h2>
     </div>
 </div>
@@ -167,7 +188,7 @@
             <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between mb-3">
                     <span class="stat-label">Évolution parc Solaire &amp; Éolien - 12 mois</span>
-                    <div class="stat-icon stat-icon-blue">
+                    <div class="stat-icon stat-icon-amber">
                         <i class="ti ti-wind"></i>
                     </div>
                 </div>
