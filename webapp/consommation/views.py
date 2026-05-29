@@ -273,7 +273,6 @@ def create_parc_prod_sankey(parc_mw, prod_mwh):
     GAP = 0.004  # léger espace entre barre et lien
 
     shapes = []
-    hover_traces = []
     annotations = []
 
     for f in filieres:
@@ -321,40 +320,6 @@ def create_parc_prod_sankey(parc_mw, prod_mwh):
             xref='x', yref='y',
         ))
 
-        # Trace invisible pour le hover sur la barre gauche
-        hover_traces.append(go.Scatter(
-            x=[LX0, LX1, LX1, LX0, LX0],
-            y=[lb, lb, lt, lt, lb],
-            mode='none',
-            fill='toself',
-            fillcolor='rgba(0,0,0,0)',
-            hovertemplate=(
-                f'<b>{FILIERES[f]}</b><br>'
-                f'Parc : {parc_mw[f]/1000:.1f} GW<br>'
-                f'Part : {parc_frac[f]*100:.1f} %'
-                '<extra></extra>'
-            ),
-            showlegend=False,
-            hoverlabel=dict(bgcolor=fc, font_color='white', font_size=12),
-        ))
-
-        # Trace invisible pour le hover sur la barre droite
-        hover_traces.append(go.Scatter(
-            x=[RX0, RX1, RX1, RX0, RX0],
-            y=[rb, rb, rt, rt, rb],
-            mode='none',
-            fill='toself',
-            fillcolor='rgba(0,0,0,0)',
-            hovertemplate=(
-                f'<b>{FILIERES[f]}</b><br>'
-                f'Production : {prod_mwh[f]/1e6:.1f} TWh<br>'
-                f'Part : {prod_frac[f]*100:.1f} %'
-                '<extra></extra>'
-            ),
-            showlegend=False,
-            hoverlabel=dict(bgcolor=fc, font_color='white', font_size=12),
-        ))
-
         # Labels gauche (parc) — uniquement si le segment est assez haut
         if (lt - lb) >= 0.045:
             annotations.append(dict(
@@ -397,18 +362,18 @@ def create_parc_prod_sankey(parc_mw, prod_mwh):
         ),
     ]
 
-    fig = go.Figure(data=hover_traces)
+    fig = go.Figure()
     fig.update_layout(
         shapes=shapes,
         annotations=annotations,
         xaxis=dict(range=[0, 1], visible=False, fixedrange=True),
         yaxis=dict(range=[0, 1.08], visible=False, fixedrange=True),
-        height=ChartConfig.LINE_CHART_HEIGHT,
+        height=330,
         margin=dict(l=180, r=180, t=30, b=20),
         paper_bgcolor=ChartConfig.PAPER_COLOR,
         plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
         font=dict(color=ChartConfig.TEXT_COLOR, size=11),
-        hovermode='closest',
+        hovermode=False,
     )
     return fig.to_json()
 
