@@ -74,7 +74,7 @@
                             </a>
                         </li>
                         <li class="nav-item {% if request.resolver_match.url_name == 'api' %}active{% endif %}">
-                            <a class="nav-link" href="{% if is_authenticated %}{% url 'consommation:api' %}{% else %}{% url 'consommation:login' %}{% endif %}"{% if not is_authenticated %} title="Connectez-vous ou inscrivez-vous pour accéder à cette fonctionnalité"{% endif %}>
+                            <a class="nav-link" href="{% url 'consommation:api' %}"{% if not is_authenticated %} title="Connectez-vous ou inscrivez-vous pour accéder à cette fonctionnalité"{% endif %}>
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
                                     <i class="ti ti-api"></i>
                                 </span>
@@ -82,7 +82,7 @@
                             </a>
                         </li>
                         <li class="nav-item {% if request.resolver_match.url_name == 'chat' %}active{% endif %}">
-                            <a class="nav-link" href="{% if is_authenticated %}{% url 'consommation:chat' %}{% else %}{% url 'consommation:login' %}{% endif %}"{% if not is_authenticated %} title="Connectez-vous ou inscrivez-vous pour accéder à cette fonctionnalité"{% endif %}>
+                            <a class="nav-link" href="{% url 'consommation:chat' %}"{% if not is_authenticated %} title="Connectez-vous ou inscrivez-vous pour accéder à cette fonctionnalité"{% endif %}>
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
                                     <i class="ti ti-messages"></i>
                                 </span>

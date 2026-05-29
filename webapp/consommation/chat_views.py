@@ -5,7 +5,7 @@ import json
 import logging
 
 from django.http import JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 @require_GET
 @ensure_csrf_cookie
 def chat_page(request):
-    if not is_authenticated(request):
-        return redirect("consommation:login")
+    # Page accessible aux visiteurs : le template affiche une invitation à se
+    # connecter/s'inscrire si l'utilisateur n'est pas authentifié.
     return render(request, "consommation/chat.html")
 
 

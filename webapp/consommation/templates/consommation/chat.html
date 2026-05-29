@@ -3,6 +3,9 @@
 {% block title %}Chat - ElecFlow{% endblock %}
 {% block page_title %}Chat sur les données{% endblock %}
 {% block content %}
+{% if not is_authenticated %}
+{% include "partials/_login_invite.html" %}
+{% else %}
 <div class="card">
   <div class="card-body p-0 d-flex flex-column" style="height: calc(100vh - 220px); min-height: 480px;">
     <div id="chat-history" class="flex-grow-1 overflow-auto p-3" style="background: #fafafa;">
@@ -139,4 +142,5 @@
   renderAll();
 })();
 </script>
+{% endif %}
 {% endblock %}

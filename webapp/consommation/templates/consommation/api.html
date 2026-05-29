@@ -2,9 +2,13 @@
 {% block title %}API - ElecFlow{% endblock %}
 {% block page_title %}API{% endblock %}
 {% block content %}
+{% if is_authenticated %}
 <div class="card">
     <div class="card-body">
         <p class="text-muted">Page API - En construction.</p>
     </div>
 </div>
+{% else %}
+{% include "partials/_login_invite.html" %}
+{% endif %}
 {% endblock %}

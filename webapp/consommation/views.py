@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from datetime import datetime, timedelta
 import json
@@ -924,7 +924,6 @@ def export_echanges_csv(request):
 
 # ========== API ==========
 def api(request):
-    from .auth import is_authenticated
-    if not is_authenticated(request):
-        return redirect('consommation:login')
+    # Page accessible aux visiteurs : le template affiche une invitation à se
+    # connecter/s'inscrire si l'utilisateur n'est pas authentifié.
     return render(request, 'consommation/api.html')
