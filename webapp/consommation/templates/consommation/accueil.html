@@ -9,19 +9,19 @@
 <div class="row mb-4">
     <div class="col-12">
         <div class="card welcome-card">
-            <div class="card-body py-4" style="padding-left: 3rem; padding-right: 3rem;">
+            <div class="card-body welcome-card-body">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                    <h1 class="mb-0 d-flex align-items-center" style="font-size: 1.75rem; font-weight: 700; letter-spacing: -0.03em; color: #FAFAFA;">
+                    <h1 class="mb-0 d-flex align-items-center welcome-title">
                         ElecFlow
                     </h1>
                     {% if has_dashboard_data %}
-                    <p class="text-muted mb-0" style="font-size: 0.8125rem;">
+                    <p class="text-muted mb-0 text-xs">
                         <i class="ti ti-calendar me-1"></i>
                         Dernières données disponibles — {{ dashboard_date|date:"d/m/Y" }}
                     </p>
                     {% endif %}
                 </div>
-                <p style="font-size: 1.0625rem; color: #A1A1AA; max-width: 600px; margin-bottom: 0;">
+                <p class="welcome-lead">
                     Visualisez les données de consommation, production et échanges électriques en France. Cette page en présente les principaux indicateurs ; le détail est disponible dans chaque rubrique.
                 </p>
             </div>
@@ -29,7 +29,6 @@
     </div>
 </div>
 
-<!-- Fonctionnalités -->
 <div class="row row-cards mb-4">
     <div class="col-12 col-md">
         <a href="{% url 'consommation:index' %}" class="text-decoration-none">
@@ -38,8 +37,8 @@
                     <div class="icon-box mb-3">
                         <i class="ti ti-chart-line"></i>
                     </div>
-                    <h3 class="mb-1" style="font-size: 1rem; font-weight: 600; color: #FAFAFA;">Consommation</h3>
-                    <p class="text-muted mb-0" style="font-size: 0.875rem;">
+                    <h3 class="mb-1 feature-title">Consommation</h3>
+                    <p class="text-muted mb-0 text-sm">
                         Suivez la consommation électrique française aux échelles horaire, mensuelle et annuelle.
                     </p>
                 </div>
@@ -53,8 +52,8 @@
                     <div class="icon-box mb-3">
                         <i class="ti ti-building-factory"></i>
                     </div>
-                    <h3 class="mb-1" style="font-size: 1rem; font-weight: 600; color: #FAFAFA;">Production</h3>
-                    <p class="text-muted mb-0" style="font-size: 0.875rem;">
+                    <h3 class="mb-1 feature-title">Production</h3>
+                    <p class="text-muted mb-0 text-sm">
                         Explorez le mix énergétique par filière.
                     </p>
                 </div>
@@ -68,8 +67,8 @@
                     <div class="icon-box mb-3">
                         <i class="ti ti-arrows-exchange"></i>
                     </div>
-                    <h3 class="mb-1" style="font-size: 1rem; font-weight: 600; color: #FAFAFA;">Échanges</h3>
-                    <p class="text-muted mb-0" style="font-size: 0.875rem;">
+                    <h3 class="mb-1 feature-title">Échanges</h3>
+                    <p class="text-muted mb-0 text-sm">
                         Analysez les flux d'électricité transfrontaliers entre la France et ses voisins.
                     </p>
                 </div>
@@ -83,8 +82,8 @@
                     <div class="icon-box mb-3">
                         <i class="ti ti-api"></i>
                     </div>
-                    <h3 class="mb-1" style="font-size: 1rem; font-weight: 600; color: #FAFAFA;">API</h3>
-                    <p class="text-muted mb-0" style="font-size: 0.875rem;">
+                    <h3 class="mb-1 feature-title">API</h3>
+                    <p class="text-muted mb-0 text-sm">
                         Accédez aux données électriques via l'API pour vos propres analyses.
                     </p>
                 </div>
@@ -98,8 +97,8 @@
                     <div class="icon-box mb-3">
                         <i class="ti ti-messages"></i>
                     </div>
-                    <h3 class="mb-1" style="font-size: 1rem; font-weight: 600; color: #FAFAFA;">Chat</h3>
-                    <p class="text-muted mb-0" style="font-size: 0.875rem;">
+                    <h3 class="mb-1 feature-title">Chat</h3>
+                    <p class="text-muted mb-0 text-sm">
                         Interrogez les données électriques en langage naturel grâce à l'assistant.
                     </p>
                 </div>
@@ -109,10 +108,9 @@
 </div>
 
 {% if has_dashboard_data %}
-<!-- Section Consommation -->
 <div class="row mb-2">
     <div class="col-12">
-        <h2 style="font-size: 1.125rem; font-weight: 600; color: #FAFAFA; margin-bottom: 0.75rem; border-left: 3px solid #22D3EE; padding-left: 0.75rem;">
+        <h2 class="section-title">
             Consommation
         </h2>
     </div>
@@ -159,10 +157,9 @@
     </div>
 </div>
 
-<!-- Section Production -->
 <div class="row mb-2">
     <div class="col-12">
-        <h2 style="font-size: 1.125rem; font-weight: 600; color: #FAFAFA; margin-bottom: 0.75rem; border-left: 3px solid #FBBF24; padding-left: 0.75rem;">
+        <h2 class="section-title section-title--amber">
             Production
         </h2>
     </div>
@@ -193,14 +190,14 @@
                     </div>
                 </div>
                 <div class="d-flex justify-content-between align-items-baseline mb-2">
-                    <span class="text-muted" style="font-size: 0.875rem;">Éolien</span>
+                    <span class="text-muted text-sm">Éolien</span>
                     <span>
                         <strong class="{% if parc_eolien_positive %}stat-value-green{% else %}stat-value-red{% endif %}">{{ parc_eolien_delta }} %</strong>
                         <span class="text-muted ms-2">{{ parc_eolien_gw }} GW</span>
                     </span>
                 </div>
                 <div class="d-flex justify-content-between align-items-baseline mb-2">
-                    <span class="text-muted" style="font-size: 0.875rem;">Solaire</span>
+                    <span class="text-muted text-sm">Solaire</span>
                     <span>
                         <strong class="{% if parc_solaire_positive %}stat-value-green{% else %}stat-value-red{% endif %}">{{ parc_solaire_delta }} %</strong>
                         <span class="text-muted ms-2">{{ parc_solaire_gw }} GW</span>

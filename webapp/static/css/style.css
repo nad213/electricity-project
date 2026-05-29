@@ -1,6 +1,5 @@
 /*
  * ElecFlow - Dark Modern Theme
- * Inspired by Linear, Vercel, Raycast
  */
 
 /* ========== Google Fonts ========== */
@@ -289,15 +288,6 @@ body {
 }
 
 .feature-card .icon-box {
-    width: 48px;
-    height: 48px;
-    border-radius: 0.625rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    background-color: var(--surface-hover);
-    color: var(--text-secondary);
     transition: background-color 0.2s ease, color 0.2s ease;
 }
 
@@ -397,6 +387,85 @@ body {
     border-radius: 0.25rem;
 }
 
+/* ========== Icon Box ========== */
+.icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 0.625rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    background-color: var(--surface-hover);
+    color: var(--text-secondary);
+}
+
+/* ========== Navbar Brand ========== */
+.navbar-brand-icon {
+    font-size: 1.5rem;
+    color: var(--accent);
+}
+
+/* ========== Typographie utilitaire ========== */
+.text-sm {
+    font-size: 0.875rem;
+}
+
+.text-xs {
+    font-size: 0.8125rem;
+}
+
+.text-bright {
+    color: var(--text) !important;
+}
+
+/* ========== Hero / Welcome ========== */
+.welcome-card-body {
+    padding: 1.5rem 3rem;
+}
+
+.welcome-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--text);
+}
+
+.welcome-lead {
+    font-size: 1.0625rem;
+    color: var(--text-secondary);
+    max-width: 600px;
+    margin-bottom: 0;
+}
+
+/* ========== Feature Cards (texte) ========== */
+.feature-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+/* ========== Section Titles ========== */
+.section-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+    border-left: 3px solid var(--accent);
+    padding-left: 0.75rem;
+}
+
+.section-title--amber {
+    border-left-color: var(--amber);
+}
+
+/* ========== Login Invite ========== */
+.login-invite-text {
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 /* ========== Loader ========== */
 #page-loader {
     background: rgba(15, 23, 42, 0.95) !important;
@@ -488,6 +557,10 @@ body {
 
 /* ========== Responsive ========== */
 @media (max-width: 768px) {
+    .welcome-card-body {
+        padding: 1.25rem 1.5rem;
+    }
+
     .navbar-pastel .nav-link {
         padding: 0.75rem 1rem;
     }

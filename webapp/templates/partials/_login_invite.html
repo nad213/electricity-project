@@ -4,11 +4,11 @@ pour accéder à une fonctionnalité réservée (API, Chat).
 {% endcomment %}
 <div class="card">
     <div class="card-body text-center py-5">
-        <div class="icon-box mb-3 mx-auto" style="width: 3rem; height: 3rem; display: flex; align-items: center; justify-content: center;">
-            <i class="ti ti-lock" style="font-size: 1.5rem;"></i>
+        <div class="icon-box mb-3 mx-auto">
+            <i class="ti ti-lock"></i>
         </div>
-        <h3 class="mb-2" style="color: #FAFAFA;">Connexion requise</h3>
-        <p class="text-muted mb-4" style="max-width: 480px; margin-left: auto; margin-right: auto;">
+        <h3 class="mb-2 text-bright">Connexion requise</h3>
+        <p class="text-muted mb-4 login-invite-text">
             Connectez-vous ou inscrivez-vous pour accéder à cette fonctionnalité.
         </p>
         <a href="{% url 'consommation:login' %}" class="btn btn-primary">
