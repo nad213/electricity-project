@@ -28,6 +28,55 @@
     </div>
 </div>
 
+<!-- Fonctionnalités -->
+<div class="row row-cards mb-4">
+    <div class="col-md-4">
+        <a href="{% url 'consommation:index' %}" class="text-decoration-none">
+            <div class="card feature-card h-100">
+                <div class="card-body">
+                    <div class="icon-box icon-box-blue mb-3">
+                        <i class="ti ti-chart-line"></i>
+                    </div>
+                    <h3 class="mb-1" style="font-size: 1rem; font-weight: 600; color: #FAFAFA;">Consommation</h3>
+                    <p class="text-muted mb-0" style="font-size: 0.875rem;">
+                        Suivez la consommation électrique française aux échelles horaire, mensuelle et annuelle.
+                    </p>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="{% url 'consommation:production' %}" class="text-decoration-none">
+            <div class="card feature-card h-100">
+                <div class="card-body">
+                    <div class="icon-box icon-box-orange mb-3">
+                        <i class="ti ti-building-factory"></i>
+                    </div>
+                    <h3 class="mb-1" style="font-size: 1rem; font-weight: 600; color: #FAFAFA;">Production</h3>
+                    <p class="text-muted mb-0" style="font-size: 0.875rem;">
+                        Explorez le mix énergétique par filière : nucléaire, éolien, solaire, hydraulique…
+                    </p>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="{% url 'consommation:echanges' %}" class="text-decoration-none">
+            <div class="card feature-card h-100">
+                <div class="card-body">
+                    <div class="icon-box icon-box-green mb-3">
+                        <i class="ti ti-arrows-exchange"></i>
+                    </div>
+                    <h3 class="mb-1" style="font-size: 1rem; font-weight: 600; color: #FAFAFA;">Échanges</h3>
+                    <p class="text-muted mb-0" style="font-size: 0.875rem;">
+                        Analysez les flux d'électricité transfrontaliers entre la France et ses voisins.
+                    </p>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
 {% if has_dashboard_data %}
 <!-- Date label -->
 <div class="row mb-3 align-items-center">
@@ -181,7 +230,7 @@
     Plotly.newPlot('chart-production-jour', chartData.data, chartData.layout, plotConfig);
 
     chartData = JSON.parse('{{ graph_sankey|escapejs }}');
-    Plotly.newPlot('chart-parc-prod-sankey', chartData.data, chartData.layout, plotConfig);
+    Plotly.newPlot('chart-parc-prod-sankey', chartData.data, chartData.layout, {responsive: true, staticPlot: true});
 })();
 </script>
 {% endif %}
