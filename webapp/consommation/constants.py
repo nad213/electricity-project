@@ -169,4 +169,8 @@ def get_csv_header(column):
             if filiere in FILIERES:
                 return f'{filiere}_mwh'
 
+    # Colonnes de puissance instantanée par filière (ex: 'nucleaire' → 'nucleaire_mw')
+    if column in FILIERES:
+        return f'{column}_mw'
+
     return column

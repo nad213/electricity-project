@@ -203,6 +203,50 @@ def get_production_data(start_date, end_date, filiere='nucleaire'):
     return result
 
 
+def get_production_data_multi(start_date, end_date, filieres):
+    """
+    Loads production data for a date range and several sectors (filières).
+    Returns a wide DataFrame with one column per filière (named by its key).
+    Uses validated column names to prevent SQL injection.
+    """
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+
+    # Validate filieres to prevent SQL injection (before opening connection)
+    valid_filieres = list(get_production_filieres().keys())
+    for filiere in filieres:
+        if filiere not in valid_filieres:
+            raise ValueError(f"Filière invalide. Choisissez parmi: {', '.join(valid_filieres)}")
+
+    if not filieres:
+        raise ValueError("Au moins une filière doit être sélectionnée.")
+
+    # Columns are validated keys, safe to interpolate (like get_production_data)
+    cols = ", ".join(filieres)
+
+    path = data_cache.get_local_path('production')
+    with get_duckdb_connection(path) as conn:
+        query = f"""
+            SELECT date_heure, {cols}, source
+            FROM read_parquet(?)
+            WHERE date_heure BETWEEN ? AND ?
+            ORDER BY date_heure;
+        """
+        result = conn.execute(
+            query,
+            [path, start_str, f"{end_str} 23:59:59"]
+        ).fetchdf()
+
+    # Translate source labels to French for consistency with consumption
+    source_map = {
+        'Consolidated Data': 'Données Consolidées',
+        'Real-Time Data': 'Temps Réel'
+    }
+    result['source'] = result['source'].map(source_map).fillna(result['source'])
+
+    return result
+
+
 def get_consommation_peaks(start_date, end_date, n=5, direction='max'):
     """
     Top-N peaks (or troughs) of consumption with their exact datetime.

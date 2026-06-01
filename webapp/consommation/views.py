@@ -10,6 +10,7 @@ from functools import wraps
 from .services import (
     get_date_range, get_puissance_data, get_annual_data, get_monthly_data,
     get_production_date_range, get_production_filieres, get_production_data,
+    get_production_data_multi,
     get_production_annual_data, get_production_monthly_data,
     get_echanges_date_range, get_echanges_pays, get_echanges_data,
     get_dashboard_data, get_parc_installe_data,
@@ -127,6 +128,54 @@ def create_line_chart(df, x_col, y_col, color=None, y_label='Valeur'):
         xaxis_title_text='',
         yaxis_title_text='MW',
         margin=ChartConfig.MARGIN_NO_LEGEND,
+        height=ChartConfig.LINE_CHART_HEIGHT,
+        plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
+        paper_bgcolor=ChartConfig.PAPER_COLOR,
+        font=dict(color=ChartConfig.TEXT_COLOR),
+    )
+
+    fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
+    fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR, zerolinecolor=ChartConfig.GRID_COLOR)
+
+    return fig.to_json()
+
+
+def create_multi_line_chart(df, x_col, filieres, colors, labels):
+    """
+    Creates a Plotly line chart with one line per filière, each with its own
+    color and a legend.
+
+    Args:
+        df: Wide DataFrame with x_col and one column per filière
+        x_col: Column name for x-axis
+        filieres: List of filière keys (also the column names in df)
+        colors: dict {filiere_key: hex_color}
+        labels: dict {filiere_key: French label}
+
+    Returns:
+        JSON string of the Plotly figure
+    """
+    fig = go.Figure()
+    for filiere in filieres:
+        if filiere not in df.columns:
+            continue
+        label = labels.get(filiere, filiere)
+        fig.add_trace(go.Scatter(
+            x=df[x_col],
+            y=df[filiere],
+            name=label,
+            mode='lines',
+            line=dict(color=colors.get(filiere, Colors.PRIMARY)),
+            hovertemplate=f"Date: %{{x|%d/%m/%Y %H:%M}}<br>{label}: %{{y:,.0f}} MW<extra></extra>",
+        ))
+
+    fig.update_layout(separators=", ")
+    fig.update_layout(
+        showlegend=True,
+        legend=dict(orientation='h', yanchor='top', y=-0.12, xanchor='center', x=0.5),
+        xaxis_title_text='',
+        yaxis_title_text='MW',
+        margin=ChartConfig.MARGIN_WITH_LEGEND,
         height=ChartConfig.LINE_CHART_HEIGHT,
         plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
         paper_bgcolor=ChartConfig.PAPER_COLOR,
@@ -668,25 +717,26 @@ def production(request):
     # Get available min/max dates
     min_date, max_date = get_production_date_range()
 
-    # Validate filiere
-    filiere = request.GET.get('filiere', 'nucleaire')
+    # Validate filieres (multi-selection)
     filieres = get_production_filieres()
-    if filiere not in filieres:
-        return HttpResponseBadRequest(f"Filière invalide. Choisissez parmi: {', '.join(filieres.keys())}")
+    filieres_selected = request.GET.getlist('filiere') or ['nucleaire']
+    for filiere in filieres_selected:
+        if filiere not in filieres:
+            return HttpResponseBadRequest(f"Filière invalide. Choisissez parmi: {', '.join(filieres.keys())}")
 
     # Validate and get dates from request
     start_date, end_date = validate_and_get_dates(request, min_date, max_date)
 
     # Load production data for the line chart
-    df_production = get_production_data(start_date, end_date, filiere)
+    df_production = get_production_data_multi(start_date, end_date, filieres_selected)
 
-    # Create production curve chart
-    graph_production = create_line_chart(
+    # Create production curve chart (one line per selected filière)
+    graph_production = create_multi_line_chart(
         df_production,
         x_col='date_heure',
-        y_col='production',
-        color=FILIERE_COLORS[filiere],
-        y_label='Production'
+        filieres=filieres_selected,
+        colors=FILIERE_COLORS,
+        labels=filieres
     )
 
     # Load annual and monthly aggregated data
@@ -734,7 +784,7 @@ def production(request):
         'max_date': max_date,
         'start_date': start_date,
         'end_date': end_date,
-        'filiere': filiere,
+        'filieres_selected': filieres_selected,
         'filieres': filieres,
         'graph_production': graph_production,
         'graph_production_annuel': graph_production_annuel,
@@ -887,25 +937,23 @@ def export_production_csv(request):
     # Get available min/max dates
     min_date, max_date = get_production_date_range()
 
-    # Validate filiere
-    filiere = request.GET.get('filiere', 'nucleaire')
+    # Validate filieres (multi-selection)
     filieres = get_production_filieres()
-    if filiere not in filieres:
-        return HttpResponseBadRequest(f"Filière invalide. Choisissez parmi: {', '.join(filieres.keys())}")
+    filieres_selected = request.GET.getlist('filiere') or ['nucleaire']
+    for filiere in filieres_selected:
+        if filiere not in filieres:
+            return HttpResponseBadRequest(f"Filière invalide. Choisissez parmi: {', '.join(filieres.keys())}")
 
     # Validate and get dates from request
     start_date, end_date = validate_and_get_dates(request, min_date, max_date)
 
-    # Load data
-    df = get_production_data(start_date, end_date, filiere)
+    # Load data (wide format: one column per selected filière)
+    df = get_production_data_multi(start_date, end_date, filieres_selected)
 
-    # Ajouter la filière en colonne (sinon elle n'apparaît que dans le nom du fichier)
-    df = df.copy()
-    df['filiere'] = filiere
-
-    # Export to CSV
-    filename = f'production_{filiere}_{start_date}_{end_date}.csv'
-    return _export_to_csv(df, filename, ['date_heure', 'filiere', 'production'])
+    # Export to CSV (date_heure + one column per filière)
+    filieres_slug = '-'.join(filieres_selected)
+    filename = f'production_{filieres_slug}_{start_date}_{end_date}.csv'
+    return _export_to_csv(df, filename, ['date_heure'] + filieres_selected)
 
 
 def export_production_annuel_csv(request):
