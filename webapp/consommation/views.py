@@ -16,7 +16,7 @@ from .services import (
 )
 from .constants import (
     Colors, ChartConfig, ProductionColors, FILIERE_COLORS, FILIERES,
-    get_production_colors_and_labels, get_filiere_columns
+    get_production_colors_and_labels, get_filiere_columns, get_csv_header
 )
 
 
@@ -795,6 +795,21 @@ def echanges(request):
 
 
 # ========== Export Functions ==========
+def _format_value(value):
+    """
+    Formate une valeur pour l'export CSV.
+
+    Supprime le '.0' superflu des floats entiers (ex: 2012.0 → 2012,
+    486560097.0 → 486560097) tout en conservant les décimales réelles (12.5).
+    """
+    if isinstance(value, float):
+        if value != value:  # NaN n'est jamais égal à lui-même
+            return ''
+        if value.is_integer():
+            return int(value)
+    return value
+
+
 def _export_to_csv(df, filename, columns):
     """
     Generic CSV export function
@@ -811,10 +826,12 @@ def _export_to_csv(df, filename, columns):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
     writer = csv.writer(response, delimiter=';')
-    writer.writerow(columns)
+    # En-têtes français unifiés, données lues via les clés techniques
+    writer.writerow([get_csv_header(col) for col in columns])
 
     # Performance: use values.tolist() instead of iterrows()
-    writer.writerows(df[columns].values.tolist())
+    rows = df[columns].values.tolist()
+    writer.writerows([_format_value(v) for v in row] for row in rows)
 
     return response
 
@@ -843,6 +860,9 @@ def export_annuel_csv(request):
     Export annual consumption data to CSV
     """
     df = get_annual_data()
+    # Arrondir : les décimales viennent de l'agrégation des sources, sans sens en MWh annuels
+    df = df.copy()
+    df['yearly_consumption'] = df['yearly_consumption'].round()
     return _export_to_csv(df, 'consommation_annuelle.csv', ['year', 'yearly_consumption'])
 
 
@@ -851,7 +871,12 @@ def export_mensuel_csv(request):
     Export monthly consumption data to CSV
     """
     df = get_monthly_data()
-    return _export_to_csv(df, 'consommation_mensuelle.csv', ['year_month', 'monthly_consumption'])
+    # Découper 'year_month' (ex: '2012-01') en colonnes annee/mois, comme la production
+    df = df.copy()
+    df[['year', 'month']] = df['year_month'].str.split('-', expand=True).astype(int)
+    # Arrondir : les décimales viennent de l'agrégation des sources, sans sens en MWh
+    df['monthly_consumption'] = df['monthly_consumption'].round()
+    return _export_to_csv(df, 'consommation_mensuelle.csv', ['year', 'month', 'monthly_consumption'])
 
 
 @handle_validation_errors
@@ -874,9 +899,13 @@ def export_production_csv(request):
     # Load data
     df = get_production_data(start_date, end_date, filiere)
 
+    # Ajouter la filière en colonne (sinon elle n'apparaît que dans le nom du fichier)
+    df = df.copy()
+    df['filiere'] = filiere
+
     # Export to CSV
     filename = f'production_{filiere}_{start_date}_{end_date}.csv'
-    return _export_to_csv(df, filename, ['date_heure', 'production'])
+    return _export_to_csv(df, filename, ['date_heure', 'filiere', 'production'])
 
 
 def export_production_annuel_csv(request):
@@ -884,7 +913,11 @@ def export_production_annuel_csv(request):
     Export annual production data by sector to CSV
     """
     df = get_production_annual_data()
-    columns = ['year'] + get_filiere_columns('annual')
+    filiere_cols = get_filiere_columns('annual')
+    # Arrondir : les décimales viennent de l'agrégation des sources, sans sens en MWh
+    df = df.copy()
+    df[filiere_cols] = df[filiere_cols].round()
+    columns = ['year'] + filiere_cols
     return _export_to_csv(df, 'production_annuelle.csv', columns)
 
 
@@ -893,7 +926,11 @@ def export_production_mensuel_csv(request):
     Export monthly production data by sector to CSV
     """
     df = get_production_monthly_data()
-    columns = ['year', 'month'] + get_filiere_columns('monthly')
+    filiere_cols = get_filiere_columns('monthly')
+    # Arrondir : les décimales viennent de l'agrégation des sources, sans sens en MWh
+    df = df.copy()
+    df[filiere_cols] = df[filiere_cols].round()
+    columns = ['year', 'month'] + filiere_cols
     return _export_to_csv(df, 'production_mensuelle.csv', columns)
 
 

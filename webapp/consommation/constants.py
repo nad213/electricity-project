@@ -129,3 +129,44 @@ def get_filiere_columns(period='annual'):
     """
     suffix = '_yearly_mwh' if period == 'annual' else '_mwh'
     return [f'{filiere}{suffix}' for filiere in FILIERES.keys()]
+
+
+# ========== En-têtes des exports CSV ==========
+# Noms de colonnes unifiés : minuscules, sans accent, séparés par '_',
+# unité en suffixe. Pas d'espace ni de parenthèse.
+CSV_HEADERS = {
+    'date_heure': 'date_heure',
+    'consommation': 'consommation_mw',
+    'production': 'production_mw',
+    'echange': 'echange_mw',
+    'year': 'annee',
+    'month': 'mois',
+    'year_month': 'annee_mois',
+    'yearly_consumption': 'consommation_mwh',
+    'monthly_consumption': 'consommation_mwh',
+}
+
+
+def get_csv_header(column):
+    """
+    Retourne le nom de colonne à utiliser comme en-tête CSV.
+
+    Gère les colonnes statiques (CSV_HEADERS) et les colonnes dynamiques de
+    filières (ex: 'nucleaire_yearly_mwh', 'eolien_mwh') → 'nucleaire_mwh'.
+
+    Args:
+        column: Nom technique de la colonne du DataFrame
+
+    Returns:
+        str: En-tête normalisé (minuscules, sans accent, séparé par '_')
+    """
+    if column in CSV_HEADERS:
+        return CSV_HEADERS[column]
+
+    for suffix in ('_yearly_mwh', '_mwh'):
+        if column.endswith(suffix):
+            filiere = column[: -len(suffix)]
+            if filiere in FILIERES:
+                return f'{filiere}_mwh'
+
+    return column
