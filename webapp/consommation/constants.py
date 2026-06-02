@@ -79,6 +79,15 @@ PAYS_ECHANGES = {
     'ech_comm_allemagne_belgique': 'Allemagne / Belgique',
 }
 
+# Couleur par frontière commerciale (pour la sélection multiple sur la courbe)
+PAYS_ECHANGES_COLORS = {
+    'ech_comm_angleterre': '#22D3EE',          # Cyan
+    'ech_comm_espagne': '#FBBF24',             # Amber
+    'ech_comm_italie': '#10B981',              # Emerald
+    'ech_comm_suisse': '#EF4444',              # Red
+    'ech_comm_allemagne_belgique': '#A78BFA',  # Violet
+}
+
 
 # ========== Traduction des sources ==========
 

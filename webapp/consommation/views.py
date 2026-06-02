@@ -14,11 +14,13 @@ from .services import (
     get_production_data_multi,
     get_production_annual_data, get_production_monthly_data,
     get_echanges_date_range, get_echanges_pays, get_echanges_pays_commerciaux,
-    get_echanges_data, get_echanges_annual_import_export, get_echanges_annual_detail,
+    get_echanges_data, get_echanges_data_multi,
+    get_echanges_annual_import_export, get_echanges_annual_detail,
     get_dashboard_data, get_parc_installe_data,
 )
 from .constants import (
     Colors, ChartConfig, ProductionColors, FILIERE_COLORS, FILIERES,
+    PAYS_ECHANGES_COLORS,
     get_production_colors_and_labels, get_filiere_columns, get_csv_header
 )
 
@@ -916,10 +918,11 @@ def echanges(request):
     # Commercial flows only on this page
     pays_disponibles = get_echanges_pays_commerciaux()
 
-    # Country for the load curve (top filter)
-    pays = request.GET.get('pays', 'ech_comm_allemagne_belgique')
-    if pays not in pays_disponibles:
-        return HttpResponseBadRequest(f"Pays invalide. Choisissez parmi: {', '.join(pays_disponibles.keys())}")
+    # Countries for the load curve (top filter) — multi-selection
+    pays_selected = request.GET.getlist('pays') or ['ech_comm_allemagne_belgique']
+    for pays in pays_selected:
+        if pays not in pays_disponibles:
+            return HttpResponseBadRequest(f"Pays invalide. Choisissez parmi: {', '.join(pays_disponibles.keys())}")
 
     # Country for the annual chart (bottom) — its own selector, fully
     # independent of the top filters (dates and curve country). Adds a 'total'
@@ -932,15 +935,16 @@ def echanges(request):
     # Validate and get dates from request (drives the load curve only)
     start_date, end_date = validate_and_get_dates(request, min_date, max_date)
 
-    # Load echanges data for the line chart
-    df_echanges = get_echanges_data(start_date, end_date, pays)
+    # Load echanges data for the line chart (one column per selected country)
+    df_echanges = get_echanges_data_multi(start_date, end_date, pays_selected)
 
-    # Create echanges curve chart
-    graph_echanges = create_line_chart(
+    # Create echanges curve chart (one line per selected country)
+    graph_echanges = create_multi_line_chart(
         df_echanges,
         x_col='date_heure',
-        y_col='echange',
-        y_label='Échange'
+        filieres=pays_selected,
+        colors=PAYS_ECHANGES_COLORS,
+        labels=pays_disponibles,
     )
 
     # Annual import/export volumes — always over the full available history and
@@ -971,9 +975,9 @@ def echanges(request):
         'max_date': max_date,
         'start_date': start_date,
         'end_date': end_date,
-        'pays': pays,
+        'pays': pays_selected,
         'pays_options': pays_disponibles,
-        'selected_pays': pays,
+        'selected_pays': pays_selected,
         'pays_annuel_options': pays_annuel_options,
         'selected_pays_annuel': pays_annuel,
         'graph_echanges': graph_echanges,
@@ -1162,21 +1166,23 @@ def export_echanges_csv(request):
     # Get available min/max dates
     min_date, max_date = get_echanges_date_range()
 
-    # Validate pays (commercial flows only on this page)
+    # Validate pays (commercial flows only on this page) — multi-selection
     pays_disponibles = get_echanges_pays_commerciaux()
-    pays = request.GET.get('pays', 'ech_comm_allemagne_belgique')
-    if pays not in pays_disponibles:
-        return HttpResponseBadRequest(f"Pays invalide. Choisissez parmi: {', '.join(pays_disponibles.keys())}")
+    pays_selected = request.GET.getlist('pays') or ['ech_comm_allemagne_belgique']
+    for pays in pays_selected:
+        if pays not in pays_disponibles:
+            return HttpResponseBadRequest(f"Pays invalide. Choisissez parmi: {', '.join(pays_disponibles.keys())}")
 
     # Validate and get dates from request
     start_date, end_date = validate_and_get_dates(request, min_date, max_date)
 
-    # Load data
-    df = get_echanges_data(start_date, end_date, pays)
+    # Load data (wide: one column per selected country)
+    df = get_echanges_data_multi(start_date, end_date, pays_selected)
 
     # Export to CSV
-    filename = f'echanges_{pays}_{start_date}_{end_date}.csv'
-    return _export_to_csv(df, filename, ['date_heure', 'echange'])
+    pays_slug = '_'.join(pays_selected)
+    filename = f'echanges_{pays_slug}_{start_date}_{end_date}.csv'
+    return _export_to_csv(df, filename, ['date_heure', *pays_selected])
 
 
 @handle_validation_errors

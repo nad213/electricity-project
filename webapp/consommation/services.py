@@ -4,7 +4,7 @@ from django.conf import settings
 from datetime import datetime, timedelta
 from contextlib import contextmanager
 
-from .constants import FILIERES
+from .constants import FILIERES, PAYS_ECHANGES
 from . import data_cache
 
 
@@ -353,17 +353,10 @@ def get_production_monthly_data():
 
 def get_echanges_pays():
     """
-    Returns the list of available exchange countries
+    Returns the list of available exchange countries.
+    Single source of truth: PAYS_ECHANGES in constants.py.
     """
-    pays = {
-        'ech_physiques': 'Échanges physiques (total)',
-        'ech_comm_angleterre': 'Angleterre',
-        'ech_comm_espagne': 'Espagne',
-        'ech_comm_italie': 'Italie',
-        'ech_comm_suisse': 'Suisse',
-        'ech_comm_allemagne_belgique': 'Allemagne / Belgique',
-    }
-    return pays
+    return dict(PAYS_ECHANGES)
 
 
 def get_echanges_pays_commerciaux():
@@ -420,6 +413,51 @@ def get_echanges_data(start_date, end_date, pays='ech_physiques'):
 
     # Rename the pays column to 'echange' for consistency in templates
     result = result.rename(columns={pays: 'echange'})
+
+    # Translate source labels to French for consistency
+    source_map = {
+        'Consolidated Data': 'Données Consolidées',
+        'Real-Time Data': 'Temps Réel'
+    }
+    result['source'] = result['source'].map(source_map).fillna(result['source'])
+
+    return result
+
+
+def get_echanges_data_multi(start_date, end_date, pays_list):
+    """
+    Loads exchange data for a date range and several commercial borders.
+    Returns a wide DataFrame with one column per country (named by its key),
+    suitable for a multi-line chart. Uses validated column names to prevent
+    SQL injection.
+    """
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+
+    # Validate pays to prevent SQL injection (before opening connection)
+    valid_pays = list(get_echanges_pays().keys())
+    for pays in pays_list:
+        if pays not in valid_pays:
+            raise ValueError(f"Pays invalide. Choisissez parmi: {', '.join(valid_pays)}")
+
+    if not pays_list:
+        raise ValueError("Au moins un pays doit être sélectionné.")
+
+    # Columns are validated keys, safe to interpolate (like get_echanges_data)
+    cols = ", ".join(pays_list)
+
+    path = data_cache.get_local_path('echanges')
+    with get_duckdb_connection(path) as conn:
+        query = f"""
+            SELECT date_heure, {cols}, source
+            FROM read_parquet(?)
+            WHERE date_heure BETWEEN ? AND ?
+            ORDER BY date_heure;
+        """
+        result = conn.execute(
+            query,
+            [path, start_str, f"{end_str} 23:59:59"]
+        ).fetchdf()
 
     # Translate source labels to French for consistency
     source_map = {
