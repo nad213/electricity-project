@@ -188,7 +188,7 @@ def create_multi_line_chart(df, x_col, filieres, colors, labels):
     return fig.to_json()
 
 
-def create_bar_chart(df, x_col, y_col, color=None, tickangle=0, y_label='Consommation'):
+def create_bar_chart(df, x_col, y_col, color=None, tickangle=0, y_label='Consommation', x_date_format=None):
     """
     Creates a standardized Plotly bar chart
 
@@ -199,6 +199,9 @@ def create_bar_chart(df, x_col, y_col, color=None, tickangle=0, y_label='Consomm
         color: Bar color (default: PRIMARY)
         tickangle: Angle for x-axis labels (default: 0)
         y_label: Label for y-axis in hover tooltip
+        x_date_format: Optional d3 date format applied to both the axis ticks
+            and the hover x value (e.g. '%B %Y' for full month + year). Use it
+            for date axes to avoid the day and the abbreviated month names.
 
     Returns:
         HTML string of the chart
@@ -218,9 +221,10 @@ def create_bar_chart(df, x_col, y_col, color=None, tickangle=0, y_label='Consomm
     )
 
     # Custom hover template (French locale: space as thousands separator)
+    x_hover = f"%{{x|{x_date_format}}}" if x_date_format else "%{x}"
     fig.update_layout(separators=", ")
     fig.update_traces(
-        hovertemplate=f"Période: %{{x}}<br>{y_label}: %{{y:,.1f}} TWh<extra></extra>"
+        hovertemplate=f"Période: {x_hover}<br>{y_label}: %{{y:,.1f}} TWh<extra></extra>"
     )
 
     fig.update_layout(
@@ -233,6 +237,8 @@ def create_bar_chart(df, x_col, y_col, color=None, tickangle=0, y_label='Consomm
         font=dict(color=ChartConfig.TEXT_COLOR),
     )
     fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR, tickangle=tickangle)
+    if x_date_format:
+        fig.update_xaxes(tickformat=x_date_format)
     fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR)
 
     return fig.to_json()
@@ -696,7 +702,8 @@ def index(request):
         x_col='year_month',
         y_col='monthly_consumption',
         color=Colors.SECONDARY,
-        tickangle=45
+        tickangle=45,
+        x_date_format='%B %Y'
     )
     
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
