@@ -13,7 +13,8 @@ from .services import (
     get_production_date_range, get_production_filieres, get_production_data,
     get_production_data_multi,
     get_production_annual_data, get_production_monthly_data,
-    get_echanges_date_range, get_echanges_pays, get_echanges_data,
+    get_echanges_date_range, get_echanges_pays, get_echanges_pays_commerciaux,
+    get_echanges_data, get_echanges_annual_import_export, get_echanges_annual_detail,
     get_dashboard_data, get_parc_installe_data,
 )
 from .constants import (
@@ -307,6 +308,83 @@ def create_stacked_bar_chart(df, x_col, y_cols, colors, labels, unit='MWh', divi
 
     return fig.to_json()
 
+
+def create_import_export_chart(df, x_col, import_col, export_col, unit='TWh', divisor=1_000_000, decimals=2, x_date_format='%B %Y'):
+    """
+    Creates a diverging bar chart: exports above the zero line, imports below.
+
+    Args:
+        df: DataFrame with positive volumes (MWh) in both columns
+        x_col: Column name for x-axis (a date)
+        import_col: Column holding the imported volume (plotted downward)
+        export_col: Column holding the exported volume (plotted upward)
+        unit: Unit label displayed on the y-axis and in the hover (e.g. 'TWh')
+        divisor: Factor to divide raw MWh values by to reach `unit`
+        decimals: Number of decimals shown in the hover
+        x_date_format: d3 date format for the axis ticks and unified hover header
+
+    Returns:
+        JSON string of the chart
+    """
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        x=df[x_col],
+        y=df[export_col] / divisor,
+        name='Export',
+        marker_color=Colors.PRIMARY,
+        hovertemplate=f'Export : %{{y:,.{decimals}f}} {unit}<extra></extra>',
+    ))
+    # Imports plotted as negative so they diverge below zero; hover shows the
+    # positive magnitude via customdata.
+    fig.add_trace(go.Bar(
+        x=df[x_col],
+        y=-df[import_col] / divisor,
+        customdata=df[import_col] / divisor,
+        name='Import',
+        marker_color=Colors.SECONDARY,
+        hovertemplate=f'Import : %{{customdata:,.{decimals}f}} {unit}<extra></extra>',
+    ))
+    # Net balance line (export − import): positive = net exporter.
+    fig.add_trace(go.Scatter(
+        x=df[x_col],
+        y=(df[export_col] - df[import_col]) / divisor,
+        name='Solde',
+        mode='lines+markers',
+        line=dict(color='#F1F5F9', width=2),
+        marker=dict(size=6),
+        hovertemplate=f'Solde : %{{y:,.{decimals}f}} {unit}<extra></extra>',
+    ))
+
+    fig.update_layout(
+        barmode='relative',
+        separators=', ',
+        xaxis_title_text='',
+        yaxis_title_text=unit,
+        margin=ChartConfig.MARGIN_WITH_LEGEND,
+        height=ChartConfig.BAR_CHART_HEIGHT,
+        plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
+        paper_bgcolor=ChartConfig.PAPER_COLOR,
+        font=dict(color=ChartConfig.TEXT_COLOR),
+        legend=dict(
+            orientation="h",
+            x=0.5,
+            y=-0.2,
+            xanchor="center",
+        ),
+        hovermode='x unified',
+        hoverlabel=dict(
+            bgcolor='#1E293B',
+            bordercolor='#475569',
+            font=dict(color='#F1F5F9', size=11),
+        ),
+    )
+    fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
+    if x_date_format:
+        fig.update_xaxes(tickformat=x_date_format, hoverformat=x_date_format)
+    fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR, zeroline=True, zerolinecolor=ChartConfig.AXIS_COLOR)
+
+    return fig.to_json()
 
 
 def create_parc_prod_sankey(parc_mw, prod_mwh):
@@ -835,13 +913,23 @@ def echanges(request):
     # Get available min/max dates
     min_date, max_date = get_echanges_date_range()
 
-    # Validate pays
-    pays = request.GET.get('pays', 'ech_physiques')
-    pays_disponibles = get_echanges_pays()
+    # Commercial flows only on this page
+    pays_disponibles = get_echanges_pays_commerciaux()
+
+    # Country for the load curve (top filter)
+    pays = request.GET.get('pays', 'ech_comm_allemagne_belgique')
     if pays not in pays_disponibles:
         return HttpResponseBadRequest(f"Pays invalide. Choisissez parmi: {', '.join(pays_disponibles.keys())}")
 
-    # Validate and get dates from request
+    # Country for the annual chart (bottom) — its own selector, fully
+    # independent of the top filters (dates and curve country). Adds a 'total'
+    # option (sum of all commercial borders).
+    pays_annuel_options = {'total': 'Total', **pays_disponibles}
+    pays_annuel = request.GET.get('pays_annuel', 'total')
+    if pays_annuel not in pays_annuel_options:
+        return HttpResponseBadRequest(f"Pays invalide. Choisissez parmi: {', '.join(pays_annuel_options.keys())}")
+
+    # Validate and get dates from request (drives the load curve only)
     start_date, end_date = validate_and_get_dates(request, min_date, max_date)
 
     # Load echanges data for the line chart
@@ -855,7 +943,24 @@ def echanges(request):
         y_label='Échange'
     )
 
+    # Annual import/export volumes — always over the full available history and
+    # for its own selected country, independent of the top filters.
+    df_echanges_annuel = get_echanges_annual_import_export(min_date, max_date, pays_annuel)
+    graph_echanges_annuel = create_import_export_chart(
+        df_echanges_annuel,
+        x_col='annee',
+        import_col='import_mwh',
+        export_col='export_mwh',
+        x_date_format=None,
+    )
+
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # Each form refreshes only its own chart, so the two stay independent:
+        # the bottom selector sends `pays_annuel`, the top form does not.
+        if 'pays_annuel' in request.GET:
+            return JsonResponse({'charts': {
+                'chart-echanges-annuel': json.loads(graph_echanges_annuel),
+            }})
         return JsonResponse({'charts': {
             'chart-echanges': json.loads(graph_echanges),
         }})
@@ -869,7 +974,10 @@ def echanges(request):
         'pays': pays,
         'pays_options': pays_disponibles,
         'selected_pays': pays,
+        'pays_annuel_options': pays_annuel_options,
+        'selected_pays_annuel': pays_annuel,
         'graph_echanges': graph_echanges,
+        'graph_echanges_annuel': graph_echanges_annuel,
         'row_count': len(df_echanges),
     }
 
@@ -1054,9 +1162,9 @@ def export_echanges_csv(request):
     # Get available min/max dates
     min_date, max_date = get_echanges_date_range()
 
-    # Validate pays
-    pays = request.GET.get('pays', 'ech_physiques')
-    pays_disponibles = get_echanges_pays()
+    # Validate pays (commercial flows only on this page)
+    pays_disponibles = get_echanges_pays_commerciaux()
+    pays = request.GET.get('pays', 'ech_comm_allemagne_belgique')
     if pays not in pays_disponibles:
         return HttpResponseBadRequest(f"Pays invalide. Choisissez parmi: {', '.join(pays_disponibles.keys())}")
 
@@ -1069,6 +1177,32 @@ def export_echanges_csv(request):
     # Export to CSV
     filename = f'echanges_{pays}_{start_date}_{end_date}.csv'
     return _export_to_csv(df, filename, ['date_heure', 'echange'])
+
+
+@handle_validation_errors
+def export_echanges_annuel_csv(request):
+    """
+    Export the full annual detail to CSV: import/export/solde for every
+    commercial border and the overall total, all years. Independent of the
+    page filters.
+    """
+    min_date, max_date = get_echanges_date_range()
+
+    df = get_echanges_annual_detail(min_date, max_date).copy()
+
+    # Derive the solde for each border (and total), and build the column order:
+    # annee, then import/export/solde grouped per border, total last.
+    bases = [c[:-len('_import_mwh')] for c in df.columns if c.endswith('_import_mwh')]
+    columns = ['annee']
+    for base in bases:
+        df[f'{base}_solde_mwh'] = df[f'{base}_export_mwh'] - df[f'{base}_import_mwh']
+        columns += [f'{base}_import_mwh', f'{base}_export_mwh', f'{base}_solde_mwh']
+
+    # Round: decimals come from the source aggregation, meaningless in MWh.
+    value_cols = [c for c in columns if c != 'annee']
+    df[value_cols] = df[value_cols].round()
+
+    return _export_to_csv(df, 'echanges_annuels_detail.csv', columns)
 
 
 # ========== API ==========

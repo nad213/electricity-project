@@ -14,18 +14,19 @@ Variables optionnelles :
   - extra_filter_options : dict {key: label} des options
   - extra_filter_selected : valeur sélectionnée (ou liste de valeurs si multiple)
   - extra_filter_multiple : si vrai, rend des boutons à bascule (multi-sélection)
+  - extra_filter_radio : si vrai, rend des boutons en sélection unique (radio)
 {% endcomment %}
 
 <form method="get" class="mb-4" id="date-filter-form">
-    {% if extra_filter_multiple %}
-    {# Filtre multi-sélection (filières) : boutons à bascule sur une ligne dédiée #}
+    {% if extra_filter_multiple or extra_filter_radio %}
+    {# Filtre en boutons sur une ligne dédiée : bascule (multi) ou radio (mono) #}
     <div class="mb-3">
         <label class="form-label fs-6 mb-1 d-block">{{ extra_filter_label }}</label>
         <div class="d-flex flex-wrap gap-2">
             {% for key, label in extra_filter_options.items %}
-            <input type="checkbox" class="btn-check" name="{{ extra_filter_name }}"
+            <input type="{% if extra_filter_radio %}radio{% else %}checkbox{% endif %}" class="btn-check" name="{{ extra_filter_name }}"
                    value="{{ key }}" id="filter-{{ extra_filter_name }}-{{ key }}" autocomplete="off"
-                   {% if key in extra_filter_selected %}checked{% endif %}>
+                   {% if extra_filter_radio %}{% if key == extra_filter_selected %}checked{% endif %}{% else %}{% if key in extra_filter_selected %}checked{% endif %}{% endif %}>
             <label class="btn btn-sm btn-outline-primary" for="filter-{{ extra_filter_name }}-{{ key }}">
                 {{ label }}
             </label>
@@ -35,8 +36,8 @@ Variables optionnelles :
     {% endif %}
 
     <div class="row g-2 align-items-end">
-        {% if extra_filter_name and not extra_filter_multiple %}
-        {# Filtre mono-sélection inline (ex: pays) #}
+        {% if extra_filter_name and not extra_filter_multiple and not extra_filter_radio %}
+        {# Filtre mono-sélection inline (menu déroulant) #}
         <div class="col-md-3">
             <label class="form-label fs-6 mb-1">{{ extra_filter_label }}</label>
             <select class="form-select form-select-sm" name="{{ extra_filter_name }}">
@@ -62,7 +63,7 @@ Variables optionnelles :
                 max="{{ max_date|date:'Y-m-d' }}"
             >
         </div>
-        {% if extra_filter_name and not extra_filter_multiple %}
+        {% if extra_filter_name and not extra_filter_multiple and not extra_filter_radio %}
         <div class="col-md-3">
         {% else %}
         <div class="col-md-4">
@@ -78,7 +79,7 @@ Variables optionnelles :
                 max="{{ max_date|date:'Y-m-d' }}"
             >
         </div>
-        {% if extra_filter_name and not extra_filter_multiple %}
+        {% if extra_filter_name and not extra_filter_multiple and not extra_filter_radio %}
         <div class="col-md-3">
         {% else %}
         <div class="col-md-4">

@@ -366,6 +366,14 @@ def get_echanges_pays():
     return pays
 
 
+def get_echanges_pays_commerciaux():
+    """
+    Commercial-exchange countries only (excludes the physical total).
+    Used by the Échanges page, which focuses on commercial flows per border.
+    """
+    return {k: v for k, v in get_echanges_pays().items() if k != 'ech_physiques'}
+
+
 def get_echanges_date_range():
     """
     Retrieves the min and max dates from the echanges dataset
@@ -419,6 +427,128 @@ def get_echanges_data(start_date, end_date, pays='ech_physiques'):
         'Real-Time Data': 'Temps Réel'
     }
     result['source'] = result['source'].map(source_map).fillna(result['source'])
+
+    return result
+
+
+def get_echanges_annual_import_export(start_date, end_date, pays='total'):
+    """
+    Annual import/export volumes (MWh) for a commercial border, derived from the
+    detailed exchange file.
+
+    `pays` is either a single ech_comm_* column, or 'total' (sum of all
+    commercial borders at each time step → France's overall commercial balance).
+
+    The detail file stores signed power per time step (convention for this
+    dataset: positive = import, negative = export). The energy carried by each
+    step is power × its duration; the duration is read directly from the gap to
+    the next sample (capped at 1h to absorb data gaps), so the result is correct
+    whatever the sampling cadence — no per-source divisor to hard-code.
+
+    Returns a DataFrame with columns:
+        annee       – year (string, so the x-axis stays categorical)
+        import_mwh  – positive volume imported (MWh)
+        export_mwh  – positive volume exported (MWh)
+    """
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+
+    # Build the value/filter expressions from our own (safe) column names — no
+    # user input reaches the SQL string, so there is no injection surface.
+    commercial = list(get_echanges_pays_commerciaux().keys())
+    if pays == 'total':
+        val_expr = "(" + " + ".join(f"COALESCE({c}, 0)" for c in commercial) + ")"
+        notnull_expr = "(" + " OR ".join(f"{c} IS NOT NULL" for c in commercial) + ")"
+    elif pays in commercial:
+        val_expr = pays
+        notnull_expr = f"{pays} IS NOT NULL"
+    else:
+        raise ValueError(f"Pays invalide. Choisissez parmi: total, {', '.join(commercial)}")
+
+    path = data_cache.get_local_path('echanges')
+    with get_duckdb_connection(path) as conn:
+        query = f"""
+            WITH stepped AS (
+                SELECT
+                    date_heure,
+                    {val_expr} AS val,
+                    LEAST(
+                        date_diff('second', date_heure,
+                            lead(date_heure) OVER (ORDER BY date_heure)) / 3600.0,
+                        1.0
+                    ) AS dt_h
+                FROM read_parquet(?)
+                WHERE date_heure BETWEEN ? AND ?
+                  AND {notnull_expr}
+            )
+            SELECT
+                CAST(year(date_heure) AS VARCHAR) AS annee,
+                SUM(CASE WHEN val > 0 THEN val * dt_h ELSE 0 END) AS import_mwh,
+                -SUM(CASE WHEN val < 0 THEN val * dt_h ELSE 0 END) AS export_mwh
+            FROM stepped
+            GROUP BY 1
+            ORDER BY 1;
+        """
+        result = conn.execute(
+            query, [path, start_str, f"{end_str} 23:59:59"]
+        ).fetchdf()
+
+    return result
+
+
+def get_echanges_annual_detail(start_date, end_date):
+    """
+    Annual import/export (MWh) for every commercial border plus the overall
+    total, in a single wide table — used for the full CSV export.
+
+    Same energy method as get_echanges_annual_import_export (power × real step
+    duration). Returns columns: annee, then for each border and 'total':
+    <name>_import_mwh, <name>_export_mwh. (Solde is derived by the caller.)
+    """
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+
+    # Column names come from our own dict (safe), so building SQL is injection-free.
+    commercial = list(get_echanges_pays_commerciaux().keys())
+    total_expr = "(" + " + ".join(f"COALESCE({c}, 0)" for c in commercial) + ")"
+
+    selects = []
+    for col in commercial:
+        short = col.replace("ech_comm_", "")
+        selects.append(f"SUM(CASE WHEN {col} > 0 THEN {col} * dt_h ELSE 0 END) AS {short}_import_mwh")
+        selects.append(f"-SUM(CASE WHEN {col} < 0 THEN {col} * dt_h ELSE 0 END) AS {short}_export_mwh")
+    selects.append(f"SUM(CASE WHEN {total_expr} > 0 THEN {total_expr} * dt_h ELSE 0 END) AS total_import_mwh")
+    selects.append(f"-SUM(CASE WHEN {total_expr} < 0 THEN {total_expr} * dt_h ELSE 0 END) AS total_export_mwh")
+
+    notnull_expr = " OR ".join(f"{c} IS NOT NULL" for c in commercial)
+    select_cols = ",\n                ".join(selects)
+    keep_cols = "".join(f", {c}" for c in commercial)
+
+    path = data_cache.get_local_path('echanges')
+    with get_duckdb_connection(path) as conn:
+        query = f"""
+            WITH stepped AS (
+                SELECT
+                    date_heure,
+                    LEAST(
+                        date_diff('second', date_heure,
+                            lead(date_heure) OVER (ORDER BY date_heure)) / 3600.0,
+                        1.0
+                    ) AS dt_h{keep_cols}
+                FROM read_parquet(?)
+                WHERE date_heure BETWEEN ? AND ?
+                  AND ({notnull_expr})
+            )
+            SELECT
+                CAST(year(date_heure) AS VARCHAR) AS annee,
+                {select_cols}
+            FROM stepped
+            GROUP BY 1
+            ORDER BY 1 DESC;
+        """
+        result = conn.execute(
+            query, [path, start_str, f"{end_str} 23:59:59"]
+        ).fetchdf()
 
     return result
 

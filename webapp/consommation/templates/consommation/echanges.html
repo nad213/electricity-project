@@ -17,7 +17,7 @@
                 <h3 class="card-title">Courbe de charge des échanges</h3>
             </div>
             <div class="card-body">
-                {% include 'partials/_date_filter_form.html' with extra_filter_label="Pays" extra_filter_name="pays" extra_filter_options=pays_options extra_filter_selected=selected_pays %}
+                {% include 'partials/_date_filter_form.html' with extra_filter_label="Pays" extra_filter_name="pays" extra_filter_options=pays_options extra_filter_selected=selected_pays extra_filter_radio=True %}
 
                 <!-- Graphique -->
                 <div class="chart-container">
@@ -38,11 +38,79 @@
     </div>
 </div>
 
+<!-- Section: Import / Export annuels (sélecteur de pays indépendant) -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Import / Export annuels</h3>
+            </div>
+            <div class="card-body">
+                <!-- Sélecteur de pays propre à ce graphique, indépendant des filtres du haut -->
+                <form id="echanges-annuel-form" class="mb-3">
+                    <label class="form-label fs-6 mb-1 d-block">Pays</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for key, label in pays_annuel_options.items %}
+                        <input type="radio" class="btn-check" name="pays_annuel"
+                               value="{{ key }}" id="annuel-pays-{{ key }}" autocomplete="off"
+                               {% if key == selected_pays_annuel %}checked{% endif %}>
+                        <label class="btn btn-sm btn-outline-primary" for="annuel-pays-{{ key }}">
+                            {{ label }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </form>
+
+                <!-- Graphique -->
+                <div class="chart-container">
+                    <div id="chart-echanges-annuel"></div>
+                </div>
+
+                <!-- Download button : CSV détaillé (tous les pays, toutes les années) -->
+                <div class="mt-3 text-end">
+                    <a id="export-echanges-annuel" data-static-export
+                       href="{% url 'consommation:export_echanges_annuel' %}"
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="ti ti-download me-1"></i>
+                        Télécharger CSV
+                    </a>
+                </div>
+
+                {% include 'partials/_data_source.html' with collapse_id="src-echanges-annuel" source="ODRE – Données éco2mix RTE, échanges commerciaux aux frontières" calcul="Volumes annuels (TWh) pour le pays sélectionné ci-dessus : import et export sommés séparément à partir des flux par pas de temps, l'énergie de chaque pas étant sa puissance × sa durée réelle. Export tracé en positif, import en négatif. Indépendant des filtres de dates/pays du graphique du haut." %}
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-// Render chart client-side
+// Render charts client-side
 (function() {
-    var chartData = JSON.parse('{{ graph_echanges|escapejs }}');
-    Plotly.newPlot('chart-echanges', chartData.data, chartData.layout, {responsive: true});
+    var plotConfig = { responsive: true };
+
+    var chartEchanges = JSON.parse('{{ graph_echanges|escapejs }}');
+    Plotly.newPlot('chart-echanges', chartEchanges.data, chartEchanges.layout, plotConfig);
+
+    var chartEchangesAnnuel = JSON.parse('{{ graph_echanges_annuel|escapejs }}');
+    Plotly.newPlot('chart-echanges-annuel', chartEchangesAnnuel.data, chartEchangesAnnuel.layout, plotConfig);
+
+    // Le sélecteur de pays du graphe annuel ne rafraîchit QUE ce graphe,
+    // via le paramètre `pays_annuel` (le formulaire du haut ne l'envoie jamais).
+    var annuelForm = document.getElementById('echanges-annuel-form');
+    if (annuelForm) {
+        annuelForm.addEventListener('change', function() {
+            var checked = annuelForm.querySelector('input[name="pays_annuel"]:checked');
+            if (!checked) return;
+            var url = window.location.pathname + '?pays_annuel=' + encodeURIComponent(checked.value);
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    Object.keys(data.charts).forEach(function(id) {
+                        var c = data.charts[id];
+                        Plotly.react(id, c.data, c.layout, plotConfig);
+                    });
+                });
+        });
+    }
 })();
 </script>
 {% endblock %}

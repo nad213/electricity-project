@@ -71,7 +71,8 @@
                 // Mettre à jour l'URL (pour que refresh/bookmark fonctionnent)
                 window.history.replaceState(null, '', url);
                 // Mettre à jour les liens d'export CSV avec les nouveaux paramètres
-                document.querySelectorAll('a[href*="export"]').forEach(function(link) {
+                // (sauf ceux marqués data-static-export, qui gèrent leurs propres params)
+                document.querySelectorAll('a[href*="export"]:not([data-static-export])').forEach(function(link) {
                     var baseUrl = link.href.split('?')[0];
                     link.href = baseUrl + '?' + params;
                 });

@@ -28,5 +28,6 @@ urlpatterns = [
     path('production/export-parc-installe/', views.export_parc_installe_csv, name='export_parc_installe'),
     path('echanges/', views.echanges, name='echanges'),
     path('echanges/export/', views.export_echanges_csv, name='export_echanges'),
+    path('echanges/export-annuel/', views.export_echanges_annuel_csv, name='export_echanges_annuel'),
     path('api/', views.api, name='api'),
 ]
