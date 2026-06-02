@@ -3,11 +3,94 @@
 {% block page_title %}API{% endblock %}
 {% block content %}
 {% if is_authenticated %}
-<div class="card">
+
+<div class="card mb-3">
     <div class="card-body">
-        <p class="text-muted">Page API - En construction.</p>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+                <h3 class="mb-1">API publique ElecFlow <span class="badge bg-blue-lt">v1</span></h3>
+                <p class="text-muted mb-0">
+                    Accès en lecture seule, au format JSON, aux données électriques françaises (source : ODRE).
+                    Les puissances sont exprimées en <strong>MW</strong>.
+                </p>
+            </div>
+            <a href="{{ api_base }}/docs" target="_blank" rel="noopener" class="btn btn-primary">
+                <i class="ti ti-api me-2"></i>Documentation interactive (Swagger)
+            </a>
+        </div>
     </div>
 </div>
+
+<div class="card mb-3">
+    <div class="card-header"><h4 class="card-title mb-0">Endpoints</h4></div>
+    <div class="table-responsive">
+        <table class="table card-table table-vcenter">
+            <thead>
+                <tr>
+                    <th style="width:7rem">Méthode</th>
+                    <th>Endpoint</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="badge bg-green-lt">GET</span></td>
+                    <td><code>/api/v1/meta</code></td>
+                    <td>Plages de dates disponibles et listes de référence (filières, pays).</td>
+                </tr>
+                <tr>
+                    <td><span class="badge bg-green-lt">GET</span></td>
+                    <td><code>/api/v1/consommation</code></td>
+                    <td>Consommation (puissance, MW). Paramètres : <code>start_date</code>, <code>end_date</code>.</td>
+                </tr>
+                <tr>
+                    <td><span class="badge bg-green-lt">GET</span></td>
+                    <td><code>/api/v1/production</code></td>
+                    <td>Production par filière (MW). Paramètres : <code>start_date</code>, <code>end_date</code>, <code>filiere</code>.</td>
+                </tr>
+                <tr>
+                    <td><span class="badge bg-green-lt">GET</span></td>
+                    <td><code>/api/v1/echanges</code></td>
+                    <td>Échanges transfrontaliers (MW). Paramètres : <code>start_date</code>, <code>end_date</code>, <code>pays</code>.</td>
+                </tr>
+                <tr>
+                    <td><span class="badge bg-green-lt">GET</span></td>
+                    <td><code>/api/v1/parc-installe</code></td>
+                    <td>Parc installé mensuel éolien/solaire (MW).</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header"><h4 class="card-title mb-0">Paramètres communs</h4></div>
+    <div class="card-body">
+        <ul class="mb-0">
+            <li><code>start_date</code> / <code>end_date</code> — format <code>AAAA-MM-JJ</code>. Plage maximale : 366 jours.</li>
+            <li><code>filiere</code> — clé de filière (ex. <code>nucleaire</code>, <code>eolien</code>, <code>solaire</code>…). Voir <code>/meta</code>.</li>
+            <li><code>pays</code> — clé de frontière (ex. <code>ech_physiques</code>…). Voir <code>/meta</code>.</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h4 class="card-title mb-0">Exemples</h4></div>
+    <div class="card-body">
+        <p class="text-muted mb-2">Métadonnées :</p>
+        <pre class="mb-3"><code>curl "{{ api_base }}/meta"</code></pre>
+
+        <p class="text-muted mb-2">Consommation sur une période :</p>
+        <pre class="mb-3"><code>curl "{{ api_base }}/consommation?start_date=2024-01-01&end_date=2024-01-07"</code></pre>
+
+        <p class="text-muted mb-2">Production solaire :</p>
+        <pre class="mb-3"><code>curl "{{ api_base }}/production?start_date=2024-06-01&end_date=2024-06-07&filiere=solaire"</code></pre>
+
+        <p class="text-muted mb-2">Échanges physiques :</p>
+        <pre class="mb-0"><code>curl "{{ api_base }}/echanges?start_date=2024-01-01&end_date=2024-01-07"</code></pre>
+    </div>
+</div>
+
 {% else %}
 {% include "partials/_login_invite.html" %}
 {% endif %}

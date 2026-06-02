@@ -1213,6 +1213,8 @@ def export_echanges_annuel_csv(request):
 
 # ========== API ==========
 def api(request):
-    # Page accessible aux visiteurs : le template affiche une invitation à se
-    # connecter/s'inscrire si l'utilisateur n'est pas authentifié.
-    return render(request, 'consommation/api.html')
+    # Page portail : doc réservée aux utilisateurs connectés (le template
+    # affiche sinon une invitation à se connecter/s'inscrire). Les endpoints
+    # JSON sous /api/v1/ sont, eux, publics en phase 1.
+    api_base = request.build_absolute_uri('/api/v1/').rstrip('/')
+    return render(request, 'consommation/api.html', {'api_base': api_base})
