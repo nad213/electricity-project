@@ -238,16 +238,19 @@ def create_bar_chart(df, x_col, y_col, color=None, tickangle=0, y_label='Consomm
     return fig.to_json()
 
 
-def create_stacked_bar_chart(df, x_col, y_cols, colors, labels):
+def create_stacked_bar_chart(df, x_col, y_cols, colors, labels, unit='MWh', divisor=1, decimals=0):
     """
     Creates a stacked bar chart with Plotly
 
     Args:
-        df: DataFrame with data
+        df: DataFrame with data (values in MWh)
         x_col: Column name for x-axis
         y_cols: List of column names to stack
         colors: Dict mapping column names to colors
         labels: Dict mapping column names to display labels
+        unit: Unit label displayed on the y-axis and in the hover (e.g. 'TWh')
+        divisor: Factor to divide raw MWh values by to reach `unit`
+        decimals: Number of decimals shown in the hover
 
     Returns:
         HTML string of the chart
@@ -259,15 +262,17 @@ def create_stacked_bar_chart(df, x_col, y_cols, colors, labels):
         if col in df.columns:
             fig.add_trace(go.Bar(
                 x=df[x_col],
-                y=df[col],
+                y=df[col] / divisor,
                 name=labels.get(col, col),
                 marker_color=colors.get(col, Colors.PRIMARY),
+                hovertemplate=f'{labels.get(col, col)}: %{{y:,.{decimals}f}} {unit}<extra></extra>',
             ))
 
     fig.update_layout(
         barmode='stack',
+        separators=', ',
         xaxis_title_text='',
-        yaxis_title_text='MWh',
+        yaxis_title_text=unit,
         margin=ChartConfig.MARGIN_WITH_LEGEND,
         height=ChartConfig.BAR_CHART_HEIGHT,
         plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
@@ -278,6 +283,12 @@ def create_stacked_bar_chart(df, x_col, y_cols, colors, labels):
             x=0.5,
             y=-0.2,
             xanchor="center",
+        ),
+        hovermode='x unified',
+        hoverlabel=dict(
+            bgcolor='#1E293B',
+            bordercolor='#475569',
+            font=dict(color='#F1F5F9', size=11),
         ),
     )
     fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
@@ -756,7 +767,10 @@ def production(request):
         x_col='year',
         y_cols=get_filiere_columns('annual'),
         colors=colors,
-        labels=labels
+        labels=labels,
+        unit='TWh',
+        divisor=1_000_000,
+        decimals=1,
     )
 
     # Create year-month label for monthly chart
@@ -767,7 +781,10 @@ def production(request):
         x_col='annee_mois',
         y_cols=get_filiere_columns('monthly'),
         colors=colors,
-        labels=labels
+        labels=labels,
+        unit='TWh',
+        divisor=1_000_000,
+        decimals=1,
     )
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
