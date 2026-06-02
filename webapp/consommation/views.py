@@ -913,6 +913,8 @@ def export_annuel_csv(request):
     # Arrondir : les décimales viennent de l'agrégation des sources, sans sens en MWh annuels
     df = df.copy()
     df['yearly_consumption'] = df['yearly_consumption'].round()
+    # Années récentes en premier
+    df = df.sort_values('year', ascending=False)
     return _export_to_csv(df, 'consommation_annuelle.csv', ['year', 'yearly_consumption'])
 
 
@@ -924,6 +926,8 @@ def export_mensuel_csv(request):
     # Découper 'year_month' (ex: '2012-01') en colonnes annee/mois, comme la production
     df = df.copy()
     df[['year', 'month']] = df['year_month'].str.split('-', expand=True).astype(int)
+    # Mois récents en premier
+    df = df.sort_values('year_month', ascending=False)
     # Arrondir : les décimales viennent de l'agrégation des sources, sans sens en MWh
     df['monthly_consumption'] = df['monthly_consumption'].round()
     return _export_to_csv(df, 'consommation_mensuelle.csv', ['year', 'month', 'monthly_consumption'])
@@ -965,6 +969,8 @@ def export_production_annuel_csv(request):
     # Arrondir : les décimales viennent de l'agrégation des sources, sans sens en MWh
     df = df.copy()
     df[filiere_cols] = df[filiere_cols].round()
+    # Années récentes en premier
+    df = df.sort_values('year', ascending=False)
     columns = ['year'] + filiere_cols
     return _export_to_csv(df, 'production_annuelle.csv', columns)
 
@@ -978,8 +984,34 @@ def export_production_mensuel_csv(request):
     # Arrondir : les décimales viennent de l'agrégation des sources, sans sens en MWh
     df = df.copy()
     df[filiere_cols] = df[filiere_cols].round()
+    # Mois récents en premier
+    df = df.sort_values(['year', 'month'], ascending=False)
     columns = ['year', 'month'] + filiere_cols
     return _export_to_csv(df, 'production_mensuelle.csv', columns)
+
+
+def export_parc_installe_csv(request):
+    """
+    Export installed wind/solar capacity data to CSV
+    """
+    df = get_parc_installe_data()
+    # Long → wide : une colonne par filière (valeurs en MW)
+    wide = (df.pivot(index='date', columns='filiere', values='parc_mw')
+              .reset_index()
+              .rename(columns={
+                  'Eolien terrestre': 'eolien_terrestre',
+                  'Eolien en mer': 'eolien_en_mer',
+                  'Solaire': 'solaire',
+              }))
+    # Découper 'date' (ex: '2012-01') en colonnes annee/mois, comme les autres exports
+    wide[['year', 'month']] = wide['date'].str.split('-', expand=True).astype(int)
+    # Mois récents en premier
+    wide = wide.sort_values('date', ascending=False)
+    # Arrondir : la capacité déduite n'a pas de sens au-delà du MW entier
+    filiere_cols = [c for c in ('eolien_terrestre', 'eolien_en_mer', 'solaire') if c in wide.columns]
+    wide[filiere_cols] = wide[filiere_cols].round()
+    columns = ['year', 'month'] + filiere_cols
+    return _export_to_csv(wide, 'parc_installe_eolien_solaire.csv', columns)
 
 
 @handle_validation_errors

@@ -144,6 +144,8 @@ CSV_HEADERS = {
     'year_month': 'annee_mois',
     'yearly_consumption': 'consommation_mwh',
     'monthly_consumption': 'consommation_mwh',
+    'eolien_terrestre': 'eolien_terrestre_mw',
+    'eolien_en_mer': 'eolien_en_mer_mw',
 }
 
 

@@ -61,7 +61,7 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">Énergie Produite par Filière</h3>
+                        <h3 class="card-title">Énergie Produite par Filière (GWh)</h3>
                     </div>
                     <div class="card-body">
                         <div class="text-muted mb-3">
@@ -135,11 +135,14 @@
                         <h3 class="card-title">Parc Installé Éolien et Solaire (GW)</h3>
                     </div>
                     <div class="card-body">
-                        <div class="text-muted mb-3">
-                            Capacité installée mensuelle déduite des données RTE : production divisée par le facteur de charge et les heures du mois.
-                        </div>
                         <div class="chart-container">
                             <div id="chart-parc-installe"></div>
+                        </div>
+                        <div class="mt-3 text-end">
+                            <a href="{% url 'consommation:export_parc_installe' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="ti ti-download me-1"></i>
+                                Télécharger CSV
+                            </a>
                         </div>
                         <div class="mt-2">
                             <a data-bs-toggle="collapse" href="#src-parc-installe" class="text-muted small text-decoration-none" role="button" aria-expanded="false">
