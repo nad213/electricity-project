@@ -8,9 +8,13 @@
 {% endblock %}
 
 {% block content %}
+<div class="row">
+
+    <!-- Main content -->
+    <div class="col-12 col-lg-11">
 
 <!-- Section: Courbe de charge des échanges -->
-<div class="row mb-4">
+<div class="row mb-4" id="section-courbe">
     <div class="col-12">
         <div class="card">
             <div class="card-header">
@@ -39,7 +43,7 @@
 </div>
 
 <!-- Section: Import / Export annuels (sélecteur de pays indépendant) -->
-<div class="row mb-4">
+<div class="row mb-4" id="section-annuel">
     <div class="col-12">
         <div class="card">
             <div class="card-header">
@@ -82,6 +86,29 @@
     </div>
 </div>
 
+    </div>
+
+    <!-- Sticky sidebar nav -->
+    <div class="col-lg-1 d-none d-lg-block">
+        <nav id="page-nav" class="page-nav-sidebar">
+            <p class="page-nav-label">Sur cette page</p>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#section-courbe">
+                        <i class="ti ti-chart-line me-2"></i>Courbe de charge
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#section-annuel">
+                        <i class="ti ti-arrows-exchange me-2"></i>Import / Export annuels
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+</div>
+
 <script>
 // Render charts client-side
 (function() {
@@ -111,6 +138,24 @@
                 });
         });
     }
+})();
+
+// Scrollspy via IntersectionObserver (ne dépend pas de Bootstrap)
+(function() {
+    var sections = document.querySelectorAll('#section-courbe, #section-annuel');
+    var navLinks = document.querySelectorAll('#page-nav .nav-link');
+
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                navLinks.forEach(function(link) { link.classList.remove('active'); });
+                var active = document.querySelector('#page-nav a[href="#' + entry.target.id + '"]');
+                if (active) active.classList.add('active');
+            }
+        });
+    }, { rootMargin: '-15% 0px -70% 0px' });
+
+    sections.forEach(function(section) { observer.observe(section); });
 })();
 </script>
 {% endblock %}
