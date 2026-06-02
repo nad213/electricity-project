@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import json
 import plotly.express as px
 import plotly.graph_objects as go
+import pandas as pd
 import csv
 from functools import wraps
 
@@ -244,7 +245,7 @@ def create_bar_chart(df, x_col, y_col, color=None, tickangle=0, y_label='Consomm
     return fig.to_json()
 
 
-def create_stacked_bar_chart(df, x_col, y_cols, colors, labels, unit='MWh', divisor=1, decimals=0):
+def create_stacked_bar_chart(df, x_col, y_cols, colors, labels, unit='MWh', divisor=1, decimals=0, x_date_format=None):
     """
     Creates a stacked bar chart with Plotly
 
@@ -257,6 +258,8 @@ def create_stacked_bar_chart(df, x_col, y_cols, colors, labels, unit='MWh', divi
         unit: Unit label displayed on the y-axis and in the hover (e.g. 'TWh')
         divisor: Factor to divide raw MWh values by to reach `unit`
         decimals: Number of decimals shown in the hover
+        x_date_format: Optional d3 date format applied to the axis ticks and the
+            unified hover header (e.g. '%B %Y'). Requires x_col to be a date.
 
     Returns:
         HTML string of the chart
@@ -298,6 +301,8 @@ def create_stacked_bar_chart(df, x_col, y_cols, colors, labels, unit='MWh', divi
         ),
     )
     fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
+    if x_date_format:
+        fig.update_xaxes(tickformat=x_date_format, hoverformat=x_date_format)
     fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR)
 
     return fig.to_json()
@@ -780,8 +785,10 @@ def production(request):
         decimals=1,
     )
 
-    # Create year-month label for monthly chart
-    df_monthly['annee_mois'] = df_monthly['year'].astype(str) + '-' + df_monthly['month'].astype(str).str.zfill(2)
+    # Real date (first of month) so the axis/hover can show French month names
+    df_monthly['annee_mois'] = pd.to_datetime(
+        df_monthly['year'].astype(str) + '-' + df_monthly['month'].astype(str).str.zfill(2) + '-01'
+    )
 
     graph_production_mensuel = create_stacked_bar_chart(
         df_monthly,
@@ -792,6 +799,7 @@ def production(request):
         unit='TWh',
         divisor=1_000_000,
         decimals=1,
+        x_date_format='%B %Y',
     )
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
