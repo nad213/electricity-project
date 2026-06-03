@@ -22,6 +22,25 @@
     --text-secondary: #94A3B8;
     --text-muted: #64748B;
     --shadow: rgba(0, 0, 0, 0.3);
+
+    /* Remap des variables Tabler/Bootstrap vers le thème dark.
+       Tous les composants (listes, cards, tableaux, badges…) qui
+       référencent ces variables deviennent ainsi lisibles d'un coup,
+       au lieu de tomber sur les couleurs claires par défaut de Tabler. */
+    --tblr-body-color: #F1F5F9;
+    --tblr-body-color-rgb: 241, 245, 249;
+    --tblr-body-bg: #0F172A;
+    --tblr-body-bg-rgb: 15, 23, 42;
+    --tblr-emphasis-color: #F1F5F9;
+    --tblr-secondary-color: #94A3B8;
+    --tblr-tertiary-color: #64748B;
+    --tblr-heading-color: #F1F5F9;
+    --tblr-border-color: #334155;
+    --tblr-border-color-translucent: rgba(255, 255, 255, 0.08);
+    --tblr-secondary-bg: #1E293B;
+    --tblr-tertiary-bg: #334155;
+    --tblr-link-color: #22D3EE;
+    --tblr-link-hover-color: #67E8F9;
 }
 
 /* ========== Global Styles ========== */
@@ -480,9 +499,37 @@ body {
     color: var(--accent);
 }
 
+/* ========== Tables ========== */
+.table {
+    --tblr-table-color: var(--text);
+    --tblr-table-bg: transparent;
+    --tblr-table-border-color: var(--border);
+    --tblr-table-striped-color: var(--text);
+    --tblr-table-hover-color: var(--text);
+    --tblr-table-hover-bg: var(--surface-hover);
+    color: var(--text);
+}
+
+.table thead th {
+    color: var(--text-secondary);
+    background-color: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid var(--border-light);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.table td,
+.table th {
+    color: var(--text);
+    border-top-color: var(--border);
+    border-bottom-color: var(--border);
+}
+
 /* ========== Text Utilities ========== */
 .text-muted {
-    color: var(--text-muted) !important;
+    color: var(--text-secondary) !important;
 }
 
 /* ========== Alerts ========== */
@@ -574,4 +621,30 @@ body {
     .navbar-pastel .nav-item.active .nav-link {
         background-color: var(--accent-glow);
     }
+}
+
+/* ========== Code & blocs préformatés (page API) ========== */
+code {
+    color: var(--accent-hover);
+    background-color: var(--accent-glow-strong);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    font-size: 0.875em;
+}
+
+pre {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    color: var(--text);
+    overflow-x: auto;
+}
+
+pre code {
+    color: var(--accent-hover);
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0;
+    font-size: 0.875rem;
 }
