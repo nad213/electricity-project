@@ -93,6 +93,14 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
+# Nombre de proxys de confiance devant l'app (Render = 1). Indique à Django
+# Ninja de prendre la dernière IP de X-Forwarded-For (celle ajoutée par le
+# proxy = client réel) pour identifier les clients du throttling, au lieu de
+# concaténer tout l'en-tête — qui est falsifiable et permettrait de contourner
+# la limite de débit. En local (pas de proxy, pas de XFF), REMOTE_ADDR est
+# utilisé : aucun impact.
+NINJA_NUM_PROXIES = int(os.getenv('NINJA_NUM_PROXIES', '1'))
+
 
 # Application definition
 

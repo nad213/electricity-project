@@ -5,28 +5,59 @@ Expose en JSON, en lecture seule, les données déjà servies par les pages de
 visualisation. Les endpoints réutilisent directement `services.py` (DuckDB →
 Parquet/S3) : ici on ne fait que valider les paramètres et sérialiser.
 
-Phase 1 : endpoints publics, sans clé d'API. L'authentification par clé et le
-rate limiting sont prévus en phase 2.
+Accès protégé par clé d'API (en-tête `Authorization: Bearer <clé>`, cf.
+`api_auth.py`) et limité en débit par clé (throttling). Données publiques mais
+accès tracé/révocable.
 
 Documentation interactive (Swagger) : /api/v1/docs
 """
+import os
 from datetime import date, datetime
 from typing import Optional
 
 import pandas as pd
 from ninja import NinjaAPI, Schema
 from ninja.errors import HttpError
+from ninja.throttling import AuthRateThrottle
 
 from . import services
+from .api_auth import get_api_auth
+
+
+# ========== Rate limiting (throttling) ==========
+# Les endpoints sont coûteux (lecture Parquet + DuckDB à chaque appel) :
+# sans plafond, une boucle de requêtes suffit à saturer le service.
+# `AuthRateThrottle` compte PAR CLÉ d'API (str(request.auth)) quand la requête
+# est authentifiée, et retombe sur l'IP sinon (dev-open). Deux fenêtres :
+#   - "burst"     : coupe les boucles serrées (rafale courte)
+#   - "sustained" : plafonne le volume total sur la durée
+# Les seuils sont ajustables sans redéploiement via variables d'environnement.
+# NB : le compteur vit dans le cache Django (LocMemCache par défaut, donc par
+# process) — la limite effective est multipliée par le nombre de workers
+# Gunicorn. Pour un comptage exact en multi-worker, brancher un cache partagé
+# (Redis) ; ce throttling « approximatif » protège déjà l'essentiel.
+class BurstRateThrottle(AuthRateThrottle):
+    scope = "burst"
+
+
+class SustainedRateThrottle(AuthRateThrottle):
+    scope = "sustained"
+
 
 api = NinjaAPI(
     title="ElecFlow API",
     version="1.0.0",
     description=(
         "API publique de données électriques françaises (source : ODRE). "
-        "Données en lecture seule. Les puissances sont en MW."
+        "Données en lecture seule. Les puissances sont en MW. "
+        "Accès par clé d'API : en-tête `Authorization: Bearer <clé>`."
     ),
     docs_url="/docs",
+    auth=get_api_auth(),
+    throttle=[
+        BurstRateThrottle(os.getenv("API_THROTTLE_BURST", "10/s")),
+        SustainedRateThrottle(os.getenv("API_THROTTLE_SUSTAINED", "60/min")),
+    ],
 )
 
 # Les données infra-journalières (pas de 15/30 min) génèrent ~35 000 points par
