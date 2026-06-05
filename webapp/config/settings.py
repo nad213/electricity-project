@@ -80,6 +80,21 @@ CSRF_TRUSTED_ORIGINS = [
     f"https://{h}" for h in ALLOWED_HOSTS if h not in ("localhost", "127.0.0.1")
 ]
 
+# GitHub Codespaces: the app is reached via a forwarded *.app.github.dev URL
+# behind a TLS-terminating proxy.  Trust that host and its X-Forwarded-Proto so
+# request.build_absolute_uri() yields https — required for the Auth0 callback.
+# Only active inside a Codespace; no effect on local dev or Render.
+_codespace_name = os.getenv('CODESPACE_NAME')
+if _codespace_name:
+    _fwd_domain = os.getenv('GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN', 'app.github.dev')
+    _codespace_host = f"{_codespace_name}-8000.{_fwd_domain}"
+    ALLOWED_HOSTS.append(_codespace_host)
+    CSRF_TRUSTED_ORIGINS.append(f"https://{_codespace_host}")
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    # The proxy forwards with Host: localhost:8000 and puts the real public
+    # host in X-Forwarded-Host — use the latter so redirect_uri is correct.
+    USE_X_FORWARDED_HOST = True
+
 # Security settings for production
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
