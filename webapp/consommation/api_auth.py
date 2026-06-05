@@ -1,37 +1,36 @@
 """Authentification par clé d'API (Bearer) pour l'API publique v1.
 
-Pas de base de données dans ce projet (`DATABASES = {}`) : les clés valides sont
-déclarées en variable d'environnement `API_KEYS`, et on n'y stocke que le
-**hash SHA-256** de chaque clé — jamais la clé en clair. Ainsi, même si l'env
-fuite, les clés ne sont pas réutilisables.
+Les clés sont désormais générées par les utilisateurs depuis l'interface et
+stockées en base (`consommation.models.ApiKey`) : seul le **hash SHA-256** est
+conservé, jamais la clé en clair. Cf. `models.py`.
 
-Format de `API_KEYS` (séparateur virgule, un libellé par clé) :
-
-    API_KEYS="alice:<sha256hex>,bob:<sha256hex>"
-
-Génération d'une clé : `python manage.py generate_api_key <libellé>`.
+Compatibilité : on garde aussi le support de la variable d'environnement
+`API_KEYS` (format `libellé:sha256hex,...`), pour ne pas casser d'éventuelles
+clés déjà distribuées avant la migration vers la base.
 
 Politique d'accès :
-- Si au moins une clé est configurée → toute requête doit présenter
-  `Authorization: Bearer <clé>` valide, sinon 401.
-- Aucune clé configurée + DEBUG (dev local) → API ouverte (confort de dev).
-- Aucune clé configurée + prod (DEBUG=False) → tout est rejeté (fail-safe
-  fermé : on ne s'ouvre jamais en grand par oubli de config).
+- Au moins une clé valide présentée (DB ou env) → OK, sinon 401.
+- Aucune clé configurée du tout + DEBUG (dev local) → API ouverte (confort).
+- Aucune clé configurée + prod (DEBUG=False) → tout est rejeté (fail-safe fermé).
 """
 import hashlib
 import os
 
 from django.conf import settings
+from django.utils import timezone
 from ninja.security import HttpBearer
 
 
 def hash_key(raw_key: str) -> str:
-    """Hash SHA-256 (hex) d'une clé brute — ce qui est stocké dans `API_KEYS`."""
+    """Hash SHA-256 (hex) d'une clé brute — ce qui est stocké."""
     return hashlib.sha256(raw_key.encode()).hexdigest()
 
 
-def load_keys() -> dict[str, str]:
-    """Parse `API_KEYS` en {hash_sha256: libellé}. Entrées invalides ignorées."""
+def load_env_keys() -> dict[str, str]:
+    """Parse `API_KEYS` en {hash_sha256: libellé}. Entrées invalides ignorées.
+
+    Chemin de compatibilité : la source principale est désormais la base.
+    """
     raw = os.getenv("API_KEYS", "").strip()
     keys: dict[str, str] = {}
     if not raw:
@@ -47,36 +46,52 @@ def load_keys() -> dict[str, str]:
     return keys
 
 
-# Chargé une fois à l'import : l'environnement ne change pas en cours d'exécution.
-_KEYS = load_keys()
+# Clés d'env chargées une fois (l'environnement ne change pas en cours d'exécution).
+_ENV_KEYS = load_env_keys()
 
-# API ouverte uniquement en dev local sans aucune clé configurée.
-DEV_OPEN = settings.DEBUG and not _KEYS
+
+def _dev_open() -> bool:
+    """API ouverte uniquement en dev local quand AUCUNE clé n'est configurée.
+
+    On évalue à la requête (et non à l'import) pour rester patchable en test et
+    pour tenir compte des clés créées en base après le démarrage.
+    """
+    if not settings.DEBUG or _ENV_KEYS:
+        return False
+    from .models import ApiKey
+    return not ApiKey.objects.filter(revoked_at__isnull=True).exists()
 
 
 class ApiKeyAuth(HttpBearer):
-    """Valide `Authorization: Bearer <clé>` contre les hash de `API_KEYS`.
+    """Valide `Authorization: Bearer <clé>` contre la base puis l'env.
 
-    Retourne le **libellé** de la clé (utilisé comme identité pour le quota
-    par-clé du throttling), ou None → 401.
-
-    Les globales `DEV_OPEN` / `_KEYS` sont lues à chaque requête (et non figées à
-    la construction), ce qui rend la politique d'accès patchable en test.
+    Retourne une **identité** (libellé ou `key:<id>`) utilisée comme clé du
+    quota par-clé du throttling, ou None → 401.
     """
 
     def __call__(self, request):
-        if DEV_OPEN:
-            # Dev local sans clé : on laisse passer (identité partagée).
+        if _dev_open():
             return "dev-open"
         return super().__call__(request)
 
     def authenticate(self, request, token):
         if not token:
             return None
-        return _KEYS.get(hash_key(token))
+        h = hash_key(token)
+
+        # Source principale : la base. On filtre sur les clés non révoquées.
+        from .models import ApiKey
+        key = ApiKey.objects.filter(key_hash=h, revoked_at__isnull=True).first()
+        if key is not None:
+            # Trace de dernière utilisation (best-effort, sans bloquer la requête).
+            ApiKey.objects.filter(pk=key.pk).update(last_used_at=timezone.now())
+            return key.label or f"key:{key.pk}"
+
+        # Compat : clés héritées déclarées en variable d'environnement.
+        return _ENV_KEYS.get(h)
 
 
 def get_api_auth():
     """Auth à passer à NinjaAPI. Toujours une instance : le mode dev-open est
-    géré dans `ApiKeyAuth.__call__` (lecture de `DEV_OPEN` à la requête)."""
+    géré dans `ApiKeyAuth.__call__`."""
     return ApiKeyAuth()

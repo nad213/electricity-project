@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from . import auth_views
 from . import chat_views
+from . import api_key_views
 
 app_name = 'consommation'
 
@@ -30,4 +31,6 @@ urlpatterns = [
     path('echanges/export/', views.export_echanges_csv, name='export_echanges'),
     path('echanges/export-annuel/', views.export_echanges_annuel_csv, name='export_echanges_annuel'),
     path('api/', views.api, name='api'),
+    path('api/keys/generate/', api_key_views.generate_api_key, name='generate_api_key'),
+    path('api/keys/<int:key_id>/revoke/', api_key_views.revoke_api_key, name='revoke_api_key'),
 ]

@@ -80,6 +80,16 @@ CSRF_TRUSTED_ORIGINS = [
     f"https://{h}" for h in ALLOWED_HOSTS if h not in ("localhost", "127.0.0.1")
 ]
 
+# Dev local : l'app est souvent atteinte via le port-forwarding (localhost:8000,
+# y compris derrière le proxy TLS d'un Codespace → Origin https://localhost:8000).
+# Django vérifie l'en-tête Origin sur les POST : sans ces entrées, les
+# formulaires sont rejetés en 403 CSRF. Limité à DEBUG, sans effet en prod.
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS += [
+        "http://localhost:8000", "https://localhost:8000",
+        "http://127.0.0.1:8000", "https://127.0.0.1:8000",
+    ]
+
 # GitHub Codespaces: the app is reached via a forwarded *.app.github.dev URL
 # behind a TLS-terminating proxy.  Trust that host and its X-Forwarded-Proto so
 # request.build_absolute_uri() yields https — required for the Auth0 callback.
@@ -163,9 +173,20 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-# Not using a database - data is read directly from S3 via DuckDB
+# Les données de visualisation viennent de S3 (DuckDB), PAS d'une base. La base
+# ne sert qu'à un usage léger : stocker les clés d'API générées par les
+# utilisateurs (cf. consommation/models.py).
+# - En prod : `DATABASE_URL` pointe vers la Postgres (Render/Neon/…).
+# - En local sans `DATABASE_URL` : fallback SQLite (fichier db.sqlite3) pour
+#   pouvoir tester sans dépendre d'une base distante.
+import dj_database_url
 
-DATABASES = {}
+DATABASES = {
+    'default': dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600,
+    )
+}
 
 # Session configuration - use signed cookies (no database required)
 SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'

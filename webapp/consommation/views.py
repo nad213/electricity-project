@@ -1217,4 +1217,16 @@ def api(request):
     # affiche sinon une invitation à se connecter/s'inscrire). Les endpoints
     # JSON sous /api/v1/ sont, eux, publics en phase 1.
     api_base = request.build_absolute_uri('/api/v1/').rstrip('/')
-    return render(request, 'consommation/api.html', {'api_base': api_base})
+    context = {'api_base': api_base}
+
+    # Gestion des clés d'API de l'utilisateur connecté (génération/révocation
+    # dans api_key_views.py). `new_api_key` est la clé brute fraîchement créée,
+    # affichée une seule fois puis effacée de la session.
+    from .auth import get_user_from_session
+    from .models import ApiKey
+    user = get_user_from_session(request)
+    if user:
+        context['api_keys'] = ApiKey.objects.filter(user_sub=user['sub'])
+        context['new_api_key'] = request.session.pop('new_api_key', None)
+
+    return render(request, 'consommation/api.html', context)

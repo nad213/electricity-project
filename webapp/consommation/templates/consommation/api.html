@@ -22,6 +22,92 @@
 </div>
 
 <div class="card mb-3">
+    <div class="card-header">
+        <h4 class="card-title mb-0">Vos clés d'API</h4>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">
+            Authentifiez vos requêtes avec l'en-tête
+            <code>Authorization: Bearer &lt;clé&gt;</code>.
+            Une clé n'est affichée qu'une seule fois, à sa création.
+        </p>
+
+        {% if new_api_key %}
+        <div class="alert alert-success" role="alert">
+            <h4 class="alert-title">Votre nouvelle clé</h4>
+            <p class="text-secondary mb-2">
+                Copiez-la maintenant : elle ne sera plus jamais affichée.
+            </p>
+            <pre class="mb-0"><code>{{ new_api_key }}</code></pre>
+        </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'consommation:generate_api_key' %}"
+              class="row g-2 align-items-end mb-3">
+            {% csrf_token %}
+            <div class="col-sm">
+                <label class="form-label">Libellé</label>
+                <input type="text" name="label" class="form-control" maxlength="100"
+                       placeholder="ex. notebook perso" required>
+            </div>
+            <div class="col-sm-auto">
+                <button type="submit" class="btn btn-primary">
+                    <i class="ti ti-plus me-2"></i>Générer une clé
+                </button>
+            </div>
+        </form>
+
+        {% if api_keys %}
+        <div class="table-responsive">
+            <table class="table card-table table-vcenter">
+                <thead>
+                    <tr>
+                        <th>Libellé</th>
+                        <th>Préfixe</th>
+                        <th>Créée le</th>
+                        <th>Dernière utilisation</th>
+                        <th>Statut</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for key in api_keys %}
+                    <tr>
+                        <td>{{ key.label }}</td>
+                        <td><code>{{ key.prefix }}…</code></td>
+                        <td>{{ key.created_at|date:"d/m/Y H:i" }}</td>
+                        <td>{{ key.last_used_at|date:"d/m/Y H:i"|default:"—" }}</td>
+                        <td>
+                            {% if key.is_active %}
+                            <span class="badge bg-green-lt">Active</span>
+                            {% else %}
+                            <span class="badge bg-red-lt">Révoquée</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if key.is_active %}
+                            <form method="post"
+                                  action="{% url 'consommation:revoke_api_key' key.id %}"
+                                  onsubmit="return confirm('Révoquer la clé « {{ key.label }} » ? Cette action est définitive.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    Révoquer
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">Vous n'avez pas encore de clé.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card mb-3">
     <div class="card-header"><h4 class="card-title mb-0">Endpoints</h4></div>
     <div class="table-responsive">
         <table class="table card-table table-vcenter">
