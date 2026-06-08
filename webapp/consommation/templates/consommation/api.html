@@ -163,17 +163,27 @@
 <div class="card">
     <div class="card-header"><h4 class="card-title mb-0">Exemples</h4></div>
     <div class="card-body">
+        <p class="text-muted mb-2">
+            Chaque requête doit porter l'en-tête <code>Authorization: Bearer &lt;clé&gt;</code>.
+            Pratique : exportez votre clé une fois, puis réutilisez-la.
+        </p>
+        <pre class="mb-3"><code>export ELF_KEY="votre_clé"</code></pre>
+
         <p class="text-muted mb-2">Métadonnées :</p>
-        <pre class="mb-3"><code>curl "{{ api_base }}/meta"</code></pre>
+        <pre class="mb-3"><code>curl -H "Authorization: Bearer $ELF_KEY" \
+  "{{ api_base }}/meta"</code></pre>
 
         <p class="text-muted mb-2">Consommation sur une période :</p>
-        <pre class="mb-3"><code>curl "{{ api_base }}/consommation?start_date=2024-01-01&end_date=2024-01-07"</code></pre>
+        <pre class="mb-3"><code>curl -H "Authorization: Bearer $ELF_KEY" \
+  "{{ api_base }}/consommation?start_date=2024-01-01&end_date=2024-01-07"</code></pre>
 
         <p class="text-muted mb-2">Production solaire :</p>
-        <pre class="mb-3"><code>curl "{{ api_base }}/production?start_date=2024-06-01&end_date=2024-06-07&filiere=solaire"</code></pre>
+        <pre class="mb-3"><code>curl -H "Authorization: Bearer $ELF_KEY" \
+  "{{ api_base }}/production?start_date=2024-06-01&end_date=2024-06-07&filiere=solaire"</code></pre>
 
         <p class="text-muted mb-2">Échanges physiques :</p>
-        <pre class="mb-0"><code>curl "{{ api_base }}/echanges?start_date=2024-01-01&end_date=2024-01-07"</code></pre>
+        <pre class="mb-0"><code>curl -H "Authorization: Bearer $ELF_KEY" \
+  "{{ api_base }}/echanges?start_date=2024-01-01&end_date=2024-01-07"</code></pre>
     </div>
 </div>
 

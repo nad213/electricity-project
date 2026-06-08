@@ -11,7 +11,8 @@ clés déjà distribuées avant la migration vers la base.
 Politique d'accès (identique en dev et en prod) :
 - Au moins une clé valide présentée (DB ou env) → OK, sinon 401.
 
-En local, créer une clé une fois avec `python manage.py generate_api_key`.
+Les clés se créent depuis la page `/api/` (connecté Auth0) ; en local sans
+Auth0, créer une `ApiKey` via `manage.py shell`.
 """
 import hashlib
 import os
