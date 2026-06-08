@@ -8,15 +8,14 @@ Compatibilité : on garde aussi le support de la variable d'environnement
 `API_KEYS` (format `libellé:sha256hex,...`), pour ne pas casser d'éventuelles
 clés déjà distribuées avant la migration vers la base.
 
-Politique d'accès :
+Politique d'accès (identique en dev et en prod) :
 - Au moins une clé valide présentée (DB ou env) → OK, sinon 401.
-- Aucune clé configurée du tout + DEBUG (dev local) → API ouverte (confort).
-- Aucune clé configurée + prod (DEBUG=False) → tout est rejeté (fail-safe fermé).
+
+En local, créer une clé une fois avec `python manage.py generate_api_key`.
 """
 import hashlib
 import os
 
-from django.conf import settings
 from django.utils import timezone
 from ninja.security import HttpBearer
 
@@ -50,29 +49,13 @@ def load_env_keys() -> dict[str, str]:
 _ENV_KEYS = load_env_keys()
 
 
-def _dev_open() -> bool:
-    """API ouverte uniquement en dev local quand AUCUNE clé n'est configurée.
-
-    On évalue à la requête (et non à l'import) pour rester patchable en test et
-    pour tenir compte des clés créées en base après le démarrage.
-    """
-    if not settings.DEBUG or _ENV_KEYS:
-        return False
-    from .models import ApiKey
-    return not ApiKey.objects.filter(revoked_at__isnull=True).exists()
-
-
 class ApiKeyAuth(HttpBearer):
     """Valide `Authorization: Bearer <clé>` contre la base puis l'env.
 
     Retourne une **identité** (libellé ou `key:<id>`) utilisée comme clé du
-    quota par-clé du throttling, ou None → 401.
+    quota par-clé du throttling, ou None → 401. Comportement identique en dev
+    et en prod : une clé valide est toujours requise.
     """
-
-    def __call__(self, request):
-        if _dev_open():
-            return "dev-open"
-        return super().__call__(request)
 
     def authenticate(self, request, token):
         if not token:
@@ -92,6 +75,5 @@ class ApiKeyAuth(HttpBearer):
 
 
 def get_api_auth():
-    """Auth à passer à NinjaAPI. Toujours une instance : le mode dev-open est
-    géré dans `ApiKeyAuth.__call__`."""
+    """Auth à passer à NinjaAPI."""
     return ApiKeyAuth()

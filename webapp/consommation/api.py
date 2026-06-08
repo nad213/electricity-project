@@ -27,8 +27,8 @@ from .api_auth import get_api_auth
 # ========== Rate limiting (throttling) ==========
 # Les endpoints sont coûteux (lecture Parquet + DuckDB à chaque appel) :
 # sans plafond, une boucle de requêtes suffit à saturer le service.
-# `AuthRateThrottle` compte PAR CLÉ d'API (str(request.auth)) quand la requête
-# est authentifiée, et retombe sur l'IP sinon (dev-open). Deux fenêtres :
+# `AuthRateThrottle` compte PAR CLÉ d'API (str(request.auth)) : la requête est
+# toujours authentifiée puisqu'une clé valide est requise. Deux fenêtres :
 #   - "burst"     : coupe les boucles serrées (rafale courte)
 #   - "sustained" : plafonne le volume total sur la durée
 # Les seuils sont ajustables sans redéploiement via variables d'environnement.
