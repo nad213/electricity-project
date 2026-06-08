@@ -126,22 +126,37 @@
                 </tr>
                 <tr>
                     <td><span class="badge bg-green-lt">GET</span></td>
-                    <td><code>/api/v1/consommation</code></td>
-                    <td>Consommation (puissance, MW). Paramètres : <code>start_date</code>, <code>end_date</code>.</td>
+                    <td><code>/api/v1/courbe_conso</code></td>
+                    <td>Courbe de consommation (puissance, MW). Paramètres : <code>debut</code>, <code>fin</code>.</td>
+                </tr>
+                <tr>
+                    <td><span class="badge bg-blue-lt">GET</span></td>
+                    <td><code>/api/v1/energie_conso</code></td>
+                    <td>Énergie consommée par mois (GWh). Paramètres : <code>debut</code>, <code>fin</code>.</td>
                 </tr>
                 <tr>
                     <td><span class="badge bg-green-lt">GET</span></td>
-                    <td><code>/api/v1/production</code></td>
-                    <td>Production par filière (MW). Paramètres : <code>start_date</code>, <code>end_date</code>, <code>filiere</code>.</td>
+                    <td><code>/api/v1/courbe_prod</code></td>
+                    <td>Courbe de production par filière (MW). Paramètres : <code>debut</code>, <code>fin</code>, <code>filiere</code>.</td>
+                </tr>
+                <tr>
+                    <td><span class="badge bg-blue-lt">GET</span></td>
+                    <td><code>/api/v1/energie_prod</code></td>
+                    <td>Énergie produite par mois (GWh). Paramètres : <code>debut</code>, <code>fin</code>, <code>filiere</code>.</td>
                 </tr>
                 <tr>
                     <td><span class="badge bg-green-lt">GET</span></td>
-                    <td><code>/api/v1/echanges</code></td>
-                    <td>Échanges transfrontaliers (MW). Paramètres : <code>start_date</code>, <code>end_date</code>, <code>pays</code>.</td>
+                    <td><code>/api/v1/echange</code></td>
+                    <td>Courbe d'échanges (MW). Paramètres : <code>debut</code>, <code>fin</code>, <code>pays</code> (dont <code>total</code>).</td>
+                </tr>
+                <tr>
+                    <td><span class="badge bg-blue-lt">GET</span></td>
+                    <td><code>/api/v1/energie_echange</code></td>
+                    <td>Énergie import/export par mois (GWh). Paramètres : <code>debut</code>, <code>fin</code>, <code>pays</code>.</td>
                 </tr>
                 <tr>
                     <td><span class="badge bg-green-lt">GET</span></td>
-                    <td><code>/api/v1/parc-installe</code></td>
+                    <td><code>/api/v1/parc</code></td>
                     <td>Parc installé mensuel éolien/solaire (MW).</td>
                 </tr>
             </tbody>
@@ -153,9 +168,10 @@
     <div class="card-header"><h4 class="card-title mb-0">Paramètres communs</h4></div>
     <div class="card-body">
         <ul class="mb-0">
-            <li><code>start_date</code> / <code>end_date</code> — format <code>AAAA-MM-JJ</code>. Plage maximale : 366 jours.</li>
+            <li><code>debut</code> / <code>fin</code> — format <code>AAAA-MM-JJ</code>. Plage maximale : 366 jours pour les courbes, 10 ans pour l'énergie.</li>
             <li><code>filiere</code> — clé de filière (ex. <code>nucleaire</code>, <code>eolien</code>, <code>solaire</code>…). Voir <code>/meta</code>.</li>
-            <li><code>pays</code> — clé de frontière (ex. <code>ech_physiques</code>…). Voir <code>/meta</code>.</li>
+            <li><code>pays</code> — clé de frontière (ex. <code>ech_comm_allemagne_belgique</code>…) ou <code>total</code>. Voir <code>/meta</code>.</li>
+            <li>Les endpoints <code>energie_*</code> renvoient un total par mois en <strong>GWh</strong>.</li>
         </ul>
     </div>
 </div>
@@ -173,17 +189,21 @@
         <pre class="mb-3"><code>curl -H "Authorization: Bearer $ELF_KEY" \
   "{{ api_base }}/meta"</code></pre>
 
-        <p class="text-muted mb-2">Consommation sur une période :</p>
+        <p class="text-muted mb-2">Courbe de consommation sur une période :</p>
         <pre class="mb-3"><code>curl -H "Authorization: Bearer $ELF_KEY" \
-  "{{ api_base }}/consommation?start_date=2024-01-01&end_date=2024-01-07"</code></pre>
+  "{{ api_base }}/courbe_conso?debut=2024-01-01&fin=2024-01-07"</code></pre>
 
-        <p class="text-muted mb-2">Production solaire :</p>
+        <p class="text-muted mb-2">Énergie consommée par mois (GWh) sur une année :</p>
         <pre class="mb-3"><code>curl -H "Authorization: Bearer $ELF_KEY" \
-  "{{ api_base }}/production?start_date=2024-06-01&end_date=2024-06-07&filiere=solaire"</code></pre>
+  "{{ api_base }}/energie_conso?debut=2024-01-01&fin=2024-12-31"</code></pre>
 
-        <p class="text-muted mb-2">Échanges physiques :</p>
+        <p class="text-muted mb-2">Courbe de production solaire :</p>
+        <pre class="mb-3"><code>curl -H "Authorization: Bearer $ELF_KEY" \
+  "{{ api_base }}/courbe_prod?debut=2024-06-01&fin=2024-06-07&filiere=solaire"</code></pre>
+
+        <p class="text-muted mb-2">Énergie échangée import/export par mois (total France) :</p>
         <pre class="mb-0"><code>curl -H "Authorization: Bearer $ELF_KEY" \
-  "{{ api_base }}/echanges?start_date=2024-01-01&end_date=2024-01-07"</code></pre>
+  "{{ api_base }}/energie_echange?debut=2024-01-01&fin=2024-12-31&pays=total"</code></pre>
     </div>
 </div>
 

@@ -393,15 +393,23 @@ def get_echanges_data(start_date, end_date, pays='ech_physiques'):
     start_str = start_date.strftime("%Y-%m-%d")
     end_str = end_date.strftime("%Y-%m-%d")
 
-    # Validate pays to prevent SQL injection (before opening connection)
+    # Validate pays to prevent SQL injection (before opening connection).
+    # `total` = sum of the commercial borders at each step (France's overall
+    # commercial flow); column names come from our own dict, so the expression
+    # built below is injection-free.
     valid_pays = list(get_echanges_pays().keys())
-    if pays not in valid_pays:
-        raise ValueError(f"Pays invalide. Choisissez parmi: {', '.join(valid_pays)}")
+    if pays == 'total':
+        commercial = list(get_echanges_pays_commerciaux().keys())
+        col_expr = "(" + " + ".join(f"COALESCE({c}, 0)" for c in commercial) + ")"
+    elif pays in valid_pays:
+        col_expr = pays
+    else:
+        raise ValueError(f"Pays invalide. Choisissez parmi: total, {', '.join(valid_pays)}")
 
     path = data_cache.get_local_path('echanges')
     with get_duckdb_connection(path) as conn:
         query = f"""
-            SELECT date_heure, {pays}, source
+            SELECT date_heure, {col_expr} AS echange, source
             FROM read_parquet(?)
             WHERE date_heure BETWEEN ? AND ?
             ORDER BY date_heure;
@@ -410,9 +418,6 @@ def get_echanges_data(start_date, end_date, pays='ech_physiques'):
             query,
             [path, start_str, f"{end_str} 23:59:59"]
         ).fetchdf()
-
-    # Rename the pays column to 'echange' for consistency in templates
-    result = result.rename(columns={pays: 'echange'})
 
     # Translate source labels to French for consistency
     source_map = {
@@ -588,6 +593,137 @@ def get_echanges_annual_detail(start_date, end_date):
             query, [path, start_str, f"{end_str} 23:59:59"]
         ).fetchdf()
 
+    return result
+
+
+# ===== Énergie mensuelle (API publique v1) =====
+# Toutes ces fonctions intègrent puissance × durée réelle du pas (dt_h, plafonné
+# à 1h pour absorber les trous de données) puis somment par mois calendaire. Pas
+# de diviseur en dur : le résultat est correct quelle que soit la cadence
+# (15/30 min). Même méthode que get_echanges_annual_import_export, mais groupée
+# par mois. Les fichiers conso/production pouvant porter plusieurs sources pour
+# un même horodatage, on déduplique d'abord par date_heure (AVG) pour ne pas
+# fausser les durées de pas.
+
+def get_consommation_energie_mensuelle(start_date, end_date):
+    """Énergie consommée (MWh) par mois sur une plage. Colonnes: mois, energie_mwh."""
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+    path = data_cache.get_local_path('puissance')
+
+    with get_duckdb_connection(path) as conn:
+        query = """
+            WITH per_step AS (
+                SELECT date_heure, AVG(consommation) AS val
+                FROM read_parquet(?)
+                WHERE date_heure BETWEEN ? AND ?
+                  AND consommation IS NOT NULL
+                GROUP BY date_heure
+            ),
+            stepped AS (
+                SELECT date_heure, val,
+                    LEAST(
+                        date_diff('second', date_heure,
+                            lead(date_heure) OVER (ORDER BY date_heure)) / 3600.0,
+                        1.0
+                    ) AS dt_h
+                FROM per_step
+            )
+            SELECT strftime(date_heure, '%Y-%m') AS mois,
+                   SUM(val * dt_h) AS energie_mwh
+            FROM stepped
+            GROUP BY 1
+            ORDER BY 1;
+        """
+        result = conn.execute(query, [path, start_str, f"{end_str} 23:59:59"]).fetchdf()
+    return result
+
+
+def get_production_energie_mensuelle(start_date, end_date, filiere='nucleaire'):
+    """Énergie produite (MWh) par mois pour une filière. Colonnes: mois, energie_mwh."""
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+
+    # Validate filiere to prevent SQL injection (before opening connection).
+    valid_filieres = list(get_production_filieres().keys())
+    if filiere not in valid_filieres:
+        raise ValueError(f"Filière invalide. Choisissez parmi: {', '.join(valid_filieres)}")
+
+    path = data_cache.get_local_path('production')
+    with get_duckdb_connection(path) as conn:
+        query = f"""
+            WITH per_step AS (
+                SELECT date_heure, AVG({filiere}) AS val
+                FROM read_parquet(?)
+                WHERE date_heure BETWEEN ? AND ?
+                  AND {filiere} IS NOT NULL
+                GROUP BY date_heure
+            ),
+            stepped AS (
+                SELECT date_heure, val,
+                    LEAST(
+                        date_diff('second', date_heure,
+                            lead(date_heure) OVER (ORDER BY date_heure)) / 3600.0,
+                        1.0
+                    ) AS dt_h
+                FROM per_step
+            )
+            SELECT strftime(date_heure, '%Y-%m') AS mois,
+                   SUM(val * dt_h) AS energie_mwh
+            FROM stepped
+            GROUP BY 1
+            ORDER BY 1;
+        """
+        result = conn.execute(query, [path, start_str, f"{end_str} 23:59:59"]).fetchdf()
+    return result
+
+
+def get_echanges_energie_mensuelle(start_date, end_date, pays='total'):
+    """Import/export (MWh) par mois pour une frontière commerciale ou 'total'.
+
+    Convention du jeu de données : puissance signée, positif = import vers la
+    France, négatif = export. Colonnes: mois, import_mwh, export_mwh (volumes
+    positifs). Même méthode d'énergie que get_echanges_annual_import_export.
+    """
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+
+    # Expressions construites depuis nos propres noms de colonnes (sûr).
+    commercial = list(get_echanges_pays_commerciaux().keys())
+    if pays == 'total':
+        val_expr = "(" + " + ".join(f"COALESCE({c}, 0)" for c in commercial) + ")"
+        notnull_expr = "(" + " OR ".join(f"{c} IS NOT NULL" for c in commercial) + ")"
+    elif pays in commercial:
+        val_expr = pays
+        notnull_expr = f"{pays} IS NOT NULL"
+    else:
+        raise ValueError(f"Pays invalide. Choisissez parmi: total, {', '.join(commercial)}")
+
+    path = data_cache.get_local_path('echanges')
+    with get_duckdb_connection(path) as conn:
+        query = f"""
+            WITH stepped AS (
+                SELECT
+                    date_heure,
+                    {val_expr} AS val,
+                    LEAST(
+                        date_diff('second', date_heure,
+                            lead(date_heure) OVER (ORDER BY date_heure)) / 3600.0,
+                        1.0
+                    ) AS dt_h
+                FROM read_parquet(?)
+                WHERE date_heure BETWEEN ? AND ?
+                  AND {notnull_expr}
+            )
+            SELECT
+                strftime(date_heure, '%Y-%m') AS mois,
+                SUM(CASE WHEN val > 0 THEN val * dt_h ELSE 0 END) AS import_mwh,
+                -SUM(CASE WHEN val < 0 THEN val * dt_h ELSE 0 END) AS export_mwh
+            FROM stepped
+            GROUP BY 1
+            ORDER BY 1;
+        """
+        result = conn.execute(query, [path, start_str, f"{end_str} 23:59:59"]).fetchdf()
     return result
 
 

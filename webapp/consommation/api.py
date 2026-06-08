@@ -60,9 +60,11 @@ api = NinjaAPI(
     ],
 )
 
-# Les données infra-journalières (pas de 15/30 min) génèrent ~35 000 points par
-# an et par série : on borne la plage pour éviter des réponses démesurées.
+# Les courbes infra-journalières (pas de 15/30 min) génèrent ~35 000 points par
+# an et par série : on borne la plage pour éviter des réponses démesurées. Les
+# endpoints « énergie » ne renvoient qu'une ligne par mois → cap bien plus large.
 MAX_RANGE_DAYS = 366
+MAX_RANGE_DAYS_ENERGIE = 366 * 10
 
 
 # ========== Helpers ==========
@@ -73,16 +75,29 @@ def _parse_date(value: str, name: str) -> date:
         raise HttpError(400, f"{name} doit être au format AAAA-MM-JJ")
 
 
-def _validate_range(start: date, end: date) -> None:
+def _validate_range(start: date, end: date, max_days: int = MAX_RANGE_DAYS) -> None:
     if start > end:
-        raise HttpError(400, "start_date doit être antérieure ou égale à end_date")
-    if (end - start).days > MAX_RANGE_DAYS:
-        raise HttpError(400, f"La plage demandée ne peut excéder {MAX_RANGE_DAYS} jours")
+        raise HttpError(400, "debut doit être antérieure ou égale à fin")
+    if (end - start).days > max_days:
+        raise HttpError(400, f"La plage demandée ne peut excéder {max_days} jours")
 
 
 def _records(df: pd.DataFrame) -> list[dict]:
     """DataFrame → liste de dicts JSON-safe (NaN/NaT → null)."""
     return df.where(pd.notnull(df), None).to_dict(orient="records")
+
+
+def _gwh(value) -> Optional[float]:
+    """MWh → GWh, arrondi à 1 décimale, None-safe."""
+    if value is None or pd.isna(value):
+        return None
+    return round(value / 1000.0, 1)
+
+
+def _energie_mois(df: pd.DataFrame) -> list[dict]:
+    """[mois, energie_mwh] → [{mois, energie_gwh}]."""
+    return [{"mois": r["mois"], "energie_gwh": _gwh(r["energie_mwh"])}
+            for r in _records(df)]
 
 
 # ========== Schémas ==========
@@ -99,33 +114,34 @@ class MetaOut(Schema):
     pays: dict[str, str]
 
 
-class ConsommationRow(Schema):
+# --- Courbes : série de puissance (MW), pas de 15/30 min ---
+class CourbeConsoRow(Schema):
     date_heure: datetime
     consommation: Optional[float] = None
     source: Optional[str] = None
 
 
-class ConsommationOut(Schema):
+class CourbeConsoOut(Schema):
     count: int
-    start_date: date
-    end_date: date
-    unit: str = "MW"
-    data: list[ConsommationRow]
+    debut: date
+    fin: date
+    unite: str = "MW"
+    data: list[CourbeConsoRow]
 
 
-class ProductionRow(Schema):
+class CourbeProdRow(Schema):
     date_heure: datetime
     production: Optional[float] = None
     source: Optional[str] = None
 
 
-class ProductionOut(Schema):
+class CourbeProdOut(Schema):
     count: int
-    start_date: date
-    end_date: date
+    debut: date
+    fin: date
     filiere: str
-    unit: str = "MW"
-    data: list[ProductionRow]
+    unite: str = "MW"
+    data: list[CourbeProdRow]
 
 
 class EchangeRow(Schema):
@@ -134,16 +150,53 @@ class EchangeRow(Schema):
     source: Optional[str] = None
 
 
-class EchangesOut(Schema):
+class EchangeOut(Schema):
     count: int
-    start_date: date
-    end_date: date
+    debut: date
+    fin: date
     pays: str
-    unit: str = "MW"
+    unite: str = "MW"
     note: str = "Signe positif = import vers la France, négatif = export."
     data: list[EchangeRow]
 
 
+# --- Énergie : intégrale de la puissance, agrégée par mois (GWh) ---
+class EnergieMoisRow(Schema):
+    mois: str
+    energie_gwh: Optional[float] = None
+
+
+class EnergieConsoOut(Schema):
+    debut: date
+    fin: date
+    unite: str = "GWh"
+    data: list[EnergieMoisRow]
+
+
+class EnergieProdOut(Schema):
+    debut: date
+    fin: date
+    filiere: str
+    unite: str = "GWh"
+    data: list[EnergieMoisRow]
+
+
+class EnergieEchangeMoisRow(Schema):
+    mois: str
+    import_gwh: Optional[float] = None
+    export_gwh: Optional[float] = None
+
+
+class EnergieEchangeOut(Schema):
+    debut: date
+    fin: date
+    pays: str
+    unite: str = "GWh"
+    note: str = "import = flux entrant vers la France, export = flux sortant."
+    data: list[EnergieEchangeMoisRow]
+
+
+# --- Parc ---
 class ParcRow(Schema):
     date: str
     filiere: str
@@ -152,14 +205,18 @@ class ParcRow(Schema):
 
 class ParcOut(Schema):
     count: int
-    unit: str = "MW"
+    unite: str = "MW"
     data: list[ParcRow]
 
 
 # ========== Endpoints ==========
 @api.get("/meta", response=MetaOut, tags=["meta"], summary="Métadonnées")
 def meta(request):
-    """Plages de dates disponibles et listes de référence (filières, pays)."""
+    """Plages de dates disponibles et listes de référence (filières, pays).
+
+    La liste `pays` inclut la clé `total` (somme des frontières commerciales),
+    acceptée par `echange` et `energie_echange`.
+    """
     c_min, c_max = services.get_date_range()
     p_min, p_max = services.get_production_date_range()
     e_min, e_max = services.get_echanges_date_range()
@@ -168,60 +225,103 @@ def meta(request):
         "production": {"min": p_min, "max": p_max},
         "echanges": {"min": e_min, "max": e_max},
         "filieres": services.get_production_filieres(),
-        "pays": services.get_echanges_pays(),
+        "pays": {"total": "Total (somme des frontières commerciales)",
+                 **services.get_echanges_pays()},
     }
 
 
-@api.get("/consommation", response=ConsommationOut, tags=["données"],
-         summary="Consommation (puissance)")
-def consommation(request, start_date: str, end_date: str):
+# ---------- Courbes (puissance, MW) ----------
+@api.get("/courbe_conso", response=CourbeConsoOut, tags=["courbes"],
+         summary="Courbe de consommation (puissance)")
+def courbe_conso(request, debut: str, fin: str):
     """Courbe de consommation (MW) sur une plage de dates."""
-    s = _parse_date(start_date, "start_date")
-    e = _parse_date(end_date, "end_date")
+    s = _parse_date(debut, "debut")
+    e = _parse_date(fin, "fin")
     _validate_range(s, e)
     df = services.get_puissance_data(s, e)
-    return {"count": len(df), "start_date": s, "end_date": e, "data": _records(df)}
+    return {"count": len(df), "debut": s, "fin": e, "data": _records(df)}
 
 
-@api.get("/production", response=ProductionOut, tags=["données"],
-         summary="Production par filière")
-def production(request, start_date: str, end_date: str, filiere: str = "nucleaire"):
-    """Production (MW) d'une filière sur une plage de dates.
-
-    Filières disponibles : voir `/meta`.
-    """
-    s = _parse_date(start_date, "start_date")
-    e = _parse_date(end_date, "end_date")
+@api.get("/courbe_prod", response=CourbeProdOut, tags=["courbes"],
+         summary="Courbe de production par filière")
+def courbe_prod(request, debut: str, fin: str, filiere: str = "nucleaire"):
+    """Courbe de production (MW) d'une filière. Filières : voir `/meta`."""
+    s = _parse_date(debut, "debut")
+    e = _parse_date(fin, "fin")
     _validate_range(s, e)
     try:
         df = services.get_production_data(s, e, filiere)
     except ValueError as ex:
         raise HttpError(400, str(ex))
-    return {"count": len(df), "start_date": s, "end_date": e,
-            "filiere": filiere, "data": _records(df)}
+    return {"count": len(df), "debut": s, "fin": e, "filiere": filiere,
+            "data": _records(df)}
 
 
-@api.get("/echanges", response=EchangesOut, tags=["données"],
-         summary="Échanges transfrontaliers")
-def echanges(request, start_date: str, end_date: str, pays: str = "ech_physiques"):
-    """Flux d'échange (MW) pour un pays/frontière sur une plage de dates.
-
-    Pays disponibles : voir `/meta`.
-    """
-    s = _parse_date(start_date, "start_date")
-    e = _parse_date(end_date, "end_date")
+@api.get("/echange", response=EchangeOut, tags=["courbes"],
+         summary="Courbe d'échanges transfrontaliers")
+def echange(request, debut: str, fin: str, pays: str = "total"):
+    """Courbe de flux d'échange (MW). `pays` : `total`, `ech_physiques` ou une
+    frontière commerciale (voir `/meta`)."""
+    s = _parse_date(debut, "debut")
+    e = _parse_date(fin, "fin")
     _validate_range(s, e)
     try:
         df = services.get_echanges_data(s, e, pays)
     except ValueError as ex:
         raise HttpError(400, str(ex))
-    return {"count": len(df), "start_date": s, "end_date": e,
-            "pays": pays, "data": _records(df)}
+    return {"count": len(df), "debut": s, "fin": e, "pays": pays,
+            "data": _records(df)}
 
 
-@api.get("/parc-installe", response=ParcOut, tags=["données"],
+# ---------- Énergie (GWh, par mois) ----------
+@api.get("/energie_conso", response=EnergieConsoOut, tags=["énergie"],
+         summary="Énergie consommée par mois")
+def energie_conso(request, debut: str, fin: str):
+    """Énergie consommée (GWh), un total par mois sur la plage."""
+    s = _parse_date(debut, "debut")
+    e = _parse_date(fin, "fin")
+    _validate_range(s, e, MAX_RANGE_DAYS_ENERGIE)
+    df = services.get_consommation_energie_mensuelle(s, e)
+    return {"debut": s, "fin": e, "data": _energie_mois(df)}
+
+
+@api.get("/energie_prod", response=EnergieProdOut, tags=["énergie"],
+         summary="Énergie produite par mois")
+def energie_prod(request, debut: str, fin: str, filiere: str = "nucleaire"):
+    """Énergie produite (GWh) d'une filière, un total par mois. Filières : `/meta`."""
+    s = _parse_date(debut, "debut")
+    e = _parse_date(fin, "fin")
+    _validate_range(s, e, MAX_RANGE_DAYS_ENERGIE)
+    try:
+        df = services.get_production_energie_mensuelle(s, e, filiere)
+    except ValueError as ex:
+        raise HttpError(400, str(ex))
+    return {"debut": s, "fin": e, "filiere": filiere, "data": _energie_mois(df)}
+
+
+@api.get("/energie_echange", response=EnergieEchangeOut, tags=["énergie"],
+         summary="Énergie échangée (import/export) par mois")
+def energie_echange(request, debut: str, fin: str, pays: str = "total"):
+    """Énergie importée/exportée (GWh) par mois. `pays` : `total` ou une
+    frontière commerciale (voir `/meta`)."""
+    s = _parse_date(debut, "debut")
+    e = _parse_date(fin, "fin")
+    _validate_range(s, e, MAX_RANGE_DAYS_ENERGIE)
+    try:
+        df = services.get_echanges_energie_mensuelle(s, e, pays)
+    except ValueError as ex:
+        raise HttpError(400, str(ex))
+    data = [{"mois": r["mois"],
+             "import_gwh": _gwh(r["import_mwh"]),
+             "export_gwh": _gwh(r["export_mwh"])}
+            for r in _records(df)]
+    return {"debut": s, "fin": e, "pays": pays, "data": data}
+
+
+# ---------- Parc ----------
+@api.get("/parc", response=ParcOut, tags=["parc"],
          summary="Parc installé (éolien/solaire)")
-def parc_installe(request):
+def parc(request):
     """Parc installé mensuel (MW) pour l'éolien (terrestre/mer) et le solaire."""
     df = services.get_parc_installe_data()
     return {"count": len(df), "data": _records(df)}

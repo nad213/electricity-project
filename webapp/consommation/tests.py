@@ -24,8 +24,8 @@ VALID_KEY = "elf_test_key"
 VALID_HASH = api_auth.hash_key(VALID_KEY)
 AUTH_HEADER = {"Authorization": f"Bearer {VALID_KEY}"}
 
-# Endpoint léger choisi pour les tests : une seule dépendance à mocker.
-PARC_ENDPOINT = "/parc-installe"
+# Endpoint léger choisi pour les tests d'auth/throttle : une seule dépendance à mocker.
+PARC_ENDPOINT = "/parc"
 FAKE_PARC = pd.DataFrame([{"date": "2024-01", "filiere": "eolien", "parc_mw": 1000.0}])
 
 
@@ -105,3 +105,45 @@ class ApiThrottleTests(TestCase):
         # bob, lui, passe encore.
         resp = self.client.get(PARC_ENDPOINT, headers={"Authorization": "Bearer k2_test_key"})
         self.assertEqual(resp.status_code, 200)
+
+
+class EnergieEndpointsTests(TestCase):
+    """Les endpoints énergie convertissent MWh→GWh et renvoient un total par mois."""
+
+    def setUp(self):
+        cache.clear()
+        self.client = TestClient(api)
+        _make_key(VALID_KEY, "test")
+        self.addCleanup(cache.clear)
+
+    def test_energie_conso_convertit_en_gwh(self):
+        fake = pd.DataFrame([
+            {"mois": "2024-01", "energie_mwh": 42010000.0},
+            {"mois": "2024-02", "energie_mwh": 39880000.0},
+        ])
+        with mock.patch("consommation.services.get_consommation_energie_mensuelle",
+                        return_value=fake):
+            resp = self.client.get(
+                "/energie_conso?debut=2024-01-01&fin=2024-02-29", headers=AUTH_HEADER)
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(body["unite"], "GWh")
+        self.assertEqual(body["data"][0], {"mois": "2024-01", "energie_gwh": 42010.0})
+
+    def test_energie_echange_import_export_gwh(self):
+        fake = pd.DataFrame([
+            {"mois": "2024-01", "import_mwh": 1250000.0, "export_mwh": 3400000.0},
+        ])
+        with mock.patch("consommation.services.get_echanges_energie_mensuelle",
+                        return_value=fake):
+            resp = self.client.get(
+                "/energie_echange?debut=2024-01-01&fin=2024-01-31&pays=total",
+                headers=AUTH_HEADER)
+        self.assertEqual(resp.status_code, 200)
+        row = resp.json()["data"][0]
+        self.assertEqual(row, {"mois": "2024-01", "import_gwh": 1250.0, "export_gwh": 3400.0})
+
+    def test_date_invalide_renvoie_400(self):
+        resp = self.client.get("/energie_conso?debut=pas-une-date&fin=2024-01-31",
+                               headers=AUTH_HEADER)
+        self.assertEqual(resp.status_code, 400)
