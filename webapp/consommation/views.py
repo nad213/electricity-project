@@ -1226,7 +1226,11 @@ def api(request):
     from .models import ApiKey
     user = get_user_from_session(request)
     if user:
-        context['api_keys'] = ApiKey.objects.filter(user_sub=user['sub'])
+        # On n'affiche que les clés actives : les révoquées restent en base
+        # (soft-delete = trace d'audit) mais n'encombrent plus la liste.
+        context['api_keys'] = ApiKey.objects.filter(
+            user_sub=user['sub'], revoked_at__isnull=True
+        )
         context['new_api_key'] = request.session.pop('new_api_key', None)
 
     return render(request, 'consommation/api.html', context)
