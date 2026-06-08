@@ -66,6 +66,7 @@
       bubble.textContent = text;
     } else {
       bubble.style.background = "#fff";
+      bubble.style.color = "#1e293b";
       bubble.style.border = "1px solid #e5e7eb";
       bubble.innerHTML = DOMPurify.sanitize(marked.parse(text || ""));
     }
