@@ -3,6 +3,7 @@ Chatbot views — authenticated only.
 """
 import json
 import logging
+import os
 
 from django.core.cache import cache
 from django.http import JsonResponse
@@ -21,10 +22,12 @@ logger = logging.getLogger(__name__)
 # l'API (cf. api.py) : compteur dans le cache Django (LocMemCache par défaut =
 # par process, donc limite effective × nombre de workers Gunicorn) — suffisant
 # comme borne anti-abus, à brancher sur Redis pour un comptage exact.
-CHAT_RATE_LIMIT = 15        # messages...
-CHAT_RATE_WINDOW = 600      # ...par fenêtre (secondes) → 15 / 10 min
+# Seuils ajustables sans redéploiement via variables d'environnement (comme les
+# THROTTLE_* de l'API).
+CHAT_RATE_LIMIT = int(os.getenv("CHAT_RATE_LIMIT", "15"))        # messages...
+CHAT_RATE_WINDOW = int(os.getenv("CHAT_RATE_WINDOW", "600"))     # ...par fenêtre (s) → 15 / 10 min
 # ~25k tokens : large pour 30 tours de conversation, borne le coût par requête.
-MAX_BODY_BYTES = 100_000
+MAX_BODY_BYTES = int(os.getenv("CHAT_MAX_BODY_BYTES", "100000"))
 
 
 def _chat_rate_limited(user_sub: str) -> bool:
