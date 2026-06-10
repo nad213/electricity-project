@@ -4,7 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ElecFlow — visualisation des données électriques françaises : consommation, production par filière et échanges transfrontaliers (données RTE éCO2mix / ODRE).">
     <title>{% block title %}ElecFlow{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -63,7 +65,7 @@
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
                                     <i class="ti ti-arrows-exchange"></i>
                                 </span>
-                                <span class="nav-link-title">Echanges</span>
+                                <span class="nav-link-title">Échanges</span>
                             </a>
                         </li>
                         <li class="nav-item {% if request.resolver_match.url_name == 'api' %}active{% endif %}">
@@ -101,7 +103,7 @@
                                 <span class="dropdown-header">{{ user_info.email }}</span>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="{% url 'consommation:logout' %}">
-                                    <i class="ti ti-logout me-2"></i>Se deconnecter
+                                    <i class="ti ti-logout me-2"></i>Se déconnecter
                                 </a>
                             </div>
                         </li>
