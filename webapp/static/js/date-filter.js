@@ -88,5 +88,28 @@
 
         startDateInput.addEventListener('change', hideError);
         endDateInput.addEventListener('change', hideError);
+
+        // Presets de période : remplissent les dates (calées sur la dernière
+        // donnée disponible, pas sur la date du jour) puis soumettent le
+        // formulaire, ce qui déclenche la mise à jour AJAX ci-dessus.
+        form.querySelectorAll('.date-preset').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var days = parseInt(btn.dataset.days, 10);
+                var maxDate = endDateInput.max;
+                if (!days || !maxDate) {
+                    return;
+                }
+                var start = new Date(maxDate + 'T00:00:00Z');
+                start.setUTCDate(start.getUTCDate() - (days - 1));
+                var startStr = start.toISOString().slice(0, 10);
+                if (startDateInput.min && startStr < startDateInput.min) {
+                    startStr = startDateInput.min;
+                }
+                startDateInput.value = startStr;
+                endDateInput.value = maxDate;
+                hideError();
+                form.requestSubmit();
+            });
+        });
     });
 })();
