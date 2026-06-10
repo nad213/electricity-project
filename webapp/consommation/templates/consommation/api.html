@@ -207,6 +207,40 @@
     </div>
 </div>
 
+<script>
+// Ajoute un bouton « copier » sur chaque bloc <pre><code> de la page API.
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.page-body pre').forEach(function (pre) {
+        var code = pre.querySelector('code');
+        if (!code) return;
+
+        pre.classList.add('position-relative');
+        pre.style.paddingRight = '3rem';
+
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-sm btn-icon position-absolute top-0 end-0 m-2';
+        btn.title = 'Copier';
+        btn.setAttribute('aria-label', 'Copier');
+        btn.innerHTML = '<i class="ti ti-copy"></i>';
+
+        btn.addEventListener('click', function () {
+            navigator.clipboard.writeText(code.innerText).then(function () {
+                var icon = btn.querySelector('i');
+                icon.className = 'ti ti-check text-green';
+                btn.title = 'Copié !';
+                setTimeout(function () {
+                    icon.className = 'ti ti-copy';
+                    btn.title = 'Copier';
+                }, 1500);
+            });
+        });
+
+        pre.appendChild(btn);
+    });
+});
+</script>
+
 {% else %}
 {% include "partials/_login_invite.html" %}
 {% endif %}

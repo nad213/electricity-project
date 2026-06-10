@@ -61,9 +61,11 @@ api = NinjaAPI(
 )
 
 # Les courbes infra-journalières (pas de 15/30 min) génèrent ~35 000 points par
-# an et par série : on borne la plage pour éviter des réponses démesurées. Les
-# endpoints « énergie » ne renvoient qu'une ligne par mois → cap bien plus large.
-MAX_RANGE_DAYS = 366
+# an et par série : on borne la plage pour éviter des réponses démesurées (pic
+# RAM DuckDB + DataFrame + sérialisation sur petite instance). Ajustable sans
+# redéploiement via `API_MAX_RANGE_DAYS`. Les endpoints « énergie » ne renvoient
+# qu'une ligne par mois → cap bien plus large.
+MAX_RANGE_DAYS = int(os.getenv("API_MAX_RANGE_DAYS", "366"))
 MAX_RANGE_DAYS_ENERGIE = 366 * 10
 
 
