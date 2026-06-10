@@ -53,8 +53,9 @@ api = NinjaAPI(
     title="ElecFlow API",
     version="1.0.0",
     description=(
-        "API publique de données électriques françaises (source : ODRE). "
-        "Données en lecture seule. Les puissances sont en MW. "
+        "API publique de données de l'application. "
+        "Données en lecture seule. Les courbes de puissance sont en MW, "
+        "l'énergie agrégée en GWh. "
         "Accès par clé d'API : en-tête `Authorization: Bearer <clé>`."
     ),
     docs_url="/docs",
