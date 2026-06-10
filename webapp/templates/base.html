@@ -14,9 +14,8 @@
 
     <link rel="stylesheet" href="{% static 'css/style.css' %}?v=10">
 
-    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
-    <script src="https://cdn.plot.ly/plotly-locale-fr-latest.js" charset="utf-8"></script>
-    <script>Plotly.setPlotConfig({locale: 'fr'});</script>
+    {# Scripts spécifiques à la page (ex. Plotly, chargé seulement par les pages à graphiques) #}
+    {% block head_scripts %}{% endblock %}
 </head>
 <body>
     <div class="page">
