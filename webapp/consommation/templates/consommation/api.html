@@ -108,6 +108,20 @@
 </div>
 
 <div class="card mb-3">
+    <div class="card-header"><h4 class="card-title mb-0">Limites d'usage</h4></div>
+    <div class="card-body">
+        <p class="text-muted">
+            Pour préserver le service en version beta, chaque clé est limitée en débit. Au-delà,
+            l'API répond <code>429 Too Many Requests</code> : patientez puis réessayez.
+        </p>
+        <ul class="mb-0">
+            <li><strong>Rafale</strong> : {{ throttle_burst }}.</li>
+            <li><strong>Sur la durée</strong> : {{ throttle_sustained }}.</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card mb-3">
     <div class="card-header"><h4 class="card-title mb-0">Endpoints</h4></div>
     <div class="table-responsive">
         <table class="table card-table table-vcenter">
@@ -222,15 +236,22 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.className = 'btn btn-sm btn-icon position-absolute top-0 end-0 m-2';
         btn.title = 'Copier';
         btn.setAttribute('aria-label', 'Copier');
+        // Styles explicites : sur fond de code clair, un bouton blanc sans
+        // variante était invisible. Puce sombre semi-transparente + icône claire.
+        btn.style.background = 'rgba(15, 23, 42, 0.72)';
+        btn.style.border = 'none';
+        btn.style.color = '#fff';
         btn.innerHTML = '<i class="ti ti-copy"></i>';
 
         btn.addEventListener('click', function () {
             navigator.clipboard.writeText(code.innerText).then(function () {
                 var icon = btn.querySelector('i');
-                icon.className = 'ti ti-check text-green';
+                icon.className = 'ti ti-check';
+                btn.style.background = 'rgba(47, 179, 68, 0.9)';
                 btn.title = 'Copié !';
                 setTimeout(function () {
                     icon.className = 'ti ti-copy';
+                    btn.style.background = 'rgba(15, 23, 42, 0.72)';
                     btn.title = 'Copier';
                 }, 1500);
             });

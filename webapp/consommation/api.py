@@ -44,6 +44,11 @@ class SustainedRateThrottle(AuthRateThrottle):
     scope = "sustained"
 
 
+# Seuils de débit (par clé), exposés comme constantes pour que la page /api/
+# puisse afficher les limites réelles sans dupliquer les valeurs par défaut.
+THROTTLE_BURST = os.getenv("API_THROTTLE_BURST", "1/2s")
+THROTTLE_SUSTAINED = os.getenv("API_THROTTLE_SUSTAINED", "5/min")
+
 api = NinjaAPI(
     title="ElecFlow API",
     version="1.0.0",
@@ -55,8 +60,8 @@ api = NinjaAPI(
     docs_url="/docs",
     auth=get_api_auth(),
     throttle=[
-        BurstRateThrottle(os.getenv("API_THROTTLE_BURST", "10/s")),
-        SustainedRateThrottle(os.getenv("API_THROTTLE_SUSTAINED", "60/min")),
+        BurstRateThrottle(THROTTLE_BURST),
+        SustainedRateThrottle(THROTTLE_SUSTAINED),
     ],
 )
 

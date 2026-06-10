@@ -1212,12 +1212,35 @@ def export_echanges_annuel_csv(request):
 
 
 # ========== API ==========
+def _humanize_rate(rate):
+    """Transforme un taux de throttle ("1/2s", "10/min") en texte FR lisible."""
+    units = [('sec', 'seconde'), ('min', 'minute'), ('hour', 'heure'),
+             ('day', 'jour'), ('s', 'seconde'), ('m', 'minute'),
+             ('h', 'heure'), ('d', 'jour')]
+    count, rest = rate.split('/', 1)
+    count = int(count)
+    req = 'requête' if count == 1 else 'requêtes'
+    for unit, label in units:
+        if rest.endswith(unit):
+            mult = int(rest[:-len(unit)]) if rest[:-len(unit)] else 1
+            if mult == 1:
+                return f"{count} {req} par {label}"
+            return f"{count} {req} toutes les {mult} {label}s"
+    return rate
+
+
 def api(request):
     # Page portail : doc réservée aux utilisateurs connectés (le template
     # affiche sinon une invitation à se connecter/s'inscrire). Les endpoints
     # JSON sous /api/v1/ sont, eux, publics en phase 1.
+    from .api import THROTTLE_BURST, THROTTLE_SUSTAINED
+
     api_base = request.build_absolute_uri('/api/v1/').rstrip('/')
-    context = {'api_base': api_base}
+    context = {
+        'api_base': api_base,
+        'throttle_burst': _humanize_rate(THROTTLE_BURST),
+        'throttle_sustained': _humanize_rate(THROTTLE_SUSTAINED),
+    }
 
     # Gestion des clés d'API de l'utilisateur connecté (génération/révocation
     # dans api_key_views.py). `new_api_key` est la clé brute fraîchement créée,
