@@ -53,9 +53,14 @@ _ENV_KEYS = load_env_keys()
 class ApiKeyAuth(HttpBearer):
     """Valide `Authorization: Bearer <clé>` contre la base puis l'env.
 
-    Retourne une **identité** (libellé ou `key:<id>`) utilisée comme clé du
-    quota par-clé du throttling, ou None → 401. Comportement identique en dev
-    et en prod : une clé valide est toujours requise.
+    Retourne une **identité** utilisée comme clé du quota de throttling, ou
+    None → 401. Comportement identique en dev et en prod : une clé valide est
+    toujours requise.
+
+    Important : l'identité retournée est celle de l'**utilisateur**
+    (`user:<sub>`), pas de la clé. Sinon le quota serait par-clé, et générer
+    plusieurs clés multiplierait le débit autorisé (contournement du
+    throttling). Toutes les clés d'un même user partagent donc un seul budget.
     """
 
     def authenticate(self, request, token):
@@ -69,10 +74,14 @@ class ApiKeyAuth(HttpBearer):
         if key is not None:
             # Trace de dernière utilisation (best-effort, sans bloquer la requête).
             ApiKey.objects.filter(pk=key.pk).update(last_used_at=timezone.now())
-            return key.label or f"key:{key.pk}"
+            # Identité = l'utilisateur, pour que le throttling soit partagé entre
+            # toutes ses clés (cf. docstring). Repli sur la clé si pas de sub.
+            return f"user:{key.user_sub}" if key.user_sub else f"key:{key.pk}"
 
-        # Compat : clés héritées déclarées en variable d'environnement.
-        return _ENV_KEYS.get(h)
+        # Compat : clés héritées (env) — pas d'utilisateur, quota par hash.
+        if h in _ENV_KEYS:
+            return f"env:{h}"
+        return None
 
 
 def get_api_auth():

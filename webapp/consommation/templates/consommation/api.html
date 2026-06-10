@@ -56,6 +56,10 @@
                 </button>
             </div>
         </form>
+        <p class="text-muted small mb-3">
+            Maximum {{ max_active_keys }} clé{{ max_active_keys|pluralize }} active{{ max_active_keys|pluralize }} par compte.
+            Le débit est partagé entre toutes vos clés (créer plusieurs clés n'augmente pas vos quotas).
+        </p>
 
         {% if api_keys %}
         <div class="table-responsive">

@@ -1234,12 +1234,14 @@ def api(request):
     # affiche sinon une invitation à se connecter/s'inscrire). Les endpoints
     # JSON sous /api/v1/ sont, eux, publics en phase 1.
     from .api import THROTTLE_BURST, THROTTLE_SUSTAINED
+    from .api_key_views import MAX_ACTIVE_KEYS
 
     api_base = request.build_absolute_uri('/api/v1/').rstrip('/')
     context = {
         'api_base': api_base,
         'throttle_burst': _humanize_rate(THROTTLE_BURST),
         'throttle_sustained': _humanize_rate(THROTTLE_SUSTAINED),
+        'max_active_keys': MAX_ACTIVE_KEYS,
     }
 
     # Gestion des clés d'API de l'utilisateur connecté (génération/révocation

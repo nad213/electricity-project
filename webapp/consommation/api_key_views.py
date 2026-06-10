@@ -12,8 +12,12 @@ from .api_auth import hash_key
 from .auth import get_user_from_session
 from .models import ApiKey
 
-# Garde-fou : on borne le nombre de clés actives par utilisateur.
-MAX_ACTIVE_KEYS = 10
+# Garde-fou : on borne le nombre de clés actives par utilisateur. 2 suffit pour
+# une rotation propre (créer la nouvelle, migrer, révoquer l'ancienne) sans
+# laisser proliférer les clés. Le throttling étant par-utilisateur (cf.
+# api_auth.py), ce cap n'est PAS ce qui empêche de contourner les quotas — c'est
+# de l'hygiène (anti-spam, surface réduite en cas de fuite).
+MAX_ACTIVE_KEYS = 2
 
 
 @require_POST
