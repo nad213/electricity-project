@@ -7,15 +7,15 @@
 {% include "partials/_login_invite.html" %}
 {% else %}
 <div class="card">
-  <div class="card-body p-0 d-flex flex-column" style="height: calc(100vh - 220px); min-height: 480px;">
-    <div id="chat-history" class="flex-grow-1 overflow-auto p-3" style="background: #fafafa;">
+  <div class="card-body p-0 d-flex flex-column chat-card-body">
+    <div id="chat-history" class="flex-grow-1 overflow-auto p-3 chat-history">
       <div class="text-muted small">
         Pose une question sur la consommation, la production ou les échanges d'électricité en France.
         Exemples : <em>« Quelle a été la conso d'hier ? »</em>, <em>« Production éolienne en mars 2024 »</em>,
         <em>« Pic de conso de l'année »</em>.
       </div>
     </div>
-    <form id="chat-form" class="border-top p-2 d-flex gap-2 align-items-end" style="background: #fff;">
+    <form id="chat-form" class="border-top p-2 d-flex gap-2 align-items-end">
       <textarea id="chat-input" class="form-control" rows="2" placeholder="Votre question..." required></textarea>
       <button id="chat-send" type="submit" class="btn btn-primary">Envoyer</button>
       <button id="chat-clear" type="button" class="btn btn-outline-secondary" title="Réinitialiser la conversation">
@@ -57,17 +57,11 @@
     const wrap = document.createElement("div");
     wrap.className = "mb-3 d-flex " + (role === "user" ? "justify-content-end" : "justify-content-start");
     const bubble = document.createElement("div");
-    bubble.className = "px-3 py-2 rounded-3 shadow-sm";
-    bubble.style.maxWidth = "85%";
-    bubble.style.whiteSpace = "pre-wrap";
+    bubble.className = "px-3 py-2 rounded-3 shadow-sm chat-bubble " +
+      (role === "user" ? "chat-bubble-user" : "chat-bubble-assistant");
     if (role === "user") {
-      bubble.style.background = "#0ea5e9";
-      bubble.style.color = "#fff";
       bubble.textContent = text;
     } else {
-      bubble.style.background = "#fff";
-      bubble.style.color = "#1e293b";
-      bubble.style.border = "1px solid #e5e7eb";
       bubble.innerHTML = DOMPurify.sanitize(marked.parse(text || ""));
     }
     wrap.appendChild(bubble);

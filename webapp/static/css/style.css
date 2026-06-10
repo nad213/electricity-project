@@ -623,6 +623,32 @@ body {
     }
 }
 
+/* ========== Chat ========== */
+.chat-card-body {
+    height: calc(100vh - 220px);
+    min-height: 480px;
+}
+
+.chat-history {
+    background-color: var(--bg);
+}
+
+.chat-bubble {
+    max-width: 85%;
+    white-space: pre-wrap;
+}
+
+.chat-bubble-user {
+    background-color: var(--accent);
+    color: var(--bg);
+}
+
+.chat-bubble-assistant {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
 /* ========== Code & blocs préformatés (page API) ========== */
 code {
     color: var(--accent-hover);
