@@ -6,16 +6,18 @@ sans le middleware HTTP, donc pas de redirection HTTPS à gérer) et on mocke la
 couche `services` pour ne pas dépendre de S3/DuckDB. Les clés sont créées en
 base (chemin principal de `ApiKeyAuth`), via une `TestCase` transactionnelle.
 """
+import json
 from unittest import mock
 
 import pandas as pd
 from django.core.cache import cache
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.utils import timezone
 
 from ninja.testing import TestClient
 
 from . import api_auth
+from . import chat_views
 from .api import api
 from .models import ApiKey
 
@@ -147,3 +149,75 @@ class EnergieEndpointsTests(TestCase):
         resp = self.client.get("/energie_conso?debut=pas-une-date&fin=2024-01-31",
                                headers=AUTH_HEADER)
         self.assertEqual(resp.status_code, 400)
+
+
+class ChatMessageGuardTests(TestCase):
+    """Garde-fous anti-abus de /chat/message/ : auth (401), taille (413),
+    quota par utilisateur (429). On mocke ChatService pour ne pas appeler
+    l'API Anthropic."""
+
+    URL = "/chat/message/"
+
+    def setUp(self):
+        cache.clear()  # compteur de rate-limit vierge
+        self.client = Client()
+        self.addCleanup(cache.clear)
+        self.addCleanup(mock.patch.stopall)
+
+    def _login(self, sub="auth0|alice"):
+        """Simule un utilisateur connecté.
+
+        Le backend de session est en cookies signés (pas de store côté serveur),
+        donc poser la session via `self.client.session` ne se propage pas en
+        test. On mocke directement la lecture de session de la vue : on teste
+        ainsi les garde-fous, indépendamment d'Auth0. `stopall` (cf. setUp)
+        nettoie le patch au teardown.
+        """
+        mock.patch.object(
+            chat_views, "get_user_from_session",
+            return_value={"sub": sub, "email": f"{sub}@example.com"},
+        ).start()
+
+    def _post(self, payload):
+        return self.client.post(
+            self.URL, data=json.dumps(payload), content_type="application/json"
+        )
+
+    def test_sans_auth_renvoie_401(self):
+        # Pas de _login → get_user_from_session renvoie None (pas de session).
+        resp = self._post({"messages": [{"role": "user", "content": "salut"}]})
+        self.assertEqual(resp.status_code, 401)
+
+    def test_body_trop_gros_renvoie_413(self):
+        self._login()
+        big = "x" * (chat_views.MAX_BODY_BYTES + 1)
+        resp = self._post({"messages": [{"role": "user", "content": big}]})
+        self.assertEqual(resp.status_code, 413)
+
+    def test_quota_depasse_renvoie_429(self):
+        self._login()
+        ok = {"reply": "ok", "messages": [], "usage": {}}
+        with mock.patch.object(chat_views, "ChatService") as MockSvc:
+            MockSvc.return_value.run.return_value = ok
+            payload = {"messages": [{"role": "user", "content": "salut"}]}
+            # Les CHAT_RATE_LIMIT premières passent...
+            for i in range(chat_views.CHAT_RATE_LIMIT):
+                resp = self._post(payload)
+                self.assertEqual(resp.status_code, 200, f"message {i + 1} inattendu")
+            # ...la suivante est rejetée.
+            resp = self._post(payload)
+            self.assertEqual(resp.status_code, 429)
+
+    def test_quota_par_utilisateur_independant(self):
+        ok = {"reply": "ok", "messages": [], "usage": {}}
+        payload = {"messages": [{"role": "user", "content": "salut"}]}
+        with mock.patch.object(chat_views, "ChatService") as MockSvc:
+            MockSvc.return_value.run.return_value = ok
+            # alice épuise son quota
+            self._login("auth0|alice")
+            for _ in range(chat_views.CHAT_RATE_LIMIT):
+                self._post(payload)
+            self.assertEqual(self._post(payload).status_code, 429)
+            # bob, lui, passe encore (quota indépendant) — on repointe le mock.
+            self._login("auth0|bob")
+            self.assertEqual(self._post(payload).status_code, 200)
