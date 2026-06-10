@@ -485,20 +485,6 @@ body {
     margin-right: auto;
 }
 
-/* ========== Loader ========== */
-#page-loader {
-    background: rgba(15, 23, 42, 0.95) !important;
-}
-
-#page-loader .spinner-border {
-    color: var(--accent) !important;
-}
-
-/* ========== Placeholder ========== */
-.placeholder-icon {
-    color: var(--accent);
-}
-
 /* ========== Tables ========== */
 .table {
     --tblr-table-color: var(--text);

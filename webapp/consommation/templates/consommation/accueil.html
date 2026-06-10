@@ -239,19 +239,9 @@
 
 {% if has_dashboard_data %}
 <script>
-(function() {
-    var plotConfig = {responsive: true};
-    var chartData;
-
-    chartData = JSON.parse('{{ graph_conso_jour|escapejs }}');
-    Plotly.newPlot('chart-conso-jour', chartData.data, chartData.layout, plotConfig);
-
-    chartData = JSON.parse('{{ graph_production_jour|escapejs }}');
-    Plotly.newPlot('chart-production-jour', chartData.data, chartData.layout, plotConfig);
-
-    chartData = JSON.parse('{{ graph_sankey|escapejs }}');
-    Plotly.newPlot('chart-parc-prod-sankey', chartData.data, chartData.layout, {responsive: true, staticPlot: true});
-})();
+ElecFlow.renderChart('chart-conso-jour', '{{ graph_conso_jour|escapejs }}');
+ElecFlow.renderChart('chart-production-jour', '{{ graph_production_jour|escapejs }}');
+ElecFlow.renderChart('chart-parc-prod-sankey', '{{ graph_sankey|escapejs }}', {responsive: true, staticPlot: true});
 </script>
 {% endif %}
 

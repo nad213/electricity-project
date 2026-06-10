@@ -112,52 +112,28 @@
 </div>
 
 <script>
-// Render charts client-side
+{# Rendu des graphiques ; resize des onglets et scrollspy gérés par charts.js #}
+ElecFlow.renderChart('chart-echanges', '{{ graph_echanges|escapejs }}');
+ElecFlow.renderChart('chart-echanges-annuel', '{{ graph_echanges_annuel|escapejs }}');
+
+// Le sélecteur de pays du graphe annuel ne rafraîchit QUE ce graphe,
+// via le paramètre `pays_annuel` (le formulaire du haut ne l'envoie jamais).
 (function() {
-    var plotConfig = { responsive: true };
-
-    var chartEchanges = JSON.parse('{{ graph_echanges|escapejs }}');
-    Plotly.newPlot('chart-echanges', chartEchanges.data, chartEchanges.layout, plotConfig);
-
-    var chartEchangesAnnuel = JSON.parse('{{ graph_echanges_annuel|escapejs }}');
-    Plotly.newPlot('chart-echanges-annuel', chartEchangesAnnuel.data, chartEchangesAnnuel.layout, plotConfig);
-
-    // Le sélecteur de pays du graphe annuel ne rafraîchit QUE ce graphe,
-    // via le paramètre `pays_annuel` (le formulaire du haut ne l'envoie jamais).
     var annuelForm = document.getElementById('echanges-annuel-form');
-    if (annuelForm) {
-        annuelForm.addEventListener('change', function() {
-            var checked = annuelForm.querySelector('input[name="pays_annuel"]:checked');
-            if (!checked) return;
-            var url = window.location.pathname + '?pays_annuel=' + encodeURIComponent(checked.value);
-            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    Object.keys(data.charts).forEach(function(id) {
-                        var c = data.charts[id];
-                        Plotly.react(id, c.data, c.layout, plotConfig);
-                    });
+    if (!annuelForm) return;
+    annuelForm.addEventListener('change', function() {
+        var checked = annuelForm.querySelector('input[name="pays_annuel"]:checked');
+        if (!checked) return;
+        var url = window.location.pathname + '?pays_annuel=' + encodeURIComponent(checked.value);
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                Object.keys(data.charts).forEach(function(id) {
+                    var c = data.charts[id];
+                    Plotly.react(id, c.data, c.layout, ElecFlow.PLOT_CONFIG);
                 });
-        });
-    }
-})();
-
-// Scrollspy via IntersectionObserver (ne dépend pas de Bootstrap)
-(function() {
-    var sections = document.querySelectorAll('#section-courbe, #section-annuel');
-    var navLinks = document.querySelectorAll('#page-nav .nav-link');
-
-    var observer = new IntersectionObserver(function(entries) {
-        entries.forEach(function(entry) {
-            if (entry.isIntersecting) {
-                navLinks.forEach(function(link) { link.classList.remove('active'); });
-                var active = document.querySelector('#page-nav a[href="#' + entry.target.id + '"]');
-                if (active) active.classList.add('active');
-            }
-        });
-    }, { rootMargin: '-15% 0px -70% 0px' });
-
-    sections.forEach(function(section) { observer.observe(section); });
+            });
+    });
 })();
 </script>
 {% endblock %}

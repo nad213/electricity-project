@@ -193,45 +193,10 @@
 </div>
 
 <script>
-(function() {
-    var plotConfig = {responsive: true};
-    var chartData;
-
-    chartData = JSON.parse('{{ graph_production|escapejs }}');
-    Plotly.newPlot('chart-production', chartData.data, chartData.layout, plotConfig);
-
-    chartData = JSON.parse('{{ graph_production_annuel|escapejs }}');
-    Plotly.newPlot('chart-production-annuel', chartData.data, chartData.layout, plotConfig);
-
-    chartData = JSON.parse('{{ graph_production_mensuel|escapejs }}');
-    Plotly.newPlot('chart-production-mensuel', chartData.data, chartData.layout, plotConfig);
-
-    chartData = JSON.parse('{{ graph_parc_installe|escapejs }}');
-    Plotly.newPlot('chart-parc-installe', chartData.data, chartData.layout, plotConfig);
-})();
-
-document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(button => {
-    button.addEventListener('shown.bs.tab', function() {
-        window.dispatchEvent(new Event('resize'));
-    });
-});
-
-// Scrollspy via IntersectionObserver (ne dépend pas de Bootstrap)
-(function() {
-    var sections = document.querySelectorAll('#section-courbe, #section-energie, #section-parc');
-    var navLinks = document.querySelectorAll('#page-nav .nav-link');
-
-    var observer = new IntersectionObserver(function(entries) {
-        entries.forEach(function(entry) {
-            if (entry.isIntersecting) {
-                navLinks.forEach(function(link) { link.classList.remove('active'); });
-                var active = document.querySelector('#page-nav a[href="#' + entry.target.id + '"]');
-                if (active) active.classList.add('active');
-            }
-        });
-    }, { rootMargin: '-15% 0px -70% 0px' });
-
-    sections.forEach(function(section) { observer.observe(section); });
-})();
+{# Rendu des graphiques ; resize des onglets et scrollspy gérés par charts.js #}
+ElecFlow.renderChart('chart-production', '{{ graph_production|escapejs }}');
+ElecFlow.renderChart('chart-production-annuel', '{{ graph_production_annuel|escapejs }}');
+ElecFlow.renderChart('chart-production-mensuel', '{{ graph_production_mensuel|escapejs }}');
+ElecFlow.renderChart('chart-parc-installe', '{{ graph_parc_installe|escapejs }}');
 </script>
 {% endblock %}
