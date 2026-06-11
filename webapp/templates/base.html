@@ -14,7 +14,7 @@
     <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css" rel="stylesheet"/>
     <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet"/>
 
-    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=12">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=13">
 
     {# Scripts spécifiques à la page (ex. Plotly, chargé seulement par les pages à graphiques) #}
     {% block head_scripts %}{% endblock %}
@@ -153,6 +153,14 @@
                     {% block content %}{% endblock %}
                 </div>
             </div>
+
+            <footer class="d-print-none mt-auto">
+                <div class="container-xl py-3 text-center text-muted text-sm">
+                    <a href="https://github.com/nad213/electricity-project" target="_blank" rel="noopener" class="text-muted">
+                        <i class="ti ti-brand-github me-1"></i>Code source
+                    </a>
+                </div>
+            </footer>
         </div>
     </div>
 

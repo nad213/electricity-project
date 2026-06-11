@@ -10,8 +10,18 @@
         <div class="row g-2 align-items-center py-3">
             <div class="col">
                 <h1 class="page-title">Le réseau électrique aujourd'hui</h1>
-                <p class="text-muted mb-0 text-sm">
+                <p class="text-muted mb-2 text-sm">
                     Consommation, production et échanges électriques français, mis à jour quotidiennement.
+                </p>
+                <p class="mb-0 text-sm d-flex align-items-center flex-wrap gap-2">
+                    <a href="https://github.com/nad213/electricity-project" target="_blank" rel="noopener">
+                        <i class="ti ti-brand-github me-1"></i>Code source
+                    </a>
+                    <span class="text-muted">·</span>
+                    {# Lien provisoire en attendant la publication de l'article #}
+                    <a href="https://fr.wikipedia.org/" target="_blank" rel="noopener">
+                        <i class="ti ti-article me-1"></i>L'article du projet
+                    </a>
                 </p>
             </div>
             {% if has_dashboard_data %}

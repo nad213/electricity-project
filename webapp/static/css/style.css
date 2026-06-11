@@ -67,12 +67,17 @@ body {
 }
 
 .navbar-pastel .navbar-brand {
-    color: var(--text);
     font-weight: 600;
     letter-spacing: -0.02em;
 }
 
-.navbar-pastel .navbar-brand:hover {
+/* Le texte est dans un <a> enfant : c'est lui qu'il faut colorer, sinon
+   il prend la couleur de lien par défaut. */
+.navbar-pastel .navbar-brand a {
+    color: var(--text);
+}
+
+.navbar-pastel .navbar-brand a:hover {
     color: var(--accent);
 }
 
@@ -189,17 +194,6 @@ body {
     background-color: var(--accent-glow);
     border-color: var(--accent);
     color: var(--accent);
-}
-
-/* ========== Badges ========== */
-.badge-navy-blue, .badge-pastel-blue {
-    background-color: var(--accent-glow-strong);
-    color: var(--accent);
-}
-
-.badge-navy-gold, .badge-pastel-green {
-    background-color: var(--amber-glow);
-    color: var(--amber);
 }
 
 /* ========== Tabs ========== */
@@ -321,24 +315,6 @@ body {
 .stat-icon-blue {
     background-color: var(--accent-glow-strong);
     color: var(--accent);
-}
-
-.badge-export {
-    background-color: rgba(16, 185, 129, 0.15);
-    color: #10B981;
-    font-size: 0.6875rem;
-    font-weight: 600;
-    padding: 0.15rem 0.4rem;
-    border-radius: 0.25rem;
-}
-
-.badge-import {
-    background-color: rgba(239, 68, 68, 0.15);
-    color: #EF4444;
-    font-size: 0.6875rem;
-    font-weight: 600;
-    padding: 0.15rem 0.4rem;
-    border-radius: 0.25rem;
 }
 
 /* ========== Icon Box ========== */
