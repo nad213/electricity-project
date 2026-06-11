@@ -708,19 +708,36 @@ def accueil(request):
                     if prev in parc_by_month.index and 'eolien' in parc_by_month.columns and 'solaire' in parc_by_month.columns:
                         def _fmt_pct(now, before):
                             d = (now - before) / before * 100
-                            return f"{'+' if d >= 0 else ''}{d:.1f}".replace('.', ','), d >= 0
+                            return f"{'+' if d >= 0 else ''}{d:.1f}".replace('.', ',')
                         now_row = parc_by_month.loc[latest]
                         prev_row = parc_by_month.loc[prev]
-                        eol_pct, eol_pos = _fmt_pct(now_row['eolien'], prev_row['eolien'])
-                        sol_pct, sol_pos = _fmt_pct(now_row['solaire'], prev_row['solaire'])
                         parc_enr_ctx = {
-                            'parc_eolien_delta': eol_pct,
-                            'parc_eolien_positive': eol_pos,
+                            'parc_eolien_delta': _fmt_pct(now_row['eolien'], prev_row['eolien']),
                             'parc_eolien_gw': f"{now_row['eolien'] / 1000:.1f}".replace('.', ','),
-                            'parc_solaire_delta': sol_pct,
-                            'parc_solaire_positive': sol_pos,
+                            'parc_solaire_delta': _fmt_pct(now_row['solaire'], prev_row['solaire']),
                             'parc_solaire_gw': f"{now_row['solaire'] / 1000:.1f}".replace('.', ','),
                         }
+            except Exception:
+                pass
+
+            # Current-year exchange balance. Convention of the detail file:
+            # positive = import, negative = export (France is a net exporter →
+            # negative balance expected). Isolated so an exchanges outage does
+            # not break the rest of the dashboard.
+            echanges_ctx = {}
+            try:
+                from datetime import date as _date
+                year = data['peak_year_datetime'].year
+                df_ech = get_echanges_annual_import_export(
+                    _date(year, 1, 1), data['dashboard_date'], pays='total'
+                )
+                row = df_ech[df_ech['annee'] == str(year)]
+                if not row.empty:
+                    solde_mwh = float(row['import_mwh'].iloc[0]) - float(row['export_mwh'].iloc[0])
+                    echanges_ctx = {
+                        'solde_echanges_twh': f"{abs(solde_mwh) / 1_000_000:.1f}".replace('.', ','),
+                        'solde_exportateur': solde_mwh < 0,
+                    }
             except Exception:
                 pass
 
@@ -737,6 +754,7 @@ def accueil(request):
                 'pct_decarbonee': f"{pct_decarbonee:.1f}".replace('.', ','),
                 'decarbonees_twh': f"{decarbonees_mwh / 1_000_000:.1f}".replace('.', ','),
                 **parc_enr_ctx,
+                **echanges_ctx,
                 'graph_conso_jour': graph_conso_jour,
                 'graph_production_jour': graph_production_jour,
                 'graph_sankey': graph_sankey,
