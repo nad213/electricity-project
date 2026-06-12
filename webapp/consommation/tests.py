@@ -7,17 +7,20 @@ couche `services` pour ne pas dépendre de S3/DuckDB. Les clés sont créées en
 base (chemin principal de `ApiKeyAuth`), via une `TestCase` transactionnelle.
 """
 import json
+from datetime import date, timedelta
 from unittest import mock
 
 import pandas as pd
+from django.contrib.sessions.backends.signed_cookies import SessionStore
 from django.core.cache import cache
-from django.test import Client, TestCase
+from django.test import Client, RequestFactory, TestCase
 from django.utils import timezone
 
 from ninja.testing import TestClient
 
 from . import api_auth
 from . import chat_views
+from . import views
 from .api import api
 from .models import ApiKey
 
@@ -221,3 +224,117 @@ class ChatMessageGuardTests(TestCase):
             # bob, lui, passe encore (quota indépendant) — on repointe le mock.
             self._login("auth0|bob")
             self.assertEqual(self._post(payload).status_code, 200)
+
+
+class FiltresSessionTests(TestCase):
+    """Mémoire par page des filtres : les params GET explicites gagnent et
+    sont mémorisés en session, une navigation sans params relit la session,
+    et une session périmée ou corrompue retombe silencieusement sur les
+    défauts (jamais d'erreur)."""
+
+    MIN = date(2020, 1, 1)
+    MAX = date(2026, 6, 10)
+
+    def _request(self, query="", session=None):
+        request = RequestFactory().get("/conso/" + (f"?{query}" if query else ""))
+        request.session = SessionStore()
+        if session:
+            request.session.update(session)
+        return request
+
+    # --- validate_and_get_dates ---
+
+    def test_params_explicites_retournes_et_memorises(self):
+        request = self._request("start_date=2026-01-01&end_date=2026-02-01")
+        result = views.validate_and_get_dates(request, self.MIN, self.MAX, session_key="dates_conso")
+        self.assertEqual(result, (date(2026, 1, 1), date(2026, 2, 1)))
+        self.assertEqual(request.session["dates_conso"], {"start": "2026-01-01", "end": "2026-02-01"})
+
+    def test_sans_params_relit_la_session(self):
+        request = self._request(session={"dates_conso": {"start": "2025-06-01", "end": "2025-12-31"}})
+        result = views.validate_and_get_dates(request, self.MIN, self.MAX, session_key="dates_conso")
+        self.assertEqual(result, (date(2025, 6, 1), date(2025, 12, 31)))
+
+    def test_sans_params_ni_session_defaut_15_jours(self):
+        request = self._request()
+        result = views.validate_and_get_dates(request, self.MIN, self.MAX, session_key="dates_conso")
+        self.assertEqual(result, (self.MAX - timedelta(days=15), self.MAX))
+
+    def test_session_perimee_recalee_dans_la_plage(self):
+        # end mémorisé au-delà du max disponible → recalé sur max, sans erreur
+        request = self._request(session={"dates_conso": {"start": "2026-06-01", "end": "2030-01-01"}})
+        result = views.validate_and_get_dates(request, self.MIN, self.MAX, session_key="dates_conso")
+        self.assertEqual(result, (date(2026, 6, 1), self.MAX))
+
+    def test_session_entierement_hors_plage_defaut(self):
+        request = self._request(session={"dates_conso": {"start": "2019-01-01", "end": "2019-12-31"}})
+        result = views.validate_and_get_dates(request, self.MIN, self.MAX, session_key="dates_conso")
+        self.assertEqual(result, (self.MAX - timedelta(days=15), self.MAX))
+
+    def test_session_corrompue_defaut_sans_exception(self):
+        for corrompu in ("n'importe quoi", {"start": "pas-une-date", "end": "2026-01-01"}, {"start": "2026-01-01"}):
+            request = self._request(session={"dates_conso": corrompu})
+            result = views.validate_and_get_dates(request, self.MIN, self.MAX, session_key="dates_conso")
+            self.assertEqual(result, (self.MAX - timedelta(days=15), self.MAX))
+
+    def test_params_explicites_prioritaires_sur_la_session(self):
+        request = self._request(
+            "start_date=2026-03-01&end_date=2026-04-01",
+            session={"dates_conso": {"start": "2025-01-01", "end": "2025-02-01"}},
+        )
+        result = views.validate_and_get_dates(request, self.MIN, self.MAX, session_key="dates_conso")
+        self.assertEqual(result, (date(2026, 3, 1), date(2026, 4, 1)))
+
+    def test_sans_session_key_la_session_est_ignoree(self):
+        # cas des exports CSV : ni lecture...
+        request = self._request(session={"dates_conso": {"start": "2025-06-01", "end": "2025-12-31"}})
+        result = views.validate_and_get_dates(request, self.MIN, self.MAX)
+        self.assertEqual(result, (self.MAX - timedelta(days=15), self.MAX))
+        # ...ni écriture
+        request = self._request("start_date=2026-01-01&end_date=2026-02-01")
+        views.validate_and_get_dates(request, self.MIN, self.MAX)
+        self.assertNotIn("dates_conso", request.session)
+
+    # --- resolve_multi_filter ---
+
+    OPTIONS = {"nucleaire": "Nucléaire", "eolien": "Éolien", "solaire": "Solaire"}
+
+    def test_filtre_explicite_memorise(self):
+        request = self._request("start_date=2026-01-01&end_date=2026-02-01&filiere=eolien&filiere=solaire")
+        selected = views.resolve_multi_filter(
+            request, "filiere", "filiere_production", self.OPTIONS, default=["nucleaire"], label="Filière"
+        )
+        self.assertEqual(selected, ["eolien", "solaire"])
+        self.assertEqual(request.session["filiere_production"], ["eolien", "solaire"])
+
+    def test_filtre_tout_decoche_retombe_sur_le_defaut(self):
+        # le formulaire soumet toujours les dates : leur présence sans le
+        # param filiere = sélection vide explicite → défaut, mémorisé
+        request = self._request("start_date=2026-01-01&end_date=2026-02-01")
+        selected = views.resolve_multi_filter(
+            request, "filiere", "filiere_production", self.OPTIONS, default=["nucleaire"], label="Filière"
+        )
+        self.assertEqual(selected, ["nucleaire"])
+        self.assertEqual(request.session["filiere_production"], ["nucleaire"])
+
+    def test_navigation_nue_relit_la_session_filtree(self):
+        # 'charbon' n'existe plus dans les options → écarté sans erreur
+        request = self._request(session={"filiere_production": ["eolien", "charbon"]})
+        selected = views.resolve_multi_filter(
+            request, "filiere", "filiere_production", self.OPTIONS, default=["nucleaire"], label="Filière"
+        )
+        self.assertEqual(selected, ["eolien"])
+
+    def test_session_filtre_corrompue_defaut(self):
+        request = self._request(session={"filiere_production": "pas-une-liste"})
+        selected = views.resolve_multi_filter(
+            request, "filiere", "filiere_production", self.OPTIONS, default=["nucleaire"], label="Filière"
+        )
+        self.assertEqual(selected, ["nucleaire"])
+
+    def test_filtre_explicite_invalide_leve_valueerror(self):
+        request = self._request("start_date=2026-01-01&end_date=2026-02-01&filiere=charbon")
+        with self.assertRaises(ValueError):
+            views.resolve_multi_filter(
+                request, "filiere", "filiere_production", self.OPTIONS, default=["nucleaire"], label="Filière"
+            )

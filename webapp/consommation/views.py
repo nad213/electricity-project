@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import json
 import plotly.express as px
 import plotly.graph_objects as go
@@ -64,13 +64,45 @@ def validate_date(date_str, param_name):
         raise
 
 
-def validate_and_get_dates(request, min_date, max_date):
+def _dates_from_session(request, session_key, min_date, max_date):
+    """
+    Returns the (start_date, end_date) remembered for this page, clamped to
+    the currently available range, or None if nothing usable is stored
+    (never raises: a stale or corrupted session must not break the page).
+    """
+    stored = request.session.get(session_key)
+    try:
+        start_date = date.fromisoformat(stored['start'])
+        end_date = date.fromisoformat(stored['end'])
+    except (TypeError, KeyError, ValueError):
+        return None
+
+    # max_date moves forward every day: clamp silently rather than erroring
+    start_date = max(start_date, min_date)
+    end_date = min(end_date, max_date)
+    if start_date > end_date:
+        # Stored range entirely outside the available history
+        return None
+    return start_date, end_date
+
+
+def validate_and_get_dates(request, min_date, max_date, session_key=None):
     """
     Validates and returns start_date and end_date from request
     Returns tuple (start_date, end_date) or raises HttpResponseBadRequest
+
+    If session_key is given, the page remembers its last explicitly
+    submitted period: GET parameters are stored in the session, and a
+    request without them reuses the stored period instead of the default.
     """
     # Default dates (last 15 days)
     default_start = max_date - timedelta(days=15)
+
+    explicit = 'start_date' in request.GET or 'end_date' in request.GET
+    if not explicit and session_key:
+        stored = _dates_from_session(request, session_key, min_date, max_date)
+        if stored:
+            return stored
 
     # Get dates from URL query parameters
     start_date_str = request.GET.get('start_date')
@@ -93,7 +125,41 @@ def validate_and_get_dates(request, min_date, max_date):
     if start_date < min_date or end_date > max_date:
         raise ValueError(f"Les dates doivent être entre {min_date} et {max_date}")
 
+    if explicit and session_key:
+        request.session[session_key] = {
+            'start': start_date.isoformat(),
+            'end': end_date.isoformat(),
+        }
+
     return start_date, end_date
+
+
+def resolve_multi_filter(request, param, session_key, options, default, label):
+    """
+    Resolves a multi-select filter with per-page memory: an explicit form
+    submission wins and is remembered in the session, otherwise the
+    remembered selection is reused, silently filtered against the currently
+    valid options (a stale session must not break the page).
+
+    The filter form always submits the dates, so their presence tells an
+    explicit submission apart from a bare navigation — including the
+    "everything unchecked" case, where the param itself is absent.
+    Raises ValueError on invalid explicit input (→ 400 via decorator).
+    """
+    explicit = (param in request.GET or 'start_date' in request.GET
+                or 'end_date' in request.GET)
+    if explicit:
+        selected = request.GET.getlist(param) or list(default)
+        for value in selected:
+            if value not in options:
+                raise ValueError(f"{label} invalide. Choisissez parmi: {', '.join(options.keys())}")
+        request.session[session_key] = selected
+        return selected
+
+    stored = request.session.get(session_key)
+    if not isinstance(stored, list):
+        stored = []
+    return [value for value in stored if value in options] or list(default)
 
 
 # ========== Chart Creation ==========
@@ -775,7 +841,9 @@ def index(request):
     min_date, max_date = get_date_range()
 
     # Validate and get dates from request
-    start_date, end_date = validate_and_get_dates(request, min_date, max_date)
+    start_date, end_date = validate_and_get_dates(
+        request, min_date, max_date, session_key='dates_conso'
+    )
 
     # Load data
     df_puissance = get_puissance_data(start_date, end_date)
@@ -840,13 +908,15 @@ def production(request):
 
     # Validate filieres (multi-selection)
     filieres = get_production_filieres()
-    filieres_selected = request.GET.getlist('filiere') or ['nucleaire']
-    for filiere in filieres_selected:
-        if filiere not in filieres:
-            return HttpResponseBadRequest(f"Filière invalide. Choisissez parmi: {', '.join(filieres.keys())}")
+    filieres_selected = resolve_multi_filter(
+        request, 'filiere', 'filiere_production', filieres,
+        default=['nucleaire'], label="Filière"
+    )
 
     # Validate and get dates from request
-    start_date, end_date = validate_and_get_dates(request, min_date, max_date)
+    start_date, end_date = validate_and_get_dates(
+        request, min_date, max_date, session_key='dates_production'
+    )
 
     # Load production data for the line chart
     df_production = get_production_data_multi(start_date, end_date, filieres_selected)
@@ -937,21 +1007,31 @@ def echanges(request):
     pays_disponibles = get_echanges_pays_commerciaux()
 
     # Countries for the load curve (top filter) — multi-selection
-    pays_selected = request.GET.getlist('pays') or ['ech_comm_allemagne_belgique']
-    for pays in pays_selected:
-        if pays not in pays_disponibles:
-            return HttpResponseBadRequest(f"Pays invalide. Choisissez parmi: {', '.join(pays_disponibles.keys())}")
+    pays_selected = resolve_multi_filter(
+        request, 'pays', 'pays_echanges', pays_disponibles,
+        default=['ech_comm_allemagne_belgique'], label="Pays"
+    )
 
     # Country for the annual chart (bottom) — its own selector, fully
     # independent of the top filters (dates and curve country). Adds a 'total'
-    # option (sum of all commercial borders).
+    # option (sum of all commercial borders). Its form only ever submits
+    # `pays_annuel`, so that param alone tells an explicit choice apart from
+    # a bare navigation (which reuses the remembered one).
     pays_annuel_options = {'total': 'Total', **pays_disponibles}
-    pays_annuel = request.GET.get('pays_annuel', 'total')
-    if pays_annuel not in pays_annuel_options:
-        return HttpResponseBadRequest(f"Pays invalide. Choisissez parmi: {', '.join(pays_annuel_options.keys())}")
+    if 'pays_annuel' in request.GET:
+        pays_annuel = request.GET['pays_annuel']
+        if pays_annuel not in pays_annuel_options:
+            return HttpResponseBadRequest(f"Pays invalide. Choisissez parmi: {', '.join(pays_annuel_options.keys())}")
+        request.session['pays_annuel_echanges'] = pays_annuel
+    else:
+        pays_annuel = request.session.get('pays_annuel_echanges', 'total')
+        if pays_annuel not in pays_annuel_options:
+            pays_annuel = 'total'
 
     # Validate and get dates from request (drives the load curve only)
-    start_date, end_date = validate_and_get_dates(request, min_date, max_date)
+    start_date, end_date = validate_and_get_dates(
+        request, min_date, max_date, session_key='dates_echanges'
+    )
 
     # Load echanges data for the line chart (one column per selected country)
     df_echanges = get_echanges_data_multi(start_date, end_date, pays_selected)
