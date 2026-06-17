@@ -179,18 +179,29 @@
     </div>
 </div>
 
+{% if graph_echanges_flux %}
+<div class="row mb-2">
+    <div class="col">
+        <h2 class="section-title section-title--amber">Échanges commerciaux</h2>
+    </div>
+    <div class="col-auto">
+        <a href="{% url 'consommation:echanges' %}" class="text-sm">Voir le détail <i class="ti ti-arrow-right"></i></a>
+    </div>
+</div>
+
 <div class="row row-cards mb-4">
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">Parc installé vs production — {{ current_year }}</h3>
+                <h3 class="card-title">Flux d'échanges avec les pays voisins — {{ current_year }}</h3>
             </div>
             <div class="card-body p-2">
-                <div id="chart-parc-prod-sankey"></div>
+                <div id="chart-echanges-flux"></div>
             </div>
         </div>
     </div>
 </div>
+{% endif %}
 
 {% else %}
 <div class="row"><div class="col-12">
@@ -205,7 +216,9 @@
 <script>
 ElecFlow.renderChart('chart-conso-jour', '{{ graph_conso_jour|escapejs }}');
 ElecFlow.renderChart('chart-production-jour', '{{ graph_production_jour|escapejs }}');
-ElecFlow.renderChart('chart-parc-prod-sankey', '{{ graph_sankey|escapejs }}', {responsive: true, staticPlot: true});
+{% if graph_echanges_flux %}
+ElecFlow.renderChart('chart-echanges-flux', '{{ graph_echanges_flux|escapejs }}', {responsive: true, displayModeBar: false});
+{% endif %}
 </script>
 {% endif %}
 

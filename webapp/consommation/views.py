@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from datetime import date, datetime, timedelta
 import json
+import math
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
@@ -16,11 +17,12 @@ from .services import (
     get_echanges_date_range, get_echanges_pays, get_echanges_pays_commerciaux,
     get_echanges_data, get_echanges_data_multi,
     get_echanges_annual_import_export, get_echanges_annual_detail,
+    get_echanges_net_by_border,
     get_dashboard_data, get_parc_installe_data,
 )
 from .constants import (
     Colors, ChartConfig, ProductionColors, FILIERE_COLORS, FILIERES,
-    PAYS_ECHANGES_COLORS,
+    PAYS_ECHANGES, PAYS_ECHANGES_COLORS,
     get_production_colors_and_labels, get_filiere_columns, get_csv_header
 )
 
@@ -455,142 +457,142 @@ def create_import_export_chart(df, x_col, import_col, export_col, unit='TWh', di
     return fig.to_json()
 
 
-def create_parc_prod_sankey(parc_mw, prod_mwh):
-    """Diagramme parc installé (MW) ↔ production annuelle (MWh), par filière.
+# Position angulaire (degrés) de chaque frontière autour de la France, choisie
+# pour évoquer la géographie réelle (Angleterre au NO, Espagne au SO, etc.).
+ECHANGES_FLOW_ANGLES = {
+    'ech_comm_angleterre': 128,
+    'ech_comm_allemagne_belgique': 52,
+    'ech_comm_suisse': -8,
+    'ech_comm_italie': -68,
+    'ech_comm_espagne': -145,
+}
 
-    Implémenté avec des formes Plotly (rectangles + trapèzes) pour garantir
-    des barres continues sans gaps, avec des liens qui peuvent se croiser.
+
+def create_echanges_flow_map(net_by_border, year=None):
+    """Carte de flux radiale : la France au centre, les frontières commerciales
+    en polygone autour, et une flèche par frontière indiquant le sens net du
+    solde (export = depuis la France, import = vers la France) avec une
+    épaisseur proportionnelle au volume échangé sur la période.
+
+    Args:
+        net_by_border: dict {col: {'import_mwh', 'export_mwh', 'net_mwh'}}
+            tel que renvoyé par services.get_echanges_net_by_border.
+        year: année affichée dans la légende (facultatif).
+
+    Convention reprise du graphe import/export : Export = cyan, Import = amber.
     """
-    filieres = [f for f in FILIERES if parc_mw.get(f, 0) > 0 and prod_mwh.get(f, 0) > 0]
-    if not filieres:
+    borders = [c for c in ECHANGES_FLOW_ANGLES if c in net_by_border]
+    if not borders:
         return go.Figure().to_json()
 
-    total_parc = sum(parc_mw[f] for f in filieres)
-    total_prod = sum(prod_mwh[f] for f in filieres)
+    EXPORT_COLOR = Colors.PRIMARY    # cyan — la France fournit
+    IMPORT_COLOR = Colors.SECONDARY  # amber — la France reçoit
 
-    parc_frac = {f: parc_mw[f] / total_parc for f in filieres}
-    prod_frac = {f: prod_mwh[f] / total_prod for f in filieres}
+    max_mag = max(abs(net_by_border[c]['net_mwh']) for c in borders) or 1.0
 
-    # Empiler de haut (y=1) vers bas (y=0) dans l'ordre de FILIERES
-    def build_segments(fracs):
-        segs = {}
-        cum = 1.0
-        for f in filieres:
-            h = fracs[f]
-            segs[f] = (cum - h, cum)  # (y_bas, y_haut)
-            cum -= h
-        return segs
-
-    left_segs = build_segments(parc_frac)
-    right_segs = build_segments(prod_frac)
-
-    BAR_W = 0.14
-    LX0, LX1 = 0.0, BAR_W
-    RX0, RX1 = 1.0 - BAR_W, 1.0
-    GAP = 0.004  # léger espace entre barre et lien
-
-    shapes = []
-    annotations = []
-
-    for f in filieres:
-        fc = FILIERE_COLORS[f]
-        r, g, b = int(fc[1:3], 16), int(fc[3:5], 16), int(fc[5:7], 16)
-
-        lb, lt = left_segs[f]
-        rb, rt = right_segs[f]
-
-        # Trapèze reliant le segment gauche au segment droit
-        # Mélange vers blanc pour obtenir une teinte claire/pastel
-        alpha = 0.60
-        mr = int(r * alpha + 255 * (1 - alpha))
-        mg = int(g * alpha + 255 * (1 - alpha))
-        mb = int(b * alpha + 255 * (1 - alpha))
-        shapes.append(dict(
-            type='path',
-            path=(
-                f'M {LX1 + GAP:.4f} {lb:.6f} '
-                f'L {LX1 + GAP:.4f} {lt:.6f} '
-                f'L {RX0 - GAP:.4f} {rt:.6f} '
-                f'L {RX0 - GAP:.4f} {rb:.6f} Z'
-            ),
-            fillcolor=f'rgb({mr},{mg},{mb})',
-            line=dict(color='rgba(0,0,0,0)', width=0),
-            layer='below',
-            xref='x', yref='y',
-        ))
-
-        # Barre gauche (parc)
-        shapes.append(dict(
-            type='rect',
-            x0=LX0, y0=lb, x1=LX1, y1=lt,
-            fillcolor=fc,
-            line=dict(color='rgba(255,255,255,0.15)', width=0.5),
-            xref='x', yref='y',
-        ))
-
-        # Barre droite (prod)
-        shapes.append(dict(
-            type='rect',
-            x0=RX0, y0=rb, x1=RX1, y1=rt,
-            fillcolor=fc,
-            line=dict(color='rgba(255,255,255,0.15)', width=0.5),
-            xref='x', yref='y',
-        ))
-
-        # Labels gauche (parc) — uniquement si le segment est assez haut
-        if (lt - lb) >= 0.045:
-            annotations.append(dict(
-                x=-0.01, y=(lb + lt) / 2,
-                xref='paper', yref='y',
-                text=f'{FILIERES[f]} {parc_mw[f]/1000:.0f} GW ({parc_frac[f]*100:.0f}%)',
-                xanchor='right', yanchor='middle',
-                showarrow=False,
-                font=dict(color=ChartConfig.TEXT_COLOR, size=11),
-            ))
-
-        # Labels droite (prod) — uniquement si le segment est assez haut
-        if (rt - rb) >= 0.045:
-            annotations.append(dict(
-                x=1.01, y=(rb + rt) / 2,
-                xref='paper', yref='y',
-                text=f'{FILIERES[f]} {prod_mwh[f]/1e6:.0f} TWh ({prod_frac[f]*100:.0f}%)',
-                xanchor='left', yanchor='middle',
-                showarrow=False,
-                font=dict(color=ChartConfig.TEXT_COLOR, size=11),
-            ))
-
-    # Titres des colonnes
-    annotations += [
-        dict(
-            x=(LX0 + LX1) / 2, y=1.04,
-            xref='x', yref='y',
-            text='<b>Parc installé</b>',
-            xanchor='center', yanchor='bottom',
-            showarrow=False,
-            font=dict(color=ChartConfig.TEXT_COLOR, size=12),
-        ),
-        dict(
-            x=(RX0 + RX1) / 2, y=1.04,
-            xref='x', yref='y',
-            text='<b>Production</b>',
-            xanchor='center', yanchor='bottom',
-            showarrow=False,
-            font=dict(color=ChartConfig.TEXT_COLOR, size=12),
-        ),
-    ]
+    # Disposition : nœuds pays sur une ellipse (étirée horizontalement pour
+    # remplir une carte large). La France est à l'origine.
+    RX, RY = 1.55, 1.0
 
     fig = go.Figure()
+    annotations = []
+
+    node_x, node_y, node_text, node_pos, node_hover = [], [], [], [], []
+    for col in borders:
+        d = net_by_border[col]
+        net = d['net_mwh']
+        twh = abs(net) / 1_000_000
+        is_import = net > 0
+        color = IMPORT_COLOR if is_import else EXPORT_COLOR
+
+        theta = math.radians(ECHANGES_FLOW_ANGLES[col])
+        cos_t, sin_t = math.cos(theta), math.sin(theta)
+        cx, cy = RX * cos_t, RY * sin_t
+
+        # Flèche fine reliant la France au pays, le long du segment centre→nœud.
+        # f_in juste hors du nœud France, f_out juste avant le nœud du pays.
+        f_in, f_out = 0.16, 0.86
+        tail = (f_in * cx, f_in * cy)
+        head = (f_out * cx, f_out * cy)
+        if is_import:        # pays → France : on inverse tête et queue
+            head, tail = tail, head
+
+        width = 2.0 + 3.5 * (abs(net) / max_mag)
+        annotations.append(dict(
+            x=head[0], y=head[1], ax=tail[0], ay=tail[1],
+            xref='x', yref='y', axref='x', ayref='y',
+            showarrow=True, arrowhead=2, arrowsize=1.0,
+            arrowwidth=width, arrowcolor=color,
+        ))
+
+        node_x.append(cx)
+        node_y.append(cy)
+        name = PAYS_ECHANGES.get(col, col)
+        node_text.append(
+            f"<b>{name}</b><br>"
+            f"<span style='color:{color}'>{twh:.1f} TWh</span>".replace('.', ',')
+        )
+        # Texte placé du côté extérieur du nœud pour ne pas chevaucher.
+        if abs(cos_t) > 0.5:
+            node_pos.append('middle right' if cos_t > 0 else 'middle left')
+        else:
+            node_pos.append('top center' if sin_t >= 0 else 'bottom center')
+        sens = 'importés depuis' if is_import else 'exportés vers'
+        node_hover.append(
+            f"<b>{name}</b><br>"
+            f"Solde : {twh:,.1f} TWh {sens} la France<br>"
+            f"Import : {d['import_mwh']/1_000_000:,.1f} TWh"
+            f" · Export : {d['export_mwh']/1_000_000:,.1f} TWh"
+            .replace(',', ' ').replace('.', ',')
+        )
+
+    # --- Nœuds pays (marqueur + libellé) ---
+    fig.add_trace(go.Scatter(
+        x=node_x, y=node_y,
+        mode='markers+text',
+        marker=dict(size=12, color='#475569', line=dict(color='#94A3B8', width=1)),
+        text=node_text,
+        textposition=node_pos,
+        textfont=dict(color='#CBD5E1', size=12),
+        customdata=node_hover,
+        hovertemplate='%{customdata}<extra></extra>',
+        showlegend=False,
+    ))
+
+    # --- Nœud central France (par-dessus les flèches) ---
+    fig.add_trace(go.Scatter(
+        x=[0], y=[0],
+        mode='markers+text',
+        marker=dict(size=58, color='#1E293B', line=dict(color='#64748B', width=2)),
+        text=['<b>France</b>'],
+        textposition='middle center',
+        textfont=dict(color='#F8FAFC', size=14),
+        hoverinfo='skip',
+        showlegend=False,
+    ))
+
+    # --- Légende de la convention (deux traces fantômes) ---
+    fig.add_trace(go.Scatter(
+        x=[None], y=[None], mode='lines', line=dict(color=EXPORT_COLOR, width=4),
+        name='Export (France → pays)',
+    ))
+    fig.add_trace(go.Scatter(
+        x=[None], y=[None], mode='lines', line=dict(color=IMPORT_COLOR, width=4),
+        name='Import (pays → France)',
+    ))
+
     fig.update_layout(
-        shapes=shapes,
         annotations=annotations,
-        xaxis=dict(range=[0, 1], visible=False, fixedrange=True),
-        yaxis=dict(range=[0, 1.08], visible=False, fixedrange=True),
-        height=330,
-        margin=dict(l=180, r=180, t=30, b=20),
+        xaxis=dict(range=[-2.55, 2.55], visible=False, fixedrange=True),
+        yaxis=dict(range=[-1.6, 1.6], visible=False, fixedrange=True),
+        height=420,
+        margin=dict(l=20, r=20, t=20, b=50),
         paper_bgcolor=ChartConfig.PAPER_COLOR,
         plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
         font=dict(color=ChartConfig.TEXT_COLOR, size=11),
-        hovermode=False,
+        legend=dict(orientation='h', x=0.5, y=-0.04, xanchor='center'),
+        hoverlabel=dict(bgcolor='#1E293B', bordercolor='#475569',
+                        font=dict(color='#F1F5F9', size=11)),
     )
     return fig.to_json()
 
@@ -747,7 +749,20 @@ def accueil(request):
                 colors=FILIERE_COLORS,
                 labels=FILIERES,
             )
-            graph_sankey = create_parc_prod_sankey(data['parc_pmax'], data['production_mix_year'])
+            # Carte de flux des échanges commerciaux de l'année courante
+            # (France au centre, voisins autour). Isolée pour qu'une panne des
+            # données d'échanges ne casse pas le reste du tableau de bord.
+            graph_echanges_flux = None
+            try:
+                from datetime import date as _date
+                _year = data['peak_year_datetime'].year
+                net_by_border = get_echanges_net_by_border(
+                    _date(_year, 1, 1), data['dashboard_date']
+                )
+                if net_by_border:
+                    graph_echanges_flux = create_echanges_flow_map(net_by_border, year=_year)
+            except Exception:
+                graph_echanges_flux = None
 
             DECARBONEES = ('nucleaire', 'hydraulique', 'bioenergies', 'solaire', 'eolien')
             mix = data['production_mix_year']
@@ -823,7 +838,7 @@ def accueil(request):
                 **echanges_ctx,
                 'graph_conso_jour': graph_conso_jour,
                 'graph_production_jour': graph_production_jour,
-                'graph_sankey': graph_sankey,
+                'graph_echanges_flux': graph_echanges_flux,
             }
     except Exception:
         pass

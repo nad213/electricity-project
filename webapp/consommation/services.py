@@ -539,6 +539,70 @@ def get_echanges_annual_import_export(start_date, end_date, pays='total'):
     return result
 
 
+def get_echanges_net_by_border(start_date, end_date):
+    """
+    Import/export/solde volumes (MWh) over the whole period, one row per
+    commercial border — used for the homepage flow map (France ↔ voisins).
+
+    Same energy method as get_echanges_annual_import_export (signed power ×
+    real step duration). Convention of the detail file: positive = import,
+    negative = export.
+
+    Returns a dict keyed by the ech_comm_* column name:
+        {col: {'import_mwh': float, 'export_mwh': float, 'net_mwh': float}}
+    where net_mwh = import − export (positive ⇒ France net importer on that
+    border). Borders with no data over the period are omitted.
+    """
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+
+    # Column names come from our own dict (safe) → no SQL injection surface.
+    commercial = list(get_echanges_pays_commerciaux().keys())
+    keep_cols = "".join(f", {c}" for c in commercial)
+    notnull_expr = " OR ".join(f"{c} IS NOT NULL" for c in commercial)
+
+    selects = []
+    for col in commercial:
+        selects.append(f"SUM(CASE WHEN {col} > 0 THEN {col} * dt_h ELSE 0 END) AS {col}_import")
+        selects.append(f"-SUM(CASE WHEN {col} < 0 THEN {col} * dt_h ELSE 0 END) AS {col}_export")
+    select_cols = ",\n                ".join(selects)
+
+    path = data_cache.get_local_path('echanges')
+    with get_duckdb_connection(path) as conn:
+        query = f"""
+            WITH stepped AS (
+                SELECT
+                    LEAST(
+                        date_diff('second', date_heure,
+                            lead(date_heure) OVER (ORDER BY date_heure)) / 3600.0,
+                        1.0
+                    ) AS dt_h{keep_cols}
+                FROM read_parquet(?)
+                WHERE date_heure BETWEEN ? AND ?
+                  AND ({notnull_expr})
+            )
+            SELECT {select_cols}
+            FROM stepped;
+        """
+        row = conn.execute(
+            query, [path, start_str, f"{end_str} 23:59:59"]
+        ).fetchdf()
+
+    result = {}
+    if not row.empty:
+        for col in commercial:
+            imp = float(row[f"{col}_import"].iloc[0] or 0.0)
+            exp = float(row[f"{col}_export"].iloc[0] or 0.0)
+            if imp == 0.0 and exp == 0.0:
+                continue
+            result[col] = {
+                'import_mwh': imp,
+                'export_mwh': exp,
+                'net_mwh': imp - exp,
+            }
+    return result
+
+
 def get_echanges_annual_detail(start_date, end_date):
     """
     Annual import/export (MWh) for every commercial border plus the overall
