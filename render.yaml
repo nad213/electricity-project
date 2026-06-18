@@ -1,7 +1,9 @@
 services:
   - type: web
-    name: electricity-app-recette
+    name: electricity-project-1
     runtime: python
+    branch: master
+    autoDeploy: true
     rootDir: webapp
     buildCommand: "./build.sh"
     startCommand: "cd webapp && gunicorn config.wsgi:application"
