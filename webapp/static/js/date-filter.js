@@ -63,7 +63,7 @@
                 return response.json();
             })
             .then(function(data) {
-                var plotConfig = { responsive: true };
+                var plotConfig = (window.KiloWatch && window.KiloWatch.PLOT_CONFIG) || { responsive: true, displayModeBar: false };
                 Object.keys(data.charts).forEach(function(chartId) {
                     var chartData = data.charts[chartId];
                     Plotly.react(chartId, chartData.data, chartData.layout, plotConfig);
