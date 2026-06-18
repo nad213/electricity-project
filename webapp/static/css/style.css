@@ -367,10 +367,6 @@ body {
     padding-left: 0.75rem;
 }
 
-.section-title--amber {
-    border-left-color: var(--amber);
-}
-
 /* ========== Login Invite ========== */
 .login-invite-text {
     max-width: 480px;
