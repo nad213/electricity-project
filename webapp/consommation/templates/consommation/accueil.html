@@ -2,7 +2,7 @@
 
 {% block head_scripts %}{% include "partials/_plotly.html" %}{% endblock %}
 
-{% block title %}KiloWhat{% endblock %}
+{% block title %}KiloWatch{% endblock %}
 
 {% block page_header %}
 <div class="page-header d-print-none">
@@ -205,8 +205,8 @@
 
 {% if has_dashboard_data %}
 <script>
-KiloWhat.renderChart('chart-conso-jour', '{{ graph_conso_jour|escapejs }}');
-KiloWhat.renderChart('chart-production-jour', '{{ graph_production_jour|escapejs }}');
+KiloWatch.renderChart('chart-conso-jour', '{{ graph_conso_jour|escapejs }}');
+KiloWatch.renderChart('chart-production-jour', '{{ graph_production_jour|escapejs }}');
 </script>
 {% endif %}
 

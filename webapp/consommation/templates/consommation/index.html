@@ -2,7 +2,7 @@
 
 {% block head_scripts %}{% include "partials/_plotly.html" %}{% endblock %}
 
-{% block title %}Consommation - KiloWhat{% endblock %}
+{% block title %}Consommation - KiloWatch{% endblock %}
 
 {% block page_title %}
     <i class="ti ti-chart-line me-2"></i>
@@ -159,8 +159,8 @@
 
 <script>
 {# Rendu des graphiques ; resize des onglets et scrollspy gérés par charts.js #}
-KiloWhat.renderChart('chart-puissance', '{{ graph_puissance|escapejs }}');
-KiloWhat.renderChart('chart-annuel', '{{ graph_annuel|escapejs }}');
-KiloWhat.renderChart('chart-mensuel', '{{ graph_mensuel|escapejs }}');
+KiloWatch.renderChart('chart-puissance', '{{ graph_puissance|escapejs }}');
+KiloWatch.renderChart('chart-annuel', '{{ graph_annuel|escapejs }}');
+KiloWatch.renderChart('chart-mensuel', '{{ graph_mensuel|escapejs }}');
 </script>
 {% endblock %}

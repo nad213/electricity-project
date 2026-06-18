@@ -2,7 +2,7 @@
 
 {% block head_scripts %}{% include "partials/_plotly.html" %}{% endblock %}
 
-{% block title %}Production - KiloWhat{% endblock %}
+{% block title %}Production - KiloWatch{% endblock %}
 
 {% block page_title %}
     <i class="ti ti-building-factory me-2"></i>
@@ -194,9 +194,9 @@
 
 <script>
 {# Rendu des graphiques ; resize des onglets et scrollspy gérés par charts.js #}
-KiloWhat.renderChart('chart-production', '{{ graph_production|escapejs }}');
-KiloWhat.renderChart('chart-production-annuel', '{{ graph_production_annuel|escapejs }}');
-KiloWhat.renderChart('chart-production-mensuel', '{{ graph_production_mensuel|escapejs }}');
-KiloWhat.renderChart('chart-parc-installe', '{{ graph_parc_installe|escapejs }}');
+KiloWatch.renderChart('chart-production', '{{ graph_production|escapejs }}');
+KiloWatch.renderChart('chart-production-annuel', '{{ graph_production_annuel|escapejs }}');
+KiloWatch.renderChart('chart-production-mensuel', '{{ graph_production_mensuel|escapejs }}');
+KiloWatch.renderChart('chart-parc-installe', '{{ graph_parc_installe|escapejs }}');
 </script>
 {% endblock %}

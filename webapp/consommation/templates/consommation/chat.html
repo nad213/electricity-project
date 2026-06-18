@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Chat - KiloWhat{% endblock %}
+{% block title %}Chat - KiloWatch{% endblock %}
 {% block page_title %}Chat sur les données{% endblock %}
 {% block content %}
 {% if not is_authenticated %}
@@ -29,7 +29,7 @@
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 <script>
 (function () {
-  const STORAGE_KEY = "kilowhat_chat_history";
+  const STORAGE_KEY = "kilowatch_chat_history";
   const historyEl = document.getElementById("chat-history");
   const form = document.getElementById("chat-form");
   const input = document.getElementById("chat-input");
