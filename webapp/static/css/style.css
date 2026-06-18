@@ -295,6 +295,14 @@ body {
     letter-spacing: -0.02em;
 }
 
+.stat-value-sm {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
 .stat-unit {
     font-size: 1rem;
     font-weight: 500;
