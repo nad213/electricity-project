@@ -5,7 +5,7 @@
  */
 window.KiloWhat = window.KiloWhat || {};
 
-KiloWhat.PLOT_CONFIG = { responsive: true };
+KiloWhat.PLOT_CONFIG = { responsive: true, displayModeBar: false };
 
 /**
  * Rend un graphique Plotly à partir du JSON sérialisé par la vue Django.
