@@ -79,3 +79,13 @@ run_lambdas_local.py
 
 # Claude Code spec
 spec
+
+# Notes et analyses locales (non versionnées)
+notes/
+*_REVIEW.md
+scripts/parc_mensuel_par_filiere.py
+
+# Brouillons de travail
+Untitled-*
+Sans titre*
+evol_accueil.jpg
