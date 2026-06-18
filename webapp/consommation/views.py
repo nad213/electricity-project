@@ -457,144 +457,195 @@ def create_import_export_chart(df, x_col, import_col, export_col, unit='TWh', di
     return fig.to_json()
 
 
-# Position angulaire (degrés) de chaque frontière autour de la France, choisie
-# pour évoquer la géographie réelle (Angleterre au NO, Espagne au SO, etc.).
-ECHANGES_FLOW_ANGLES = {
-    'ech_comm_angleterre': 128,
-    'ech_comm_allemagne_belgique': 52,
-    'ech_comm_suisse': -8,
-    'ech_comm_italie': -68,
-    'ech_comm_espagne': -145,
+# Disposition en nid d'abeille : la France au centre, chaque frontière sur l'un
+# des 6 voisins d'un hexagone « pointy-top », placé pour évoquer la géographie
+# réelle. Le 6e voisin (ouest) reste libre et accueille le bloc des totaux.
+# Coordonnées (repère mathématique, y vers le haut) pour une maille de rayon 1.
+_HEX_NEIGHBORS = {
+    'NW': (-0.8660254, 1.5),    # haut-gauche
+    'NE': (0.8660254, 1.5),     # haut-droite
+    'E':  (1.7320508, 0.0),     # droite
+    'SE': (0.8660254, -1.5),    # bas-droite
+    'SW': (-0.8660254, -1.5),   # bas-gauche
+    'W':  (-1.7320508, 0.0),    # gauche (réservé aux totaux)
+}
+ECHANGES_HEX_POS = {
+    'ech_comm_angleterre':         'NW',
+    'ech_comm_allemagne_belgique': 'NE',
+    'ech_comm_suisse':             'E',
+    'ech_comm_italie':             'SE',
+    'ech_comm_espagne':            'SW',
 }
 
 
-def create_echanges_flow_map(net_by_border, year=None):
-    """Carte de flux radiale : la France au centre, les frontières commerciales
-    en polygone autour, et une flèche par frontière indiquant le sens net du
-    solde (export = depuis la France, import = vers la France) avec une
-    épaisseur proportionnelle au volume échangé sur la période.
+def create_echanges_flow_svg(net_by_border, year=None):
+    """Schéma SVG en nid d'abeille des échanges commerciaux : la France au
+    centre, chaque frontière dans un hexagone voisin, avec pour chaque pays une
+    flèche d'import (ambre, vers la France) et une flèche d'export (cyan, depuis
+    la France) accompagnées des volumes en TWh sur la période. Le bloc des
+    totaux (import / export / solde) occupe le voisin ouest, sans hexagone.
+
+    Renvoie une chaîne SVG (markup HTML) à injecter telle quelle dans le
+    template — aucune dépendance Plotly.
 
     Args:
         net_by_border: dict {col: {'import_mwh', 'export_mwh', 'net_mwh'}}
             tel que renvoyé par services.get_echanges_net_by_border.
-        year: année affichée dans la légende (facultatif).
+        year: année (non utilisée dans le rendu, conservée pour cohérence).
 
-    Convention reprise du graphe import/export : Export = cyan, Import = amber.
+    Convention reprise du graphe import/export : Export = cyan, Import = ambre.
     """
-    borders = [c for c in ECHANGES_FLOW_ANGLES if c in net_by_border]
+    borders = [c for c in ECHANGES_HEX_POS if c in net_by_border]
     if not borders:
-        return go.Figure().to_json()
+        return ''
 
+    IMPORT_COLOR = Colors.SECONDARY  # ambre — la France reçoit
     EXPORT_COLOR = Colors.PRIMARY    # cyan — la France fournit
-    IMPORT_COLOR = Colors.SECONDARY  # amber — la France reçoit
+    HEX_STROKE = '#475569'           # contour des hexagones (slate)
+    FR_FILL = '#1E293B'              # fond de l'hexagone France
+    NAME_COLOR = '#E2E8F0'           # libellés pays
 
-    max_mag = max(abs(net_by_border[c]['net_mwh']) for c in borders) or 1.0
+    R = 100.0                        # rayon (centre → sommet) des hexagones
+    A = R * math.sqrt(3) / 2         # apothème (centre → milieu d'arête)
+    SCALE = R                        # les positions voisines sont en unités de R
 
-    # Disposition : nœuds pays sur une ellipse (étirée horizontalement pour
-    # remplir une carte large). La France est à l'origine.
-    RX, RY = 1.55, 1.0
+    def fmt(twh):
+        return f"{twh:.1f}".replace('.', ',')
 
-    fig = go.Figure()
-    annotations = []
+    def hex_path(cx, cy):
+        # Hexagone « pointy-top » : sommets à 30°, 90°, … (repère SVG, y vers le bas)
+        pts = []
+        for k in range(6):
+            ang = math.radians(60 * k + 30)
+            pts.append(f"{cx + R * math.cos(ang):.2f},{cy - R * math.sin(ang):.2f}")
+        return "M" + "L".join(pts) + "Z"
 
-    node_x, node_y, node_text, node_pos, node_hover = [], [], [], [], []
+    parts = []
+
+    # --- Flèches import / export pour chaque frontière ---------------------
+    arrow_svg = []
     for col in borders:
+        ux, uy = _HEX_NEIGHBORS[ECHANGES_HEX_POS[col]]
+        # vecteur unitaire France → pays (repère SVG : y inversé)
+        norm = math.hypot(ux, uy)
+        dx, dy = ux / norm, -uy / norm
+        px, py = -dy, dx               # perpendiculaire (décalage des 2 flèches)
+        off = 9.0
+        # Les flèches restent dans le « col » entre l'hexagone France et celui
+        # du pays (arête partagée à ~87) pour ne jamais déborder sur les libellés.
+        r_near, r_far = 58.0, 112.0
+
         d = net_by_border[col]
-        net = d['net_mwh']
-        twh = abs(net) / 1_000_000
-        is_import = net > 0
-        color = IMPORT_COLOR if is_import else EXPORT_COLOR
+        imp = d['import_mwh'] / 1_000_000
+        exp = d['export_mwh'] / 1_000_000
 
-        theta = math.radians(ECHANGES_FLOW_ANGLES[col])
-        cos_t, sin_t = math.cos(theta), math.sin(theta)
-        cx, cy = RX * cos_t, RY * sin_t
+        # Import (ambre) : pointe vers la France
+        x1, y1 = dx * r_far + px * off, dy * r_far + py * off
+        x2, y2 = dx * r_near + px * off, dy * r_near + py * off
+        arrow_svg.append(
+            f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" '
+            f'stroke="{IMPORT_COLOR}" stroke-width="3" marker-end="url(#arrow-imp)"/>'
+        )
+        # Export (cyan) : pointe vers le pays
+        x3, y3 = dx * r_near - px * off, dy * r_near - py * off
+        x4, y4 = dx * r_far - px * off, dy * r_far - py * off
+        arrow_svg.append(
+            f'<line x1="{x3:.1f}" y1="{y3:.1f}" x2="{x4:.1f}" y2="{y4:.1f}" '
+            f'stroke="{EXPORT_COLOR}" stroke-width="3" marker-end="url(#arrow-exp)"/>'
+        )
 
-        # Flèche fine reliant la France au pays, le long du segment centre→nœud.
-        # f_in juste hors du nœud France, f_out juste avant le nœud du pays.
-        f_in, f_out = 0.16, 0.86
-        tail = (f_in * cx, f_in * cy)
-        head = (f_out * cx, f_out * cy)
-        if is_import:        # pays → France : on inverse tête et queue
-            head, tail = tail, head
-
-        width = 2.0 + 3.5 * (abs(net) / max_mag)
-        annotations.append(dict(
-            x=head[0], y=head[1], ax=tail[0], ay=tail[1],
-            xref='x', yref='y', axref='x', ayref='y',
-            showarrow=True, arrowhead=2, arrowsize=1.0,
-            arrowwidth=width, arrowcolor=color,
-        ))
-
-        node_x.append(cx)
-        node_y.append(cy)
+    # --- Hexagones pays + libellés -----------------------------------------
+    # On sépare les formes (fonds/contours) des libellés pour gérer l'ordre des
+    # plans : formes au fond, puis flèches, puis textes — sinon le fond plein de
+    # l'hexagone France recouvre les têtes de flèches « import » qui pointent
+    # vers le centre.
+    hex_shapes = []
+    hex_texts = []
+    for col in borders:
+        ux, uy = _HEX_NEIGHBORS[ECHANGES_HEX_POS[col]]
+        cx, cy = ux * SCALE, -uy * SCALE
+        # Bloc de texte décalé vers l'extérieur (loin de la France) pour dégager
+        # les flèches du col.
+        norm = math.hypot(ux, uy)
+        tx, ty = cx + (ux / norm) * 14, cy + (-uy / norm) * 14
+        d = net_by_border[col]
+        imp = fmt(d['import_mwh'] / 1_000_000)
+        exp = fmt(d['export_mwh'] / 1_000_000)
         name = PAYS_ECHANGES.get(col, col)
-        node_text.append(
-            f"<b>{name}</b><br>"
-            f"<span style='color:{color}'>{twh:.1f} TWh</span>".replace('.', ',')
+
+        hex_shapes.append(
+            f'<path d="{hex_path(cx, cy)}" fill="none" '
+            f'stroke="{HEX_STROKE}" stroke-width="2"/>'
         )
-        # Texte placé du côté extérieur du nœud pour ne pas chevaucher.
-        if abs(cos_t) > 0.5:
-            node_pos.append('middle right' if cos_t > 0 else 'middle left')
-        else:
-            node_pos.append('top center' if sin_t >= 0 else 'bottom center')
-        sens = 'importés depuis' if is_import else 'exportés vers'
-        node_hover.append(
-            f"<b>{name}</b><br>"
-            f"Solde : {twh:,.1f} TWh {sens} la France<br>"
-            f"Import : {d['import_mwh']/1_000_000:,.1f} TWh"
-            f" · Export : {d['export_mwh']/1_000_000:,.1f} TWh"
-            .replace(',', ' ').replace('.', ',')
+        hex_texts.append(
+            f'<text x="{tx:.1f}" y="{ty - 22:.1f}" text-anchor="middle" '
+            f'fill="{NAME_COLOR}" font-size="14" font-weight="600">{name}</text>'
+        )
+        hex_texts.append(
+            f'<text x="{tx:.1f}" y="{ty + 1:.1f}" text-anchor="middle" '
+            f'fill="{IMPORT_COLOR}" font-size="14">{imp} TWh</text>'
+        )
+        hex_texts.append(
+            f'<text x="{tx:.1f}" y="{ty + 21:.1f}" text-anchor="middle" '
+            f'fill="{EXPORT_COLOR}" font-size="14">{exp} TWh</text>'
         )
 
-    # --- Nœuds pays (marqueur + libellé) ---
-    fig.add_trace(go.Scatter(
-        x=node_x, y=node_y,
-        mode='markers+text',
-        marker=dict(size=12, color='#475569', line=dict(color='#94A3B8', width=1)),
-        text=node_text,
-        textposition=node_pos,
-        textfont=dict(color='#CBD5E1', size=12),
-        customdata=node_hover,
-        hovertemplate='%{customdata}<extra></extra>',
-        showlegend=False,
-    ))
-
-    # --- Nœud central France (par-dessus les flèches) ---
-    fig.add_trace(go.Scatter(
-        x=[0], y=[0],
-        mode='markers+text',
-        marker=dict(size=58, color='#1E293B', line=dict(color='#64748B', width=2)),
-        text=['<b>France</b>'],
-        textposition='middle center',
-        textfont=dict(color='#F8FAFC', size=14),
-        hoverinfo='skip',
-        showlegend=False,
-    ))
-
-    # --- Légende de la convention (deux traces fantômes) ---
-    fig.add_trace(go.Scatter(
-        x=[None], y=[None], mode='lines', line=dict(color=EXPORT_COLOR, width=4),
-        name='Export (France → pays)',
-    ))
-    fig.add_trace(go.Scatter(
-        x=[None], y=[None], mode='lines', line=dict(color=IMPORT_COLOR, width=4),
-        name='Import (pays → France)',
-    ))
-
-    fig.update_layout(
-        annotations=annotations,
-        xaxis=dict(range=[-2.55, 2.55], visible=False, fixedrange=True),
-        yaxis=dict(range=[-1.6, 1.6], visible=False, fixedrange=True),
-        height=420,
-        margin=dict(l=20, r=20, t=20, b=50),
-        paper_bgcolor=ChartConfig.PAPER_COLOR,
-        plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
-        font=dict(color=ChartConfig.TEXT_COLOR, size=11),
-        legend=dict(orientation='h', x=0.5, y=-0.04, xanchor='center'),
-        hoverlabel=dict(bgcolor='#1E293B', bordercolor='#475569',
-                        font=dict(color='#F1F5F9', size=11)),
+    # --- Hexagone central France -------------------------------------------
+    hex_shapes.append(
+        f'<path d="{hex_path(0, 0)}" fill="{FR_FILL}" '
+        f'stroke="#64748B" stroke-width="2.5"/>'
     )
-    return fig.to_json()
+    hex_texts.append(
+        '<text x="0" y="5" text-anchor="middle" fill="#F8FAFC" '
+        'font-size="16" font-weight="700" letter-spacing="1">FRANCE</text>'
+    )
+
+    # --- Bloc des totaux (voisin ouest, sans hexagone) ---------------------
+    tot_imp = sum(net_by_border[c]['import_mwh'] for c in borders) / 1_000_000
+    tot_exp = sum(net_by_border[c]['export_mwh'] for c in borders) / 1_000_000
+    solde = tot_imp - tot_exp     # > 0 ⇒ la France importe net
+    solde_color = IMPORT_COLOR if solde > 0 else EXPORT_COLOR
+    solde_sens = 'importateur' if solde > 0 else 'exportateur'
+    solde_txt = f"{solde_sens} {fmt(abs(solde))}"
+    # Décalé un peu vers la gauche pour que la ligne « Solde … » (la plus longue)
+    # ne morde pas sur l'hexagone France.
+    wx = _HEX_NEIGHBORS['W'][0] * SCALE - 16
+    wy = -_HEX_NEIGHBORS['W'][1] * SCALE
+    tot_svg = [
+        f'<text x="{wx:.1f}" y="{wy - 21:.1f}" text-anchor="middle" '
+        f'fill="{IMPORT_COLOR}" font-size="13">Import {fmt(tot_imp)} TWh</text>',
+        f'<text x="{wx:.1f}" y="{wy:.1f}" text-anchor="middle" '
+        f'fill="{EXPORT_COLOR}" font-size="13">Export {fmt(tot_exp)} TWh</text>',
+        f'<text x="{wx:.1f}" y="{wy + 21:.1f}" text-anchor="middle" '
+        f'fill="{solde_color}" font-size="13" font-weight="600">'
+        f'Solde {solde_txt} TWh</text>',
+    ]
+
+    defs = (
+        '<defs>'
+        f'<marker id="arrow-imp" viewBox="0 0 10 10" refX="8" refY="5" '
+        f'markerWidth="5" markerHeight="5" orient="auto-start-reverse">'
+        f'<path d="M0,0 L10,5 L0,10 z" fill="{IMPORT_COLOR}"/></marker>'
+        f'<marker id="arrow-exp" viewBox="0 0 10 10" refX="8" refY="5" '
+        f'markerWidth="5" markerHeight="5" orient="auto-start-reverse">'
+        f'<path d="M0,0 L10,5 L0,10 z" fill="{EXPORT_COLOR}"/></marker>'
+        '</defs>'
+    )
+
+    parts.append(defs)
+    parts.extend(hex_shapes)   # fonds/contours au plan le plus bas
+    parts.extend(arrow_svg)    # flèches par-dessus les fonds
+    parts.extend(hex_texts)    # libellés au-dessus de tout
+    parts.extend(tot_svg)
+
+    # viewBox : large assez pour les hexagones extrêmes (centre ±2A en x, ±2.5R en y)
+    vb = "-300 -280 580 560"
+    return (
+        f'<svg viewBox="{vb}" width="100%" style="max-width:460px;display:block;'
+        f'margin:0 auto;height:auto;" font-family="inherit" '
+        f'role="img" aria-label="Flux d\'échanges commerciaux entre la France '
+        f'et ses voisins">{"".join(parts)}</svg>'
+    )
 
 
 def create_mini_line_chart(df, x_col, y_col):
@@ -749,10 +800,10 @@ def accueil(request):
                 colors=FILIERE_COLORS,
                 labels=FILIERES,
             )
-            # Carte de flux des échanges commerciaux de l'année courante
-            # (France au centre, voisins autour). Isolée pour qu'une panne des
+            # Schéma en nid d'abeille des échanges commerciaux de l'année courante
+            # (France au centre, voisins autour). Isolé pour qu'une panne des
             # données d'échanges ne casse pas le reste du tableau de bord.
-            graph_echanges_flux = None
+            echanges_flux_svg = None
             try:
                 from datetime import date as _date
                 _year = data['peak_year_datetime'].year
@@ -760,9 +811,9 @@ def accueil(request):
                     _date(_year, 1, 1), data['dashboard_date']
                 )
                 if net_by_border:
-                    graph_echanges_flux = create_echanges_flow_map(net_by_border, year=_year)
+                    echanges_flux_svg = create_echanges_flow_svg(net_by_border, year=_year)
             except Exception:
-                graph_echanges_flux = None
+                echanges_flux_svg = None
 
             DECARBONEES = ('nucleaire', 'hydraulique', 'bioenergies', 'solaire', 'eolien')
             mix = data['production_mix_year']
@@ -838,7 +889,7 @@ def accueil(request):
                 **echanges_ctx,
                 'graph_conso_jour': graph_conso_jour,
                 'graph_production_jour': graph_production_jour,
-                'graph_echanges_flux': graph_echanges_flux,
+                'echanges_flux_svg': echanges_flux_svg,
             }
     except Exception:
         pass

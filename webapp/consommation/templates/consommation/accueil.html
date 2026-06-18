@@ -40,101 +40,6 @@
 
 {% if has_dashboard_data %}
 
-<div class="row row-cards mb-4">
-    <div class="col-sm-6 col-lg-4 col-xl-2">
-        <div class="card stat-card h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <span class="stat-label">Pointe de consommation {{ current_year }}</span>
-                    <div class="stat-icon stat-icon-blue">
-                        <i class="ti ti-trending-up"></i>
-                    </div>
-                </div>
-                <div class="stat-value">{{ peak_year_value }} <span class="stat-unit">MW</span></div>
-                <small class="text-muted">{{ peak_year_date }} à {{ peak_year_time }}</small>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-sm-6 col-lg-4 col-xl-2">
-        <div class="card stat-card h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <span class="stat-label">Pointe de consommation historique</span>
-                    <div class="stat-icon stat-icon-blue">
-                        <i class="ti ti-trophy"></i>
-                    </div>
-                </div>
-                <div class="stat-value">{{ peak_all_value }} <span class="stat-unit">MW</span></div>
-                <small class="text-muted">{{ peak_all_date }} à {{ peak_all_time }}</small>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-sm-6 col-lg-4 col-xl-2">
-        <div class="card stat-card h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <span class="stat-label">Production décarbonée {{ current_year }}</span>
-                    <div class="stat-icon stat-icon-blue">
-                        <i class="ti ti-leaf"></i>
-                    </div>
-                </div>
-                <div class="stat-value">{{ pct_decarbonee }} <span class="stat-unit">%</span></div>
-                <small class="text-muted">{{ decarbonees_twh }} TWh</small>
-            </div>
-        </div>
-    </div>
-
-    {% if solde_echanges_twh %}
-    <div class="col-sm-6 col-lg-4 col-xl-2">
-        <div class="card stat-card h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <span class="stat-label">Échanges {{ current_year }}</span>
-                    <div class="stat-icon stat-icon-blue">
-                        <i class="ti ti-arrows-exchange"></i>
-                    </div>
-                </div>
-                <div class="stat-value">{{ solde_echanges_twh }} <span class="stat-unit">TWh</span></div>
-                <small class="text-muted">{% if solde_exportateur %}Exportateur net{% else %}Importateur net{% endif %} depuis le 1ᵉʳ janvier</small>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if parc_eolien_delta %}
-    <div class="col-sm-6 col-lg-4 col-xl-2">
-        <div class="card stat-card h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <span class="stat-label">Parc éolien</span>
-                    <div class="stat-icon stat-icon-blue">
-                        <i class="ti ti-wind"></i>
-                    </div>
-                </div>
-                <div class="stat-value">{{ parc_eolien_gw }} <span class="stat-unit">GW</span></div>
-                <small class="text-muted">{{ parc_eolien_delta }} % sur 12 mois</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-lg-4 col-xl-2">
-        <div class="card stat-card h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <span class="stat-label">Parc solaire</span>
-                    <div class="stat-icon stat-icon-blue">
-                        <i class="ti ti-sun"></i>
-                    </div>
-                </div>
-                <div class="stat-value">{{ parc_solaire_gw }} <span class="stat-unit">GW</span></div>
-                <small class="text-muted">{{ parc_solaire_delta }} % sur 12 mois</small>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-</div>
-
 <div class="row mb-2">
     <div class="col">
         <h2 class="section-title">Consommation</h2>
@@ -145,13 +50,41 @@
 </div>
 
 <div class="row row-cards mb-4">
-    <div class="col-12">
-        <div class="card">
+    <div class="col-12 col-lg-8">
+        <div class="card h-100">
             <div class="card-header">
                 <h3 class="card-title">Courbe de consommation du jour</h3>
             </div>
             <div class="card-body p-2">
                 <div id="chart-conso-jour"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-4">
+        <div class="d-flex flex-column gap-3 h-100">
+            <div class="card stat-card flex-fill">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <span class="stat-label">Pointe de consommation historique</span>
+                        <div class="stat-icon stat-icon-blue">
+                            <i class="ti ti-trophy"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ peak_all_value }} <span class="stat-unit">MW</span></div>
+                    <small class="text-muted">{{ peak_all_date }} à {{ peak_all_time }}</small>
+                </div>
+            </div>
+            <div class="card stat-card flex-fill">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <span class="stat-label">Pointe de consommation {{ current_year }}</span>
+                        <div class="stat-icon stat-icon-blue">
+                            <i class="ti ti-trending-up"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ peak_year_value }} <span class="stat-unit">MW</span></div>
+                    <small class="text-muted">{{ peak_year_date }} à {{ peak_year_time }}</small>
+                </div>
             </div>
         </div>
     </div>
@@ -167,8 +100,8 @@
 </div>
 
 <div class="row row-cards mb-4">
-    <div class="col-12">
-        <div class="card">
+    <div class="col-12 col-lg-8">
+        <div class="card h-100">
             <div class="card-header">
                 <h3 class="card-title">Production du jour par filière</h3>
             </div>
@@ -177,9 +110,49 @@
             </div>
         </div>
     </div>
+    <div class="col-12 col-lg-4">
+        <div class="d-flex flex-column gap-3 h-100">
+            <div class="card stat-card flex-fill">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <span class="stat-label">Production décarbonée {{ current_year }}</span>
+                        <div class="stat-icon stat-icon-blue">
+                            <i class="ti ti-leaf"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ pct_decarbonee }} <span class="stat-unit">%</span></div>
+                    <small class="text-muted">{{ decarbonees_twh }} TWh</small>
+                </div>
+            </div>
+            {% if parc_eolien_delta %}
+            <div class="card stat-card flex-fill">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <span class="stat-label">Évolution du parc renouvelable</span>
+                        <div class="stat-icon stat-icon-blue">
+                            <i class="ti ti-windmill"></i>
+                        </div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <div class="d-flex align-items-center gap-1 text-muted text-xs mb-1"><i class="ti ti-wind"></i> Éolien</div>
+                            <div class="stat-value">{{ parc_eolien_gw }} <span class="stat-unit">GW</span></div>
+                            <small class="text-muted">{{ parc_eolien_delta }} % / 12 mois</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex align-items-center gap-1 text-muted text-xs mb-1"><i class="ti ti-sun"></i> Solaire</div>
+                            <div class="stat-value">{{ parc_solaire_gw }} <span class="stat-unit">GW</span></div>
+                            <small class="text-muted">{{ parc_solaire_delta }} % / 12 mois</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
 </div>
 
-{% if graph_echanges_flux %}
+{% if echanges_flux_svg %}
 <div class="row mb-2">
     <div class="col">
         <h2 class="section-title section-title--amber">Échanges commerciaux</h2>
@@ -190,16 +163,38 @@
 </div>
 
 <div class="row row-cards mb-4">
-    <div class="col-12">
-        <div class="card">
+    <div class="col-12 col-lg-8">
+        <div class="card h-100">
             <div class="card-header">
                 <h3 class="card-title">Flux d'échanges avec les pays voisins — {{ current_year }}</h3>
             </div>
-            <div class="card-body p-2">
-                <div id="chart-echanges-flux"></div>
+            <div class="card-body">
+                {{ echanges_flux_svg|safe }}
+                <div class="d-flex justify-content-center gap-4 mt-2 text-sm text-muted">
+                    <span><i class="ti ti-arrow-down-right" style="color:#FBBF24;"></i> Import (vers la France)</span>
+                    <span><i class="ti ti-arrow-up-right" style="color:#22D3EE;"></i> Export (depuis la France)</span>
+                </div>
             </div>
         </div>
     </div>
+    {% if solde_echanges_twh %}
+    <div class="col-12 col-lg-4">
+        <div class="d-flex flex-column gap-3 h-100">
+            <div class="card stat-card flex-fill">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <span class="stat-label">Échanges {{ current_year }}</span>
+                        <div class="stat-icon stat-icon-blue">
+                            <i class="ti ti-arrows-exchange"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ solde_echanges_twh }} <span class="stat-unit">TWh</span></div>
+                    <small class="text-muted">{% if solde_exportateur %}Exportateur net{% else %}Importateur net{% endif %} depuis le 1ᵉʳ janvier</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endif %}
 
@@ -216,9 +211,6 @@
 <script>
 ElecFlow.renderChart('chart-conso-jour', '{{ graph_conso_jour|escapejs }}');
 ElecFlow.renderChart('chart-production-jour', '{{ graph_production_jour|escapejs }}');
-{% if graph_echanges_flux %}
-ElecFlow.renderChart('chart-echanges-flux', '{{ graph_echanges_flux|escapejs }}', {responsive: true, displayModeBar: false});
-{% endif %}
 </script>
 {% endif %}
 
