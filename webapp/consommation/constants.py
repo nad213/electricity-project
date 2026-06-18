@@ -1,5 +1,5 @@
 """
-Constantes centralisées pour l'application ElecFlow.
+Constantes centralisées pour l'application KiloWhat.
 
 Ce fichier regroupe toutes les couleurs, configurations de graphiques,
 et mappings utilisés dans l'application pour éviter la redondance.

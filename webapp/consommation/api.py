@@ -1,5 +1,5 @@
 """
-API publique ElecFlow (v1) — Django Ninja.
+API publique KiloWhat (v1) — Django Ninja.
 
 Expose en JSON, en lecture seule, les données déjà servies par les pages de
 visualisation. Les endpoints réutilisent directement `services.py` (DuckDB →
@@ -50,7 +50,7 @@ THROTTLE_BURST = os.getenv("API_THROTTLE_BURST", "1/2s")
 THROTTLE_SUSTAINED = os.getenv("API_THROTTLE_SUSTAINED", "5/min")
 
 api = NinjaAPI(
-    title="ElecFlow API",
+    title="KiloWhat API",
     version="1.0.0",
     description=(
         "API publique de données de l'application. "

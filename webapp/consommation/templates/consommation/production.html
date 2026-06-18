@@ -2,7 +2,7 @@
 
 {% block head_scripts %}{% include "partials/_plotly.html" %}{% endblock %}
 
-{% block title %}Production - ElecFlow{% endblock %}
+{% block title %}Production - KiloWhat{% endblock %}
 
 {% block page_title %}
     <i class="ti ti-building-factory me-2"></i>
@@ -194,9 +194,9 @@
 
 <script>
 {# Rendu des graphiques ; resize des onglets et scrollspy gérés par charts.js #}
-ElecFlow.renderChart('chart-production', '{{ graph_production|escapejs }}');
-ElecFlow.renderChart('chart-production-annuel', '{{ graph_production_annuel|escapejs }}');
-ElecFlow.renderChart('chart-production-mensuel', '{{ graph_production_mensuel|escapejs }}');
-ElecFlow.renderChart('chart-parc-installe', '{{ graph_parc_installe|escapejs }}');
+KiloWhat.renderChart('chart-production', '{{ graph_production|escapejs }}');
+KiloWhat.renderChart('chart-production-annuel', '{{ graph_production_annuel|escapejs }}');
+KiloWhat.renderChart('chart-production-mensuel', '{{ graph_production_mensuel|escapejs }}');
+KiloWhat.renderChart('chart-parc-installe', '{{ graph_parc_installe|escapejs }}');
 </script>
 {% endblock %}

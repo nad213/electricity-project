@@ -2,7 +2,7 @@
 
 {% block head_scripts %}{% include "partials/_plotly.html" %}{% endblock %}
 
-{% block title %}Échanges - ElecFlow{% endblock %}
+{% block title %}Échanges - KiloWhat{% endblock %}
 
 {% block page_title %}
     <i class="ti ti-arrow-exchange me-2"></i>
@@ -113,8 +113,8 @@
 
 <script>
 {# Rendu des graphiques ; resize des onglets et scrollspy gérés par charts.js #}
-ElecFlow.renderChart('chart-echanges', '{{ graph_echanges|escapejs }}');
-ElecFlow.renderChart('chart-echanges-annuel', '{{ graph_echanges_annuel|escapejs }}');
+KiloWhat.renderChart('chart-echanges', '{{ graph_echanges|escapejs }}');
+KiloWhat.renderChart('chart-echanges-annuel', '{{ graph_echanges_annuel|escapejs }}');
 
 // Le sélecteur de pays du graphe annuel ne rafraîchit QUE ce graphe,
 // via le paramètre `pays_annuel` (le formulaire du haut ne l'envoie jamais).
@@ -130,7 +130,7 @@ ElecFlow.renderChart('chart-echanges-annuel', '{{ graph_echanges_annuel|escapejs
             .then(function(data) {
                 Object.keys(data.charts).forEach(function(id) {
                     var c = data.charts[id];
-                    Plotly.react(id, c.data, c.layout, ElecFlow.PLOT_CONFIG);
+                    Plotly.react(id, c.data, c.layout, KiloWhat.PLOT_CONFIG);
                 });
             });
     });

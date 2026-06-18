@@ -3,9 +3,9 @@
  * juste après Plotly). Factorise ce qui était copié-collé dans chaque template :
  * rendu des graphiques, resize au changement d'onglet, scrollspy de la sidebar.
  */
-window.ElecFlow = window.ElecFlow || {};
+window.KiloWhat = window.KiloWhat || {};
 
-ElecFlow.PLOT_CONFIG = { responsive: true };
+KiloWhat.PLOT_CONFIG = { responsive: true };
 
 /**
  * Rend un graphique Plotly à partir du JSON sérialisé par la vue Django.
@@ -13,9 +13,9 @@ ElecFlow.PLOT_CONFIG = { responsive: true };
  * @param {string} json - figure Plotly sérialisée (data + layout)
  * @param {Object} [config] - config Plotly (défaut : PLOT_CONFIG)
  */
-ElecFlow.renderChart = function(id, json, config) {
+KiloWhat.renderChart = function(id, json, config) {
     var chart = JSON.parse(json);
-    Plotly.newPlot(id, chart.data, chart.layout, config || ElecFlow.PLOT_CONFIG);
+    Plotly.newPlot(id, chart.data, chart.layout, config || KiloWhat.PLOT_CONFIG);
 };
 
 document.addEventListener('DOMContentLoaded', function() {
