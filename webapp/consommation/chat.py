@@ -32,10 +32,11 @@ Règles :
 - Pour les filières de production : nucleaire, hydraulique, eolien, solaire, gaz, charbon, fioul, bioenergies.
 - Pour les pays d'échange : ech_physiques (solde total), ech_comm_angleterre, ech_comm_espagne, ech_comm_italie, ech_comm_suisse, ech_comm_allemagne_belgique. Un solde négatif = exportation, positif = importation.
 - Pour les VOLUMES d'échange importés/exportés (en énergie, sur un mois ou une année), utilise `get_echanges_energie` (MWh), pas `get_echanges` (qui ne donne que la puissance MW).
-- Pour la puissance installée (parc) : `get_parc`. mode='actuel' = pmax de toutes les filières à l'instant présent ; mode='historique' = série mensuelle disponible uniquement pour l'éolien terrestre, l'éolien en mer et le solaire. Ne compare pas un chiffre 'actuel' avec un chiffre 'historique' sans préciser qu'ils viennent de sources différentes.
+- Pour la puissance installée (parc) : `get_parc`. mode='actuel' = pmax de toutes les filières à l'instant présent ; mode='historique' = évolution du parc (éolien terrestre, éolien en mer, solaire uniquement), granularity='annual' par défaut (une valeur par année, année en cours marquée partial=true) ou 'monthly' pour le détail. Une ligne partial=true est la valeur du dernier mois connu, pas un total annuel : présente-la comme telle. Ne compare pas un chiffre 'actuel' avec un chiffre 'historique' sans préciser qu'ils viennent de sources différentes.
 - Quand tu présentes des séries de chiffres, utilise des tableaux markdown lisibles.
 - Pour les questions de type « pic / record / maximum / minimum » sur une période, appelle TOUJOURS `get_peak` (pas `get_consommation`/`get_production` en raw — qui downsample et perdent le datetime exact).
 - La granularité `raw` est limitée à 31 jours. Au-delà, utilise `daily` ou `get_peak`.
+- N'affirme jamais qu'une donnée « s'arrête » à une année donnée sans le vérifier : fie-toi aux lignes réellement renvoyées par le tool (et à `get_overview`). Si tu résumes une série mensuelle en années, inclus la dernière année même partielle et précise le dernier mois disponible.
 - Si une demande est ambiguë, pose une courte question avant d'appeler un tool."""
 
 
@@ -97,8 +98,10 @@ TOOLS = [
             "Puissance installée (parc) en MW. "
             "mode='actuel' = dernière puissance max installée par filière, TOUTES filières "
             "(nucleaire, hydraulique, eolien, solaire, gaz, charbon, fioul, bioenergies), source RTE pmax. "
-            "mode='historique' = série MENSUELLE du parc, disponible UNIQUEMENT pour 'Eolien terrestre', "
+            "mode='historique' = série du parc, disponible UNIQUEMENT pour 'Eolien terrestre', "
             "'Eolien en mer' et 'Solaire' (estimée à partir de production / facteur de charge). "
+            "granularity='annual' (défaut) = une valeur par année (le parc du dernier mois connu de l'année ; "
+            "l'année en cours est marquée partial=true). granularity='monthly' = série mensuelle détaillée. "
             "NB : 'actuel' et 'historique' proviennent de méthodes différentes et peuvent diverger "
             "(p. ex. le solaire) — ne pas mélanger les deux dans une même comparaison sans le préciser."
         ),
@@ -106,6 +109,11 @@ TOOLS = [
             "type": "object",
             "properties": {
                 "mode": {"type": "string", "enum": ["actuel", "historique"]},
+                "granularity": {
+                    "type": "string",
+                    "enum": ["annual", "monthly"],
+                    "description": "mode='historique' uniquement. Défaut 'annual'.",
+                },
                 "filiere": {
                     "type": "string",
                     "enum": ["Eolien terrestre", "Eolien en mer", "Solaire"],
@@ -228,6 +236,24 @@ def _df_to_payload(df: pd.DataFrame, value_col: str, unit: str, force_full: bool
         ]
         payload["note"] = f"Dataset trop volumineux ({len(df)} lignes) — sample équiréparti de {len(sample)} points fourni, plus stats globales."
     return payload
+
+
+def _parc_to_annual(df: pd.DataFrame) -> pd.DataFrame:
+    """Réduit la série mensuelle du parc à une valeur par année et par filière.
+
+    Le parc est une capacité installée (stock, pas un flux) : la valeur annuelle
+    retenue est celle du DERNIER mois disponible de l'année (décembre pour une
+    année complète). L'année en cours, dont le dernier mois n'est pas décembre,
+    est marquée `partial=true`.
+    """
+    d = df.copy()
+    d["year"] = d["date"].str[:4]
+    idx = d.groupby(["filiere", "year"])["date"].idxmax()
+    out = d.loc[idx, ["year", "filiere", "parc_mw", "date"]].rename(
+        columns={"parc_mw": "value", "date": "last_month"}
+    )
+    out["partial"] = out["last_month"].str[5:7] != "12"
+    return out.sort_values(["filiere", "year"]).reset_index(drop=True)
 
 
 # ---------- tool dispatch ---------- #
@@ -373,11 +399,29 @@ def _tool_get_parc(args: dict) -> dict:
             df = df[df["date"] >= start[:7]]
         if end:
             df = df[df["date"] <= end[:7]]
-        df = df[["date", "filiere", "parc_mw"]].rename(columns={"parc_mw": "value"})
-        payload = _df_to_payload(df, "value", "MW", force_full=True)
+        if df.empty:
+            return {"rows_total": 0, "data": [], "unit": "MW"}
+
+        month_min, month_max = df["date"].min(), df["date"].max()
+        granularity = args.get("granularity", "annual")
+        if granularity == "monthly":
+            out = df[["date", "filiere", "parc_mw"]].rename(columns={"parc_mw": "value"})
+            grain_note = "Parc mensuel. "
+        else:
+            out = _parc_to_annual(df)
+            grain_note = (
+                "Parc annuel = valeur du dernier mois connu de chaque année "
+                "(partial=true ⇒ année en cours, valeur du dernier mois disponible, pas un total annuel). "
+            )
+
+        payload = _df_to_payload(out, "value", "MW", force_full=True)
         payload["note"] = (
-            "Parc mensuel estimé (production / facteur de charge). "
-            "Disponible uniquement pour éolien terrestre, éolien en mer et solaire."
+            "Parc estimé (production / facteur de charge), uniquement éolien terrestre, "
+            "éolien en mer et solaire. "
+            + grain_note
+            + f"Données mensuelles sous-jacentes de {month_min} à {month_max} — "
+            "le dernier point fait foi : n'affirme jamais que les données s'arrêtent à une "
+            "année antérieure, et signale le dernier mois disponible."
         )
         return payload
     return {"error": f"mode '{mode}' inconnu (attendu: actuel ou historique)"}
