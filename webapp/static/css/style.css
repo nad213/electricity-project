@@ -506,12 +506,13 @@ body {
 
 .chat-bubble {
     max-width: 85%;
-    white-space: pre-wrap;
 }
 
 .chat-bubble-user {
     background-color: var(--accent);
     color: var(--bg);
+    /* Message brut (textContent) : on préserve les retours à la ligne. */
+    white-space: pre-wrap;
 }
 
 .chat-bubble-assistant {
@@ -519,6 +520,39 @@ body {
     border: 1px solid var(--border);
     color: var(--text);
 }
+
+/* Markdown rendu côté assistant : on resserre les marges des blocs et on
+   donne un vrai rendu de tableau (sinon les colonnes se chevauchent). */
+.chat-bubble-assistant > :first-child { margin-top: 0; }
+.chat-bubble-assistant > :last-child { margin-bottom: 0; }
+.chat-bubble-assistant p { margin-bottom: 0.5rem; }
+
+.chat-bubble-assistant table {
+    border-collapse: collapse;
+    margin: 0.5rem 0;
+    font-size: 0.875em;
+    /* Tableau large = défilement horizontal plutôt que débordement. */
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.chat-bubble-assistant th,
+.chat-bubble-assistant td {
+    border: 1px solid var(--border);
+    padding: 0.3rem 0.6rem;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.chat-bubble-assistant thead th {
+    background-color: var(--bg);
+    font-weight: 600;
+}
+
+/* Les nombres se lisent mieux alignés à droite. */
+.chat-bubble-assistant td:not(:first-child) { text-align: right; }
 
 /* ========== Code & blocs préformatés (page API) ========== */
 code {

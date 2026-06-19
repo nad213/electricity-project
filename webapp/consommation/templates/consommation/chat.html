@@ -29,6 +29,10 @@
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 <script>
 (function () {
+  // gfm:true (défaut) active les tableaux ; breaks:true rend les retours à la
+  // ligne simples (le bubble n'est plus en white-space: pre-wrap).
+  marked.setOptions({ gfm: true, breaks: true });
+
   const STORAGE_KEY = "kilowatch_chat_history";
   const historyEl = document.getElementById("chat-history");
   const form = document.getElementById("chat-form");
