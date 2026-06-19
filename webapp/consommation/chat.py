@@ -139,10 +139,13 @@ def _isoformat(v):
     return v
 
 
-def _df_to_payload(df: pd.DataFrame, value_col: str, unit: str) -> dict:
+def _df_to_payload(df: pd.DataFrame, value_col: str, unit: str, force_full: bool = False) -> dict:
     """Compact JSON for a time-series DataFrame.
 
-    Returns full rows under _MAX_ROWS, else stats + downsampled sample.
+    Returns full rows when `force_full` ou sous _MAX_ROWS, else stats +
+    sous-échantillon de lignes. Le sous-échantillonnage jette des lignes
+    entières (donc des périodes entières) : à ne JAMAIS utiliser pour des
+    agrégats déjà compacts (mensuel/annuel) — passer `force_full=True`.
     """
     if df.empty:
         return {"rows_total": 0, "data": [], "unit": unit}
@@ -150,14 +153,18 @@ def _df_to_payload(df: pd.DataFrame, value_col: str, unit: str) -> dict:
     series = df[value_col].astype(float)
     stats = {
         "min": float(series.min()),
+        # La ligne du min/max est jointe pour que le modèle ne recolle pas une
+        # stat globale sur la mauvaise période quand on sous-échantillonne.
+        "min_row": {k: _isoformat(v) for k, v in df.loc[series.idxmin()].items()},
         "max": float(series.max()),
+        "max_row": {k: _isoformat(v) for k, v in df.loc[series.idxmax()].items()},
         "mean": float(series.mean()),
         "sum": float(series.sum()),
         "count": int(series.count()),
     }
     payload = {"unit": unit, "rows_total": len(df), "stats": stats}
 
-    if len(df) <= _MAX_ROWS:
+    if force_full or len(df) <= _MAX_ROWS:
         payload["data"] = [
             {k: _isoformat(v) for k, v in r.items()} for r in df.to_dict(orient="records")
         ]
@@ -200,10 +207,10 @@ def _tool_get_consommation(args: dict) -> dict:
     g = args["granularity"]
     if g == "annual":
         df = services.get_annual_data()
-        return _df_to_payload(df.rename(columns={"yearly_consumption": "value"}), "value", "MWh")
+        return _df_to_payload(df.rename(columns={"yearly_consumption": "value"}), "value", "MWh", force_full=True)
     if g == "monthly":
         df = services.get_monthly_data()
-        return _df_to_payload(df.rename(columns={"monthly_consumption": "value"}), "value", "MWh")
+        return _df_to_payload(df.rename(columns={"monthly_consumption": "value"}), "value", "MWh", force_full=True)
 
     start, end = _parse_dates(args)
     if not start or not end:
@@ -229,7 +236,7 @@ def _tool_get_production(args: dict) -> dict:
         col = f"{filiere}_yearly_mwh"
         if col not in df.columns:
             return {"error": f"colonne {col} absente"}
-        return _df_to_payload(df[["year", col]].rename(columns={col: "value"}), "value", "MWh")
+        return _df_to_payload(df[["year", col]].rename(columns={col: "value"}), "value", "MWh", force_full=True)
     if g == "monthly":
         df = services.get_production_monthly_data()
         col = f"{filiere}_mwh"
@@ -239,6 +246,7 @@ def _tool_get_production(args: dict) -> dict:
             df[["year_month", col]].rename(columns={col: "value"}),
             "value",
             "MWh",
+            force_full=True,
         )
 
     start, end = _parse_dates(args)

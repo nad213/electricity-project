@@ -19,6 +19,7 @@ from django.utils import timezone
 from ninja.testing import TestClient
 
 from . import api_auth
+from . import chat
 from . import chat_views
 from . import views
 from .api import api
@@ -224,6 +225,74 @@ class ChatMessageGuardTests(TestCase):
             # bob, lui, passe encore (quota indépendant) — on repointe le mock.
             self._login("oidc|bob")
             self.assertEqual(self._post(payload).status_code, 200)
+
+
+class ChatPayloadTests(TestCase):
+    """Sérialisation des séries pour le chatbot (`chat._df_to_payload`).
+
+    Régression : une série mensuelle/annuelle est un agrégat déjà compact —
+    elle ne doit JAMAIS être sous-échantillonnée (sinon le modèle perd des mois
+    entiers et hallucine, cf. fév 2020 reporté à 19 TWh au lieu de 43). Et les
+    stats min/max doivent embarquer leur période pour ne pas être recollées au
+    mauvais mois.
+    """
+
+    def _monthly_df(self, n=174):
+        # Série > _MAX_ROWS pour déclencher l'ancien sous-échantillonnage.
+        # Le min est posé sur un mois unique et identifiable (2026-06).
+        rows = [{"year_month": f"hist-{i:03d}", "monthly_consumption": 40_000_000.0 + i}
+                for i in range(n)]
+        rows.append({"year_month": "2026-06", "monthly_consumption": 19_000_000.0})  # min
+        rows.append({"year_month": "2017-01", "monthly_consumption": 57_000_000.0})  # max
+        return pd.DataFrame(rows)
+
+    def test_monthly_jamais_sous_echantillonne(self):
+        df = self._monthly_df()
+        self.assertGreater(len(df), chat._MAX_ROWS)  # sinon le test ne prouve rien
+        with mock.patch("consommation.services.get_monthly_data", return_value=df):
+            payload = chat._tool_get_consommation({"granularity": "monthly"})
+        # Toutes les lignes sont là, aucun échantillon partiel.
+        self.assertNotIn("sample", payload)
+        self.assertEqual(len(payload["data"]), len(df))
+        self.assertEqual(payload["rows_total"], len(df))
+
+    def test_annual_jamais_sous_echantillonne(self):
+        df = pd.DataFrame([{"year": 2012 + i, "yearly_consumption": 4.0e8 + i}
+                           for i in range(chat._MAX_ROWS + 5)])
+        with mock.patch("consommation.services.get_annual_data", return_value=df):
+            payload = chat._tool_get_consommation({"granularity": "annual"})
+        self.assertNotIn("sample", payload)
+        self.assertEqual(len(payload["data"]), len(df))
+
+    def test_stats_portent_la_periode_du_min_max(self):
+        df = self._monthly_df()
+        with mock.patch("consommation.services.get_monthly_data", return_value=df):
+            payload = chat._tool_get_consommation({"granularity": "monthly"})
+        stats = payload["stats"]
+        self.assertEqual(stats["min_row"]["year_month"], "2026-06")
+        self.assertEqual(stats["max_row"]["year_month"], "2017-01")
+        self.assertEqual(stats["min"], 19_000_000.0)
+        self.assertEqual(stats["max"], 57_000_000.0)
+
+    def test_payload_serialisable_en_json(self):
+        # _run_tool doit produire du JSON valide (types numpy compris).
+        df = self._monthly_df()
+        with mock.patch("consommation.services.get_monthly_data", return_value=df):
+            out = json.loads(chat._run_tool("get_consommation", {"granularity": "monthly"}))
+        self.assertEqual(out["rows_total"], len(df))
+
+    def test_raw_reste_sous_echantillonne_au_dela_du_seuil(self):
+        # La donnée brute demi-horaire, elle, garde son sous-échantillonnage.
+        n = (chat._MAX_ROWS + 50)
+        df = pd.DataFrame({
+            "date_heure": pd.date_range("2024-01-01", periods=n, freq="30min"),
+            "consommation": [50_000.0 + i for i in range(n)],
+        })
+        with mock.patch("consommation.services.get_puissance_data", return_value=df):
+            payload = chat._tool_get_consommation(
+                {"granularity": "raw", "start": "2024-01-01", "end": "2024-01-05"})
+        self.assertIn("sample", payload)
+        self.assertNotIn("data", payload)
 
 
 class FiltresSessionTests(TestCase):
