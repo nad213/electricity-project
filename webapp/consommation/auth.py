@@ -56,6 +56,9 @@ def get_authorize_url(callback_url: str, state: str) -> str:
         'scope': settings.OIDC_SCOPES,
         'state': state,
     }
+    # Force the IdP login UI language (overrides the browser's Accept-Language).
+    if settings.OIDC_UI_LOCALES:
+        params['ui_locales'] = settings.OIDC_UI_LOCALES
     endpoint = get_oidc_config()['authorization_endpoint']
     return f"{endpoint}?{urlencode(params)}"
 

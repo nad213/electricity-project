@@ -52,6 +52,8 @@ OIDC_ISSUER = os.getenv('OIDC_ISSUER', '')
 OIDC_CLIENT_ID = os.getenv('OIDC_CLIENT_ID', '')
 OIDC_CLIENT_SECRET = os.getenv('OIDC_CLIENT_SECRET', '')
 OIDC_SCOPES = os.getenv('OIDC_SCOPES', 'openid profile email')
+# Langue forcée de l'UI de login de l'IdP (ui_locales). Vide = langue du navigateur.
+OIDC_UI_LOCALES = os.getenv('OIDC_UI_LOCALES', 'fr')
 
 # Chatbot (Anthropic API)
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY', '')
