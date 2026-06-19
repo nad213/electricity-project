@@ -6,12 +6,14 @@
 
 <div class="card mb-3">
     <div class="card-body">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
             <div>
                 <h3 class="mb-1">API publique KiloWatch <span class="badge bg-blue-lt">v1</span></h3>
                 <p class="text-muted mb-0">
                     Accès en lecture seule, au format JSON, aux données de l'application.
-                    Les courbes de puissance sont en <strong>MW</strong>, l'énergie agrégée en <strong>GWh</strong>.
+                    Puissance en <strong>MW</strong>, énergie agrégée en <strong>GWh</strong>.
+                    La liste complète des endpoints, leurs paramètres et un bac à sable
+                    pour les essayer sont dans la documentation interactive.
                 </p>
             </div>
             <a href="{{ api_base }}/docs" target="_blank" rel="noopener" class="btn btn-primary">
@@ -111,117 +113,41 @@
     </div>
 </div>
 
-<div class="card mb-3">
-    <div class="card-header"><h4 class="card-title mb-0">Limites d'usage</h4></div>
-    <div class="card-body">
-        <p class="text-muted">
-            Pour préserver le service en version beta, chaque clé est limitée en débit. Au-delà,
-            l'API répond <code>429 Too Many Requests</code> : patientez puis réessayez.
-        </p>
-        <ul class="mb-0">
-            <li><strong>Rafale</strong> : {{ throttle_burst }}.</li>
-            <li><strong>Sur la durée</strong> : {{ throttle_sustained }}.</li>
-        </ul>
-    </div>
-</div>
-
-<div class="card mb-3">
-    <div class="card-header"><h4 class="card-title mb-0">Endpoints</h4></div>
-    <div class="table-responsive">
-        <table class="table card-table table-vcenter">
-            <thead>
-                <tr>
-                    <th style="width:7rem">Méthode</th>
-                    <th>Endpoint</th>
-                    <th>Description</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><span class="badge bg-green-lt">GET</span></td>
-                    <td><code>/api/v1/meta</code></td>
-                    <td>Plages de dates disponibles et listes de référence (filières, pays).</td>
-                </tr>
-                <tr>
-                    <td><span class="badge bg-green-lt">GET</span></td>
-                    <td><code>/api/v1/courbe_conso</code></td>
-                    <td>Courbe de consommation (puissance, MW). Paramètres : <code>debut</code>, <code>fin</code>.</td>
-                </tr>
-                <tr>
-                    <td><span class="badge bg-green-lt">GET</span></td>
-                    <td><code>/api/v1/energie_conso</code></td>
-                    <td>Énergie consommée par mois (GWh). Paramètres : <code>debut</code>, <code>fin</code>.</td>
-                </tr>
-                <tr>
-                    <td><span class="badge bg-green-lt">GET</span></td>
-                    <td><code>/api/v1/courbe_prod</code></td>
-                    <td>Courbe de production par filière (MW). Paramètres : <code>debut</code>, <code>fin</code>, <code>filiere</code>.</td>
-                </tr>
-                <tr>
-                    <td><span class="badge bg-green-lt">GET</span></td>
-                    <td><code>/api/v1/energie_prod</code></td>
-                    <td>Énergie produite par mois (GWh). Paramètres : <code>debut</code>, <code>fin</code>, <code>filiere</code>.</td>
-                </tr>
-                <tr>
-                    <td><span class="badge bg-green-lt">GET</span></td>
-                    <td><code>/api/v1/echange</code></td>
-                    <td>Courbe d'échanges (MW). Paramètres : <code>debut</code>, <code>fin</code>, <code>pays</code> (dont <code>total</code>).</td>
-                </tr>
-                <tr>
-                    <td><span class="badge bg-green-lt">GET</span></td>
-                    <td><code>/api/v1/energie_echange</code></td>
-                    <td>Énergie import/export par mois (GWh). Paramètres : <code>debut</code>, <code>fin</code>, <code>pays</code>.</td>
-                </tr>
-                <tr>
-                    <td><span class="badge bg-green-lt">GET</span></td>
-                    <td><code>/api/v1/parc</code></td>
-                    <td>Parc installé mensuel éolien/solaire (MW).</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<div class="card mb-3">
-    <div class="card-header"><h4 class="card-title mb-0">Paramètres communs</h4></div>
-    <div class="card-body">
-        <ul class="mb-0">
-            <li><code>debut</code> / <code>fin</code> — format <code>AAAA-MM-JJ</code>. Plage maximale : 366 jours pour les courbes, 10 ans pour l'énergie.</li>
-            <li><code>filiere</code> — clé de filière (ex. <code>nucleaire</code>, <code>eolien</code>, <code>solaire</code>…). Voir <code>/meta</code>.</li>
-            <li><code>pays</code> — clé de frontière (ex. <code>ech_comm_allemagne_belgique</code>…) ou <code>total</code>. Voir <code>/meta</code>.</li>
-            <li>Les endpoints <code>energie_*</code> renvoient un total par mois en <strong>GWh</strong>.</li>
-        </ul>
-    </div>
-</div>
-
 <div class="card">
-    <div class="card-header"><h4 class="card-title mb-0">Exemples</h4></div>
+    <div class="card-header"><h4 class="card-title mb-0">Démarrage rapide</h4></div>
     <div class="card-body">
         <p class="text-muted mb-2">
-            Chaque requête doit porter l'en-tête <code>Authorization: Bearer &lt;clé&gt;</code>.
-            Pratique : exportez votre clé une fois, puis réutilisez-la.
+            <strong>1.</strong> Chaque requête porte l'en-tête
+            <code>Authorization: Bearer &lt;clé&gt;</code>. Exportez votre clé une fois :
         </p>
         <pre class="mb-3"><code>export ELF_KEY="votre_clé"</code></pre>
 
-        <p class="text-muted mb-2">Métadonnées :</p>
+        <p class="text-muted mb-2">
+            <strong>2.</strong> Listez les plages de dates et les clés de référence
+            (filières, pays) disponibles :
+        </p>
         <pre class="mb-3"><code>curl -H "Authorization: Bearer $ELF_KEY" \
   "{{ api_base }}/meta"</code></pre>
 
-        <p class="text-muted mb-2">Courbe de consommation sur une période :</p>
-        <pre class="mb-3"><code>curl -H "Authorization: Bearer $ELF_KEY" \
-  "{{ api_base }}/courbe_conso?debut=2024-01-01&fin=2024-01-07"</code></pre>
-
-        <p class="text-muted mb-2">Énergie consommée par mois (GWh) sur une année :</p>
-        <pre class="mb-3"><code>curl -H "Authorization: Bearer $ELF_KEY" \
-  "{{ api_base }}/energie_conso?debut=2024-01-01&fin=2024-12-31"</code></pre>
-
-        <p class="text-muted mb-2">Courbe de production solaire :</p>
+        <p class="text-muted mb-2">
+            <strong>3.</strong> Récupérez une courbe (puissance, MW) sur une période :
+        </p>
         <pre class="mb-3"><code>curl -H "Authorization: Bearer $ELF_KEY" \
   "{{ api_base }}/courbe_prod?debut=2024-06-01&fin=2024-06-07&filiere=solaire"</code></pre>
 
-        <p class="text-muted mb-2">Énergie échangée import/export par mois (total France) :</p>
-        <pre class="mb-0"><code>curl -H "Authorization: Bearer $ELF_KEY" \
+        <p class="text-muted mb-2">
+            … ou une agrégation d'énergie par mois (GWh) :
+        </p>
+        <pre class="mb-3"><code>curl -H "Authorization: Bearer $ELF_KEY" \
   "{{ api_base }}/energie_echange?debut=2024-01-01&fin=2024-12-31&pays=total"</code></pre>
+
+        <p class="text-muted mb-0">
+            La liste complète des endpoints et de leurs paramètres se trouve dans la
+            <a href="{{ api_base }}/docs" target="_blank" rel="noopener">documentation interactive</a>.
+            Limites de débit par clé : <strong>{{ throttle_burst }}</strong> en rafale,
+            <strong>{{ throttle_sustained }}</strong> sur la durée — au-delà, l'API répond
+            <code>429 Too Many Requests</code>.
+        </p>
     </div>
 </div>
 
