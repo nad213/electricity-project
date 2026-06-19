@@ -564,18 +564,21 @@ code {
 }
 
 pre {
-    background-color: var(--surface);
+    background-color: var(--bg);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 0.75rem 1rem;
+    padding: 0.85rem 1rem;
     color: var(--text);
     overflow-x: auto;
+    line-height: 1.55;
 }
 
+/* Rendu « terminal » sobre : texte neutre clair plutôt que tout le bloc en
+   couleur d'accent (illisible et criard sur un long curl). */
 pre code {
-    color: var(--accent-hover);
+    color: var(--text);
     background-color: transparent;
     padding: 0;
     border-radius: 0;
-    font-size: 0.875rem;
+    font-size: 0.85rem;
 }
