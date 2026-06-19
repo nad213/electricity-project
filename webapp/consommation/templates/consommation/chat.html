@@ -71,6 +71,8 @@
 
   function renderAll() {
     loadHistory().forEach(m => {
+      // Les messages de rôle "tool" (résultats JSON) ne sont pas affichés.
+      if (m.role !== "user" && m.role !== "assistant") return;
       const text = extractText(m.content);
       if (text) renderMessage(m.role, text);
     });

@@ -55,9 +55,9 @@ OIDC_SCOPES = os.getenv('OIDC_SCOPES', 'openid profile email')
 # Langue forcée de l'UI de login de l'IdP (ui_locales). Vide = langue du navigateur.
 OIDC_UI_LOCALES = os.getenv('OIDC_UI_LOCALES', 'fr')
 
-# Chatbot (Anthropic API)
-ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY', '')
-CHAT_MODEL = os.getenv('CHAT_MODEL', 'claude-haiku-4-5-20251001')
+# Chatbot (Mistral API)
+MISTRAL_API_KEY = os.getenv('MISTRAL_API_KEY', '')
+CHAT_MODEL = os.getenv('CHAT_MODEL', 'mistral-small-latest')
 CHAT_MAX_TURNS = int(os.getenv('CHAT_MAX_TURNS', '30'))
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.

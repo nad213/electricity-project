@@ -1,10 +1,11 @@
 """
-Chatbot service — tool-use loop against the Anthropic API.
+Chatbot service — tool-use loop against the Mistral API.
 
 Exposes a thin set of tools that wrap services.py so the model can answer
 questions about French electricity data (consumption, production, exchanges).
 
-Stateless: the caller supplies the full message history each turn.
+Stateless: the caller supplies the full message history each turn (OpenAI-style
+roles: user / assistant / tool).
 """
 from __future__ import annotations
 
@@ -12,7 +13,10 @@ import json
 from datetime import date, datetime
 
 import pandas as pd
-from anthropic import Anthropic
+try:
+    from mistralai import Mistral
+except ImportError:  # mistralai >= 2.x a déplacé Mistral sous le sous-paquet client
+    from mistralai.client import Mistral
 from django.conf import settings
 
 from . import services
@@ -102,6 +106,21 @@ TOOLS = [
             "required": ["dataset", "start", "end"],
         },
     },
+]
+
+
+# Mistral attend le format OpenAI : {"type": "function", "function": {name, description, parameters}}.
+# On dérive cette liste des définitions ci-dessus pour garder les schémas en un seul endroit.
+MISTRAL_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": t["name"],
+            "description": t["description"],
+            "parameters": t["input_schema"],
+        },
+    }
+    for t in TOOLS
 ]
 
 
@@ -332,55 +351,96 @@ def _run_tool(name: str, args: dict) -> str:
 # ---------- main loop ---------- #
 
 
+def _content_to_text(content) -> str:
+    """Mistral renvoie content soit en str, soit en liste de chunks selon le SDK."""
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for chunk in content:
+            if isinstance(chunk, str):
+                parts.append(chunk)
+            elif isinstance(chunk, dict):
+                parts.append(chunk.get("text", ""))
+            else:
+                parts.append(getattr(chunk, "text", "") or "")
+        return "".join(parts)
+    return str(content)
+
+
 class ChatService:
     def __init__(self):
-        if not settings.ANTHROPIC_API_KEY:
-            raise RuntimeError("ANTHROPIC_API_KEY non configurée")
-        self.client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        if not settings.MISTRAL_API_KEY:
+            raise RuntimeError("MISTRAL_API_KEY non configurée")
+        self.client = Mistral(api_key=settings.MISTRAL_API_KEY)
         self.model = settings.CHAT_MODEL
         self.max_turns = settings.CHAT_MAX_TURNS
 
     def run(self, messages: list[dict]) -> dict:
         """Run the tool-use loop until the model produces a final text answer.
 
-        `messages` is the Anthropic-format history: [{role, content}, ...].
+        `messages` is the OpenAI/Mistral-format history: [{role, content, ...}, ...]
+        (without the system message — il est ajouté à chaque appel).
         Returns {"reply": str, "messages": updated_history, "usage": {...}}.
         """
         if len(messages) > self.max_turns * 2:
             return {"error": f"Conversation trop longue (>{self.max_turns} tours)"}
 
         history = list(messages)
-        usage_totals = {"input": 0, "output": 0, "cache_read": 0, "cache_create": 0}
+        usage_totals = {"input": 0, "output": 0}
 
         for _ in range(10):  # hard cap on tool-use iterations
-            resp = self.client.messages.create(
+            resp = self.client.chat.complete(
                 model=self.model,
                 max_tokens=2048,
-                system=SYSTEM_PROMPT,
-                tools=TOOLS,
-                messages=history,
+                messages=[{"role": "system", "content": SYSTEM_PROMPT}] + history,
+                tools=MISTRAL_TOOLS,
+                tool_choice="auto",
             )
-            usage_totals["input"] += resp.usage.input_tokens
-            usage_totals["output"] += resp.usage.output_tokens
-            usage_totals["cache_read"] += getattr(resp.usage, "cache_read_input_tokens", 0) or 0
-            usage_totals["cache_create"] += getattr(resp.usage, "cache_creation_input_tokens", 0) or 0
+            usage = resp.usage
+            usage_totals["input"] += getattr(usage, "prompt_tokens", 0) or 0
+            usage_totals["output"] += getattr(usage, "completion_tokens", 0) or 0
 
-            assistant_content = [block.model_dump() for block in resp.content]
-            history.append({"role": "assistant", "content": assistant_content})
+            msg = resp.choices[0].message
+            tool_calls = msg.tool_calls or []
 
-            if resp.stop_reason != "tool_use":
-                text = "".join(b.text for b in resp.content if b.type == "text")
+            if not tool_calls:
+                text = _content_to_text(msg.content)
+                history.append({"role": "assistant", "content": text})
                 return {"reply": text, "messages": history, "usage": usage_totals}
 
-            tool_results = []
-            for block in resp.content:
-                if block.type == "tool_use":
-                    result_json = _run_tool(block.name, block.input or {})
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": result_json,
-                    })
-            history.append({"role": "user", "content": tool_results})
+            # On stocke des dicts JSON-sérialisables (l'historique fait l'aller-retour
+            # avec le frontend) — pas les objets SDK.
+            history.append({
+                "role": "assistant",
+                "content": _content_to_text(msg.content),
+                "tool_calls": [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments,
+                        },
+                    }
+                    for tc in tool_calls
+                ],
+            })
+
+            for tc in tool_calls:
+                raw_args = tc.function.arguments
+                try:
+                    args = json.loads(raw_args) if isinstance(raw_args, str) else (raw_args or {})
+                except json.JSONDecodeError:
+                    args = {}
+                result_json = _run_tool(tc.function.name, args)
+                history.append({
+                    "role": "tool",
+                    "name": tc.function.name,
+                    "tool_call_id": tc.id,
+                    "content": result_json,
+                })
 
         return {"error": "Trop d'itérations tool-use", "messages": history, "usage": usage_totals}

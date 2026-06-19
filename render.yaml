@@ -36,11 +36,11 @@ services:
         sync: false
       - key: S3_PATH_ECHANGES
         sync: false
-      # Chatbot (Anthropic API). Set ANTHROPIC_API_KEY in the Render dashboard.
-      - key: ANTHROPIC_API_KEY
+      # Chatbot (Mistral API). Set MISTRAL_API_KEY in the Render dashboard.
+      - key: MISTRAL_API_KEY
         sync: false
       - key: CHAT_MODEL
-        value: "claude-haiku-4-5-20251001"
+        value: "mistral-small-latest"
       # How often the web service re-checks S3 ETags (seconds). Default: 3600.
       # Set to a value slightly above your ETL run interval so fresh data is
       # picked up within one TTL cycle after each nightly run.

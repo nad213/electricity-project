@@ -17,7 +17,7 @@ from .chat import ChatService
 logger = logging.getLogger(__name__)
 
 # Garde-fous anti-abus (coût). Chaque message peut déclencher jusqu'à 10 appels
-# Anthropic facturés : sans limite, une boucle de requêtes ou un historique
+# Mistral facturés : sans limite, une boucle de requêtes ou un historique
 # énorme passe directement sur la facture. Mêmes compromis que le throttling de
 # l'API (cf. api.py) : compteur dans le cache Django (LocMemCache par défaut =
 # par process, donc limite effective × nombre de workers Gunicorn) — suffisant

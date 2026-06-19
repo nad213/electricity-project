@@ -157,7 +157,7 @@ class EnergieEndpointsTests(TestCase):
 class ChatMessageGuardTests(TestCase):
     """Garde-fous anti-abus de /chat/message/ : auth (401), taille (413),
     quota par utilisateur (429). On mocke ChatService pour ne pas appeler
-    l'API Anthropic."""
+    l'API Mistral."""
 
     URL = "/chat/message/"
 
