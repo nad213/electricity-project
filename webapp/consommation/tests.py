@@ -295,6 +295,90 @@ class ChatPayloadTests(TestCase):
         self.assertNotIn("data", payload)
 
 
+class ChatParcToolTests(TestCase):
+    """Tool `get_parc` : snapshot pmax (toutes filières) vs historique mensuel
+    (éolien/solaire uniquement, filtrable par filière et période)."""
+
+    def test_actuel_renvoie_pmax_toutes_filieres(self):
+        pmax = {"nucleaire": 61370.0, "solaire": 17419.0}
+        with mock.patch("consommation.services.get_parc_pmax", return_value=pmax):
+            payload = chat._tool_get_parc({"mode": "actuel"})
+        self.assertEqual(payload["mode"], "actuel")
+        self.assertEqual(payload["parc"], pmax)
+
+    def _histo_df(self):
+        rows = []
+        for m in range(1, 13):
+            for fil, base in (("Eolien terrestre", 20_000.0), ("Solaire", 25_000.0)):
+                rows.append({"date": f"2025-{m:02d}", "filiere": fil, "parc_mw": base + m})
+        return pd.DataFrame(rows)
+
+    def test_historique_filtre_filiere_et_periode(self):
+        with mock.patch("consommation.services.get_parc_installe_data",
+                        return_value=self._histo_df()):
+            payload = chat._tool_get_parc(
+                {"mode": "historique", "filiere": "Solaire",
+                 "start": "2025-03", "end": "2025-05"})
+        self.assertNotIn("sample", payload)  # agrégat mensuel : jamais samplé
+        self.assertEqual([r["date"] for r in payload["data"]],
+                         ["2025-03", "2025-04", "2025-05"])
+        self.assertTrue(all(r["filiere"] == "Solaire" for r in payload["data"]))
+
+    def test_historique_accepte_borne_yyyy_mm_dd(self):
+        # Une borne ISO complète est tronquée à YYYY-MM sans planter.
+        with mock.patch("consommation.services.get_parc_installe_data",
+                        return_value=self._histo_df()):
+            payload = chat._tool_get_parc(
+                {"mode": "historique", "filiere": "Solaire", "start": "2025-11-15"})
+        self.assertEqual([r["date"] for r in payload["data"]], ["2025-11", "2025-12"])
+
+    def test_mode_inconnu_renvoie_erreur(self):
+        self.assertIn("error", chat._tool_get_parc({"mode": "n_importe_quoi"}))
+
+
+class ChatEchangesEnergieToolTests(TestCase):
+    """Tool `get_echanges_energie` : volumes import/export (MWh) mensuels/annuels."""
+
+    def test_monthly_renvoie_import_export(self):
+        fake = pd.DataFrame([
+            {"mois": "2024-01", "import_mwh": 738725.0, "export_mwh": 580832.0},
+            {"mois": "2024-02", "import_mwh": 100000.0, "export_mwh": 900000.0},
+        ])
+        with mock.patch("consommation.services.get_echanges_energie_mensuelle",
+                        return_value=fake) as m:
+            payload = chat._tool_get_echanges_energie(
+                {"granularity": "monthly", "pays": "ech_comm_espagne",
+                 "start": "2024-01-01", "end": "2024-02-29"})
+        m.assert_called_once()
+        self.assertEqual(payload["unit"], "MWh")
+        self.assertEqual(payload["data"][0],
+                         {"mois": "2024-01", "import_mwh": 738725.0, "export_mwh": 580832.0})
+
+    def test_annual_utilise_le_bon_service(self):
+        fake = pd.DataFrame([{"annee": "2024", "import_mwh": 346249.0, "export_mwh": 89291456.5}])
+        with mock.patch("consommation.services.get_echanges_annual_import_export",
+                        return_value=fake):
+            payload = chat._tool_get_echanges_energie(
+                {"granularity": "annual", "start": "2024-01-01", "end": "2024-12-31"})
+        self.assertEqual(payload["data"][0]["annee"], "2024")
+
+    def test_dates_manquantes_renvoie_erreur(self):
+        payload = chat._tool_get_echanges_energie({"granularity": "monthly"})
+        self.assertIn("error", payload)
+
+    def test_pays_invalide_remonte_en_erreur(self):
+        # le service lève ValueError → _run_tool doit la transformer en {"error": ...}
+        def boom(*a, **k):
+            raise ValueError("Pays invalide.")
+        with mock.patch("consommation.services.get_echanges_annual_import_export",
+                        side_effect=boom):
+            out = json.loads(chat._run_tool(
+                "get_echanges_energie",
+                {"granularity": "annual", "pays": "ech_physiques",
+                 "start": "2024-01-01", "end": "2024-12-31"}))
+        self.assertIn("error", out)
+
+
 class FiltresSessionTests(TestCase):
     """Mémoire par page des filtres : les params GET explicites gagnent et
     sont mémorisés en session, une navigation sans params relit la session,

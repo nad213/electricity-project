@@ -31,6 +31,8 @@ Règles :
 - Les valeurs de consommation et de production sont en MW (puissance instantanée demi-horaire) ou MWh (énergie agrégée mensuelle/annuelle). Précise toujours l'unité.
 - Pour les filières de production : nucleaire, hydraulique, eolien, solaire, gaz, charbon, fioul, bioenergies.
 - Pour les pays d'échange : ech_physiques (solde total), ech_comm_angleterre, ech_comm_espagne, ech_comm_italie, ech_comm_suisse, ech_comm_allemagne_belgique. Un solde négatif = exportation, positif = importation.
+- Pour les VOLUMES d'échange importés/exportés (en énergie, sur un mois ou une année), utilise `get_echanges_energie` (MWh), pas `get_echanges` (qui ne donne que la puissance MW).
+- Pour la puissance installée (parc) : `get_parc`. mode='actuel' = pmax de toutes les filières à l'instant présent ; mode='historique' = série mensuelle disponible uniquement pour l'éolien terrestre, l'éolien en mer et le solaire. Ne compare pas un chiffre 'actuel' avec un chiffre 'historique' sans préciser qu'ils viennent de sources différentes.
 - Quand tu présentes des séries de chiffres, utilise des tableaux markdown lisibles.
 - Pour les questions de type « pic / record / maximum / minimum » sur une période, appelle TOUJOURS `get_peak` (pas `get_consommation`/`get_production` en raw — qui downsample et perdent le datetime exact).
 - La granularité `raw` est limitée à 31 jours. Au-delà, utilise `daily` ou `get_peak`.
@@ -88,6 +90,56 @@ TOOLS = [
         "name": "get_dashboard",
         "description": "Photo du jour : dernière journée disponible (conso et production demi-horaires), pic de conso de l'année et historique, mix de production de l'année en cours.",
         "input_schema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "get_parc",
+        "description": (
+            "Puissance installée (parc) en MW. "
+            "mode='actuel' = dernière puissance max installée par filière, TOUTES filières "
+            "(nucleaire, hydraulique, eolien, solaire, gaz, charbon, fioul, bioenergies), source RTE pmax. "
+            "mode='historique' = série MENSUELLE du parc, disponible UNIQUEMENT pour 'Eolien terrestre', "
+            "'Eolien en mer' et 'Solaire' (estimée à partir de production / facteur de charge). "
+            "NB : 'actuel' et 'historique' proviennent de méthodes différentes et peuvent diverger "
+            "(p. ex. le solaire) — ne pas mélanger les deux dans une même comparaison sans le préciser."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "mode": {"type": "string", "enum": ["actuel", "historique"]},
+                "filiere": {
+                    "type": "string",
+                    "enum": ["Eolien terrestre", "Eolien en mer", "Solaire"],
+                    "description": "Filtre optionnel, seulement pour mode='historique'.",
+                },
+                "start": {"type": "string", "description": "Mois de début YYYY-MM (mode historique, optionnel)."},
+                "end": {"type": "string", "description": "Mois de fin YYYY-MM (mode historique, optionnel)."},
+            },
+            "required": ["mode"],
+        },
+    },
+    {
+        "name": "get_echanges_energie",
+        "description": (
+            "Volumes d'échanges en ÉNERGIE (MWh) importés/exportés, par mois ou par an, pour une frontière "
+            "commerciale ou 'total' (solde commercial global de la France). "
+            "Convention : import = entrant vers la France, export = sortant (deux volumes positifs distincts). "
+            "À privilégier sur get_echanges (qui ne renvoie que de la puissance MW) pour toute question de "
+            "VOLUME importé/exporté sur une période."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "granularity": {"type": "string", "enum": ["monthly", "annual"]},
+                "pays": {
+                    "type": "string",
+                    "enum": ["total", "ech_comm_angleterre", "ech_comm_espagne", "ech_comm_italie", "ech_comm_suisse", "ech_comm_allemagne_belgique"],
+                    "description": "Frontière commerciale ou 'total'. Défaut 'total'. (ech_physiques non disponible en énergie.)",
+                },
+                "start": {"type": "string", "description": "Date de début ISO YYYY-MM-DD."},
+                "end": {"type": "string", "description": "Date de fin ISO YYYY-MM-DD."},
+            },
+            "required": ["granularity", "start", "end"],
+        },
     },
     {
         "name": "get_peak",
@@ -298,6 +350,73 @@ def _tool_get_dashboard() -> dict:
     }
 
 
+def _tool_get_parc(args: dict) -> dict:
+    mode = args.get("mode", "actuel")
+    if mode == "actuel":
+        pmax = services.get_parc_pmax()
+        return {
+            "unit": "MW",
+            "mode": "actuel",
+            "note": "Puissance max installée par filière (instantané RTE, toutes filières).",
+            "parc": {k: round(v, 1) for k, v in pmax.items()},
+        }
+    if mode == "historique":
+        df = services.get_parc_installe_data()
+        if df.empty:
+            return {"rows_total": 0, "data": [], "unit": "MW"}
+        filiere = args.get("filiere")
+        if filiere:
+            df = df[df["filiere"] == filiere]
+        # 'date' est au format 'YYYY-MM' → comparaison lexicographique sûre.
+        start, end = args.get("start"), args.get("end")
+        if start:
+            df = df[df["date"] >= start[:7]]
+        if end:
+            df = df[df["date"] <= end[:7]]
+        df = df[["date", "filiere", "parc_mw"]].rename(columns={"parc_mw": "value"})
+        payload = _df_to_payload(df, "value", "MW", force_full=True)
+        payload["note"] = (
+            "Parc mensuel estimé (production / facteur de charge). "
+            "Disponible uniquement pour éolien terrestre, éolien en mer et solaire."
+        )
+        return payload
+    return {"error": f"mode '{mode}' inconnu (attendu: actuel ou historique)"}
+
+
+def _tool_get_echanges_energie(args: dict) -> dict:
+    g = args["granularity"]
+    pays = args.get("pays", "total")
+    start, end = _parse_dates(args)
+    if not start or not end:
+        return {"error": "start et end sont requis"}
+    if g == "monthly":
+        df = services.get_echanges_energie_mensuelle(start, end, pays=pays)
+        label = "mois"
+    elif g == "annual":
+        df = services.get_echanges_annual_import_export(start, end, pays=pays)
+        label = "annee"
+    else:
+        return {"error": f"granularity '{g}' inconnue (attendu: monthly ou annual)"}
+    if df.empty:
+        return {"rows_total": 0, "data": [], "unit": "MWh"}
+    rows = [
+        {
+            label: r[label],
+            "import_mwh": round(float(r["import_mwh"]), 1),
+            "export_mwh": round(float(r["export_mwh"]), 1),
+        }
+        for r in df.to_dict(orient="records")
+    ]
+    return {
+        "unit": "MWh",
+        "pays": pays,
+        "granularity": g,
+        "note": "import = entrant vers la France, export = sortant (volumes positifs).",
+        "rows_total": len(rows),
+        "data": rows,
+    }
+
+
 def _tool_get_peak(args: dict) -> dict:
     dataset = args["dataset"]
     direction = args.get("direction", "max")
@@ -339,6 +458,8 @@ _DISPATCH = {
     "get_consommation": _tool_get_consommation,
     "get_production": _tool_get_production,
     "get_echanges": _tool_get_echanges,
+    "get_echanges_energie": _tool_get_echanges_energie,
+    "get_parc": _tool_get_parc,
     "get_dashboard": lambda args: _tool_get_dashboard(),
     "get_peak": _tool_get_peak,
 }
