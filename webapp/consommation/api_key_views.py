@@ -1,4 +1,4 @@
-"""Gestion des clés d'API depuis l'interface (réservée aux connectés Auth0).
+"""Gestion des clés d'API depuis l'interface (réservée aux utilisateurs connectés).
 
 L'utilisateur génère/révoque ses propres clés sur la page API. La clé brute
 n'est affichée qu'UNE fois, juste après création (passée via un flash en

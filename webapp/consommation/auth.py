@@ -1,30 +1,63 @@
 """
-Auth0 OAuth client configuration using Authlib.
+Generic OIDC client (Authlib + OpenID Connect discovery).
+
+Provider-agnostic: all endpoints are read from the issuer's
+``/.well-known/openid-configuration`` document, so any standards-compliant
+OpenID Connect provider (Zitadel, Keycloak, Auth0, …) works by configuring
+``OIDC_ISSUER`` / ``OIDC_CLIENT_ID`` / ``OIDC_CLIENT_SECRET`` only.
 """
+import requests
 from authlib.integrations.requests_client import OAuth2Session
 from django.conf import settings
 from urllib.parse import urlencode
 
 
-def get_auth0_authorize_url(callback_url: str, state: str) -> str:
+# Cache the discovery document per issuer for the process lifetime — it is
+# effectively static configuration and we don't want to fetch it on every login.
+_oidc_config_cache: dict[str, dict] = {}
+
+# Seconds to wait on network calls to the IdP before giving up.
+_HTTP_TIMEOUT = 10
+
+
+def get_oidc_config() -> dict:
     """
-    Generate the Auth0 authorization URL for login redirect.
+    Fetch (and cache) the OpenID Connect discovery document for the configured
+    issuer.
+
+    Returns:
+        The parsed ``openid-configuration`` JSON (authorization_endpoint,
+        token_endpoint, userinfo_endpoint, end_session_endpoint, …).
+    """
+    issuer = settings.OIDC_ISSUER.rstrip('/')
+    if issuer not in _oidc_config_cache:
+        url = f"{issuer}/.well-known/openid-configuration"
+        resp = requests.get(url, timeout=_HTTP_TIMEOUT)
+        resp.raise_for_status()
+        _oidc_config_cache[issuer] = resp.json()
+    return _oidc_config_cache[issuer]
+
+
+def get_authorize_url(callback_url: str, state: str) -> str:
+    """
+    Generate the OIDC authorization URL for the login redirect.
 
     Args:
-        callback_url: The URL Auth0 will redirect to after login
+        callback_url: The URL the IdP will redirect to after login
         state: Random state string for CSRF protection
 
     Returns:
-        The full Auth0 authorization URL
+        The full authorization URL
     """
     params = {
         'response_type': 'code',
-        'client_id': settings.AUTH0_CLIENT_ID,
+        'client_id': settings.OIDC_CLIENT_ID,
         'redirect_uri': callback_url,
-        'scope': 'openid profile email',
+        'scope': settings.OIDC_SCOPES,
         'state': state,
     }
-    return f"https://{settings.AUTH0_DOMAIN}/authorize?{urlencode(params)}"
+    endpoint = get_oidc_config()['authorization_endpoint']
+    return f"{endpoint}?{urlencode(params)}"
 
 
 def exchange_code_for_token(code: str, callback_url: str) -> dict:
@@ -32,17 +65,17 @@ def exchange_code_for_token(code: str, callback_url: str) -> dict:
     Exchange the authorization code for tokens.
 
     Args:
-        code: Authorization code from Auth0 callback
+        code: Authorization code from the IdP callback
         callback_url: The callback URL (must match the one used in authorize)
 
     Returns:
         Token response containing access_token, id_token, etc.
     """
     session = OAuth2Session(
-        client_id=settings.AUTH0_CLIENT_ID,
-        client_secret=settings.AUTH0_CLIENT_SECRET,
+        client_id=settings.OIDC_CLIENT_ID,
+        client_secret=settings.OIDC_CLIENT_SECRET,
     )
-    token_url = f"https://{settings.AUTH0_DOMAIN}/oauth/token"
+    token_url = get_oidc_config()['token_endpoint']
 
     token = session.fetch_token(
         token_url,
@@ -55,37 +88,42 @@ def exchange_code_for_token(code: str, callback_url: str) -> dict:
 
 def get_user_info(access_token: str) -> dict:
     """
-    Fetch user info from Auth0 using the access token.
+    Fetch user info from the IdP using the access token.
 
     Args:
-        access_token: Valid Auth0 access token
+        access_token: Valid access token
 
     Returns:
-        User info dict with email, name, picture, etc.
+        User info dict with sub, email, name, picture, etc.
     """
     session = OAuth2Session(token={'access_token': access_token, 'token_type': 'Bearer'})
-    userinfo_url = f"https://{settings.AUTH0_DOMAIN}/userinfo"
+    userinfo_url = get_oidc_config()['userinfo_endpoint']
 
     resp = session.get(userinfo_url)
     resp.raise_for_status()
     return resp.json()
 
 
-def get_logout_url(return_to: str) -> str:
+def get_logout_url(return_to: str, id_token: str | None = None) -> str:
     """
-    Generate the Auth0 logout URL.
+    Generate the RP-initiated logout URL (OIDC ``end_session_endpoint``).
 
     Args:
         return_to: URL to redirect to after logout
+        id_token: The id_token from login, used as ``id_token_hint`` when
+            available (some providers require it alongside the redirect)
 
     Returns:
-        The full Auth0 logout URL
+        The full logout URL
     """
     params = {
-        'client_id': settings.AUTH0_CLIENT_ID,
-        'returnTo': return_to,
+        'client_id': settings.OIDC_CLIENT_ID,
+        'post_logout_redirect_uri': return_to,
     }
-    return f"https://{settings.AUTH0_DOMAIN}/v2/logout?{urlencode(params)}"
+    if id_token:
+        params['id_token_hint'] = id_token
+    endpoint = get_oidc_config()['end_session_endpoint']
+    return f"{endpoint}?{urlencode(params)}"
 
 
 def get_user_from_session(request) -> dict | None:

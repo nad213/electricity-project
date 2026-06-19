@@ -71,7 +71,7 @@ def chat_message(request):
             status=413,
         )
 
-    # Quota par utilisateur (anti-boucle). `sub` Auth0 = identité stable.
+    # Quota par utilisateur (anti-boucle). `sub` OIDC = identité stable.
     if _chat_rate_limited(user["sub"]):
         return JsonResponse(
             {"error": "Trop de messages, réessaie dans quelques minutes."},

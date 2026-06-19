@@ -46,10 +46,12 @@ PARQUET_CACHE_DIR = os.getenv('PARQUET_CACHE_DIR', '/tmp/parquet_cache')
 # How often (seconds) to re-check S3 ETags for freshness.  Default: 1 hour.
 PARQUET_CACHE_CHECK_TTL = int(os.getenv('PARQUET_CACHE_CHECK_TTL', '3600'))
 
-# Auth0 Configuration
-AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN', '')
-AUTH0_CLIENT_ID = os.getenv('AUTH0_CLIENT_ID', '')
-AUTH0_CLIENT_SECRET = os.getenv('AUTH0_CLIENT_SECRET', '')
+# OIDC Configuration (provider-agnostic via OpenID Connect discovery).
+# OIDC_ISSUER is the base URL of the IdP, e.g. https://<instance>.zitadel.cloud
+OIDC_ISSUER = os.getenv('OIDC_ISSUER', '')
+OIDC_CLIENT_ID = os.getenv('OIDC_CLIENT_ID', '')
+OIDC_CLIENT_SECRET = os.getenv('OIDC_CLIENT_SECRET', '')
+OIDC_SCOPES = os.getenv('OIDC_SCOPES', 'openid profile email')
 
 # Chatbot (Anthropic API)
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY', '')
@@ -92,7 +94,7 @@ if DEBUG:
 
 # GitHub Codespaces: the app is reached via a forwarded *.app.github.dev URL
 # behind a TLS-terminating proxy.  Trust that host and its X-Forwarded-Proto so
-# request.build_absolute_uri() yields https — required for the Auth0 callback.
+# request.build_absolute_uri() yields https — required for the OIDC callback.
 # Only active inside a Codespace; no effect on local dev or Render.
 _codespace_name = os.getenv('CODESPACE_NAME')
 if _codespace_name:
@@ -162,7 +164,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'consommation.context_processors.auth0_user',
+                'consommation.context_processors.oidc_user',
             ],
         },
     },

@@ -1,12 +1,12 @@
 """
-Context processors for Auth0 user information.
+Context processors for OIDC user information.
 """
 from .auth import get_user_from_session, is_authenticated
 
 
-def auth0_user(request):
+def oidc_user(request):
     """
-    Add Auth0 user info to template context.
+    Add OIDC user info to template context.
 
     Makes available in all templates:
         - user_info: dict with user data (email, name, picture) or None

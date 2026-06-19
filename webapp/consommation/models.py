@@ -1,6 +1,6 @@
 """Modèle des clés d'API de l'API publique v1.
 
-Une `ApiKey` appartient à un utilisateur (identifié par son `sub` Auth0). On ne
+Une `ApiKey` appartient à un utilisateur (identifié par son `sub` OIDC). On ne
 stocke JAMAIS la clé en clair : seulement son hash SHA-256 (`key_hash`) et un
 court préfixe (`prefix`) qui sert uniquement à reconnaître la clé dans la liste
 de l'interface (la clé complète n'est montrée qu'une fois, à la génération).
@@ -16,7 +16,7 @@ from django.utils import timezone
 
 
 class ApiKey(models.Model):
-    # Identifiant stable de l'utilisateur côté Auth0 (request.session['user']['sub']).
+    # Identifiant stable de l'utilisateur côté IdP (request.session['user']['sub']).
     user_sub = models.CharField(max_length=255, db_index=True)
     # Email au moment de la création — confort d'affichage / support, non clé.
     user_email = models.EmailField(blank=True)

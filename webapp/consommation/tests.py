@@ -167,13 +167,13 @@ class ChatMessageGuardTests(TestCase):
         self.addCleanup(cache.clear)
         self.addCleanup(mock.patch.stopall)
 
-    def _login(self, sub="auth0|alice"):
+    def _login(self, sub="oidc|alice"):
         """Simule un utilisateur connecté.
 
         Le backend de session est en cookies signés (pas de store côté serveur),
         donc poser la session via `self.client.session` ne se propage pas en
         test. On mocke directement la lecture de session de la vue : on teste
-        ainsi les garde-fous, indépendamment d'Auth0. `stopall` (cf. setUp)
+        ainsi les garde-fous, indépendamment de l'IdP. `stopall` (cf. setUp)
         nettoie le patch au teardown.
         """
         mock.patch.object(
@@ -217,12 +217,12 @@ class ChatMessageGuardTests(TestCase):
         with mock.patch.object(chat_views, "ChatService") as MockSvc:
             MockSvc.return_value.run.return_value = ok
             # alice épuise son quota
-            self._login("auth0|alice")
+            self._login("oidc|alice")
             for _ in range(chat_views.CHAT_RATE_LIMIT):
                 self._post(payload)
             self.assertEqual(self._post(payload).status_code, 429)
             # bob, lui, passe encore (quota indépendant) — on repointe le mock.
-            self._login("auth0|bob")
+            self._login("oidc|bob")
             self.assertEqual(self._post(payload).status_code, 200)
 
 
