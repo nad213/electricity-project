@@ -39,20 +39,14 @@
 
 {% if has_dashboard_data %}
 
-<div class="row mb-2">
-    <div class="col">
-        <h2 class="section-title">Consommation</h2>
-    </div>
-    <div class="col-auto">
-        <a href="{% url 'consommation:index' %}" class="text-sm">Voir le détail <i class="ti ti-arrow-right"></i></a>
-    </div>
-</div>
-
 <div class="row row-cards mb-4">
     <div class="col-12 col-lg-9">
         <div class="card h-100">
             <div class="card-header">
-                <h3 class="card-title">Courbe de consommation du jour</h3>
+                <h3 class="card-title">Consommation</h3>
+                <div class="card-options">
+                    <a href="{% url 'consommation:index' %}" class="text-sm">Voir le détail <i class="ti ti-arrow-right"></i></a>
+                </div>
             </div>
             <div class="card-body p-2">
                 <div id="chart-conso-jour"></div>
@@ -89,20 +83,14 @@
     </div>
 </div>
 
-<div class="row mb-2">
-    <div class="col">
-        <h2 class="section-title">Production</h2>
-    </div>
-    <div class="col-auto">
-        <a href="{% url 'consommation:production' %}" class="text-sm">Voir le détail <i class="ti ti-arrow-right"></i></a>
-    </div>
-</div>
-
 <div class="row row-cards mb-4">
     <div class="col-12 col-lg-9">
         <div class="card h-100">
             <div class="card-header">
-                <h3 class="card-title">Production du jour par filière</h3>
+                <h3 class="card-title">Production</h3>
+                <div class="card-options">
+                    <a href="{% url 'consommation:production' %}" class="text-sm">Voir le détail <i class="ti ti-arrow-right"></i></a>
+                </div>
             </div>
             <div class="card-body p-2">
                 <div id="chart-production-jour"></div>
@@ -148,20 +136,14 @@
 </div>
 
 {% if echanges_flux_svg %}
-<div class="row mb-2">
-    <div class="col">
-        <h2 class="section-title">Échanges commerciaux</h2>
-    </div>
-    <div class="col-auto">
-        <a href="{% url 'consommation:echanges' %}" class="text-sm">Voir le détail <i class="ti ti-arrow-right"></i></a>
-    </div>
-</div>
-
 <div class="row row-cards mb-4">
     <div class="col-12 col-lg-9">
         <div class="card h-100">
             <div class="card-header">
-                <h3 class="card-title">Flux d'échanges avec les pays voisins — {{ current_year }}</h3>
+                <h3 class="card-title">Échanges commerciaux — {{ current_year }}</h3>
+                <div class="card-options">
+                    <a href="{% url 'consommation:echanges' %}" class="text-sm">Voir le détail <i class="ti ti-arrow-right"></i></a>
+                </div>
             </div>
             <div class="card-body">
                 {{ echanges_flux_svg|safe }}
