@@ -63,7 +63,7 @@ TOOLS = [
     },
     {
         "name": "get_production",
-        "description": "Production électrique française par filière. 'raw' = demi-horaire MW, 'daily' = moyenne quotidienne MW, 'monthly' = MWh mensuels, 'annual' = MWh annuels.",
+        "description": "Production électrique française par filière. 'raw' = demi-horaire MW, 'daily' = moyenne quotidienne MW, 'monthly' = MWh mensuels, 'annual' = MWh annuels. Pour 'monthly' : utilise `month` (1-12) pour filtrer sur un mois calendaire précis (ex. 7 = tous les mois de juillet de chaque année) et `top_n` pour ne garder que les N mois les plus productifs, déjà triés — à utiliser systématiquement pour les questions de type classement/record/palmarès sur un mois donné.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -71,6 +71,8 @@ TOOLS = [
                 "granularity": {"type": "string", "enum": ["raw", "daily", "monthly", "annual"]},
                 "start": {"type": "string", "description": "Date début ISO. Ignoré pour 'monthly'/'annual'."},
                 "end": {"type": "string", "description": "Date fin ISO."},
+                "month": {"type": "integer", "description": "Filtre sur un mois calendaire (1=janvier … 12=décembre). Uniquement pour granularity='monthly'. Le tri par production décroissante est appliqué automatiquement côté serveur."},
+                "top_n": {"type": "integer", "description": "Nombre de résultats à retourner (déjà triés par production décroissante). Uniquement pour granularity='monthly'."},
             },
             "required": ["filiere", "granularity"],
         },
@@ -134,7 +136,10 @@ TOOLS = [
             "commerciale ou 'total' (solde commercial global de la France). "
             "Convention : import = entrant vers la France, export = sortant (deux volumes positifs distincts). "
             "À privilégier sur get_echanges (qui ne renvoie que de la puissance MW) pour toute question de "
-            "VOLUME importé/exporté sur une période."
+            "VOLUME importé/exporté sur une période. "
+            "Pour 'monthly' : utilise `month` (1-12) pour filtrer sur un mois calendaire, `sort_by` "
+            "('import_mwh' ou 'export_mwh') pour le sens du classement et `top_n` pour les N résultats — "
+            "tri appliqué automatiquement côté serveur."
         ),
         "input_schema": {
             "type": "object",
@@ -147,6 +152,9 @@ TOOLS = [
                 },
                 "start": {"type": "string", "description": "Date de début ISO YYYY-MM-DD."},
                 "end": {"type": "string", "description": "Date de fin ISO YYYY-MM-DD."},
+                "month": {"type": "integer", "description": "Filtre sur un mois calendaire (1=janvier … 12=décembre). Uniquement pour granularity='monthly'."},
+                "sort_by": {"type": "string", "enum": ["import_mwh", "export_mwh"], "description": "Colonne de tri pour le classement (volumes positifs). Uniquement pour granularity='monthly'. Défaut 'import_mwh'."},
+                "top_n": {"type": "integer", "description": "Nombre de résultats à retourner (déjà triés). Uniquement pour granularity='monthly'."},
             },
             "required": ["granularity", "start", "end"],
         },
@@ -329,12 +337,15 @@ def _tool_get_production(args: dict) -> dict:
         col = f"{filiere}_mwh"
         if col not in df.columns:
             return {"error": f"colonne {col} absente"}
-        return _df_to_payload(
-            df[["year_month", col]].rename(columns={col: "value"}),
-            "value",
-            "MWh",
-            force_full=True,
-        )
+        df = df[["year_month", col]].rename(columns={col: "value"})
+        month = args.get("month")
+        top_n = args.get("top_n")
+        if month is not None:
+            df = df[df["year_month"].str[5:7] == f"{int(month):02d}"]
+            df = df.sort_values("value", ascending=False).reset_index(drop=True)
+        if top_n is not None:
+            df = df.head(int(top_n))
+        return _df_to_payload(df, "value", "MWh", force_full=True)
 
     start, end = _parse_dates(args)
     if not start or not end:
@@ -445,6 +456,15 @@ def _tool_get_echanges_energie(args: dict) -> dict:
     if g == "monthly":
         df = services.get_echanges_energie_mensuelle(start, end, pays=pays)
         label = "mois"
+        month = args.get("month")
+        sort_by = args.get("sort_by", "import_mwh")
+        top_n = args.get("top_n")
+        if month is not None:
+            df = df[df["mois"].str[5:7] == f"{int(month):02d}"]
+            if sort_by in ("import_mwh", "export_mwh"):
+                df = df.sort_values(sort_by, ascending=False).reset_index(drop=True)
+        if top_n is not None:
+            df = df.head(int(top_n))
     elif g == "annual":
         df = services.get_echanges_annual_import_export(start, end, pays=pays)
         label = "annee"
