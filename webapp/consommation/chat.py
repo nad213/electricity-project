@@ -386,7 +386,7 @@ def _tool_get_dashboard() -> dict:
         return {"error": "données dashboard indisponibles"}
     conso_ts = d["conso_ts"][["date_heure", "consommation"]]
     return {
-        "dashboard_date": d["dashboard_date"].isoformat(),
+        "dashboard_date": d["dashboard_date"].date().isoformat(),
         "peak_year": {"value_mw": d["peak_year_value"], "datetime": d["peak_year_datetime"].isoformat()},
         "peak_all_history": {"value_mw": d["peak_all_value"], "datetime": d["peak_all_datetime"].isoformat()},
         "conso_today": _df_to_payload(

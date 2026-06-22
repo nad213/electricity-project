@@ -947,7 +947,7 @@ def get_dashboard_data():
         except Exception:
             production_mix_year = {f: 0.0 for f in filieres}
 
-    dashboard_date = pd.to_datetime(conso_ts['date_heure']).max().date()
+    dashboard_date = pd.to_datetime(conso_ts['date_heure']).max().to_pydatetime()
     peak_year_value = int(round(float(peak_year_df['consommation'].iloc[0])))
     peak_year_datetime = pd.to_datetime(peak_year_df['date_heure'].iloc[0]).to_pydatetime()
     peak_all_value = int(round(float(peak_all_df['consommation'].iloc[0])))
