@@ -41,8 +41,7 @@
 
 <div class="row mb-2">
     <div class="col">
-        <h2 class="section-title">Consommation</h2>
-        <p class="text-muted text-sm mb-0">Courbe du jour</p>
+        <h2 class="section-title">Consommation <span class="text-muted fw-normal fs-5">· Courbe du jour</span></h2>
     </div>
     <div class="col-auto">
         <a href="{% url 'consommation:index' %}" class="text-sm">Voir le détail <i class="ti ti-arrow-right"></i></a>
@@ -89,8 +88,7 @@
 
 <div class="row mb-2">
     <div class="col">
-        <h2 class="section-title">Production</h2>
-        <p class="text-muted text-sm mb-0">Mix par filière du jour</p>
+        <h2 class="section-title">Production <span class="text-muted fw-normal fs-5">· Mix par filière du jour</span></h2>
     </div>
     <div class="col-auto">
         <a href="{% url 'consommation:production' %}" class="text-sm">Voir le détail <i class="ti ti-arrow-right"></i></a>
@@ -146,8 +144,7 @@
 {% if echanges_flux_svg %}
 <div class="row mb-2">
     <div class="col">
-        <h2 class="section-title">Échanges commerciaux</h2>
-        <p class="text-muted text-sm mb-0">Flux avec les pays voisins — {{ current_year }}</p>
+        <h2 class="section-title">Échanges commerciaux <span class="text-muted fw-normal fs-5">· Flux avec les pays voisins — {{ current_year }}</span></h2>
     </div>
     <div class="col-auto">
         <a href="{% url 'consommation:echanges' %}" class="text-sm">Voir le détail <i class="ti ti-arrow-right"></i></a>
