@@ -64,18 +64,6 @@
             <div class="card stat-card flex-fill">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between mb-3">
-                        <span class="stat-label">Pointe de consommation historique</span>
-                        <div class="stat-icon stat-icon-blue">
-                            <i class="ti ti-trophy"></i>
-                        </div>
-                    </div>
-                    <div class="stat-value">{{ peak_all_value }} <span class="stat-unit">MW</span></div>
-                    <small class="text-muted">{{ peak_all_date }} à {{ peak_all_time }}</small>
-                </div>
-            </div>
-            <div class="card stat-card flex-fill">
-                <div class="card-body">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
                         <span class="stat-label">Pointe de consommation {{ current_year }}</span>
                         <div class="stat-icon stat-icon-blue">
                             <i class="ti ti-trending-up"></i>
@@ -83,6 +71,18 @@
                     </div>
                     <div class="stat-value">{{ peak_year_value }} <span class="stat-unit">MW</span></div>
                     <small class="text-muted">{{ peak_year_date }} à {{ peak_year_time }}</small>
+                </div>
+            </div>
+            <div class="card stat-card flex-fill">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <span class="stat-label">Pointe de consommation historique</span>
+                        <div class="stat-icon stat-icon-blue">
+                            <i class="ti ti-trophy"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ peak_all_value }} <span class="stat-unit">MW</span></div>
+                    <small class="text-muted">{{ peak_all_date }} à {{ peak_all_time }}</small>
                 </div>
             </div>
         </div>
