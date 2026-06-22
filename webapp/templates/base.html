@@ -37,7 +37,7 @@
           integrity="sha384-ccZHbezhtZWmNy0cg8odL0D/jFU5k5HIls9y78Qd6lWor7rpvFIZtK0fTFG4z456"
           crossorigin="anonymous"/>
 
-    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=15">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 
     {# Scripts spécifiques à la page (ex. Plotly, chargé seulement par les pages à graphiques) #}
     {% block head_scripts %}{% endblock %}
@@ -162,9 +162,9 @@
                 <div class="container-xl">
                     <div class="row g-2 align-items-center py-3">
                         <div class="col">
-                            <h2 class="page-title">
+                            <h1 class="page-title">
                                 {% block page_title %}{% endblock %}
-                            </h2>
+                            </h1>
                         </div>
                     </div>
                 </div>
@@ -190,6 +190,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"
             integrity="sha384-skr6f2xmgHOAc9USAHvYxA0lNy9tzSr5JIkdr9ytaCy2C/ofOu+OWd+d/hsnEJFN"
             crossorigin="anonymous"></script>
-    <script src="{% static 'js/date-filter.js' %}?v=3"></script>
+    <script src="{% static 'js/date-filter.js' %}"></script>
 </body>
 </html>
