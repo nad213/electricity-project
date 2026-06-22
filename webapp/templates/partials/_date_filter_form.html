@@ -17,12 +17,12 @@ Variables optionnelles :
   - extra_filter_radio : si vrai, rend des boutons en sélection unique (radio)
 {% endcomment %}
 
-<form method="get" class="mb-4" id="date-filter-form">
+<form method="get" class="mb-4" id="date-filter-form" aria-describedby="date-error">
     {% if extra_filter_multiple or extra_filter_radio %}
     {# Filtre en boutons sur une ligne dédiée : bascule (multi) ou radio (mono) #}
-    <div class="mb-3">
-        <label class="form-label fs-6 mb-1 d-block">{{ extra_filter_label }}</label>
-        <div class="d-flex flex-wrap gap-2">
+    <fieldset class="mb-3">
+        <legend class="form-label fs-6 mb-1">{{ extra_filter_label }}</legend>
+        <div class="d-flex flex-wrap gap-2" role="group" aria-label="{{ extra_filter_label }}">
             {% for key, label in extra_filter_options.items %}
             <input type="{% if extra_filter_radio %}radio{% else %}checkbox{% endif %}" class="btn-check" name="{{ extra_filter_name }}"
                    value="{{ key }}" id="filter-{{ extra_filter_name }}-{{ key }}" autocomplete="off"
@@ -32,15 +32,15 @@ Variables optionnelles :
             </label>
             {% endfor %}
         </div>
-    </div>
+    </fieldset>
     {% endif %}
 
     <div class="row g-2 align-items-end">
         {% if extra_filter_name and not extra_filter_multiple and not extra_filter_radio %}
         {# Filtre mono-sélection inline (menu déroulant) #}
         <div class="col-md-3">
-            <label class="form-label fs-6 mb-1">{{ extra_filter_label }}</label>
-            <select class="form-select form-select-sm" name="{{ extra_filter_name }}">
+            <label class="form-label fs-6 mb-1" for="id-{{ extra_filter_name }}">{{ extra_filter_label }}</label>
+            <select class="form-select form-select-sm" name="{{ extra_filter_name }}" id="id-{{ extra_filter_name }}">
                 {% for key, label in extra_filter_options.items %}
                 <option value="{{ key }}" {% if key == extra_filter_selected %}selected{% endif %}>
                     {{ label }}
@@ -52,7 +52,7 @@ Variables optionnelles :
         {% else %}
         <div class="col-md-4">
         {% endif %}
-            <label class="form-label fs-6 mb-1">Date début</label>
+            <label class="form-label fs-6 mb-1" for="start_date">Date début</label>
             <input
                 type="date"
                 class="form-control form-control-sm"
@@ -61,6 +61,7 @@ Variables optionnelles :
                 value="{{ start_date|date:'Y-m-d' }}"
                 min="{{ min_date|date:'Y-m-d' }}"
                 max="{{ max_date|date:'Y-m-d' }}"
+                aria-describedby="date-error"
             >
         </div>
         {% if extra_filter_name and not extra_filter_multiple and not extra_filter_radio %}
@@ -68,7 +69,7 @@ Variables optionnelles :
         {% else %}
         <div class="col-md-4">
         {% endif %}
-            <label class="form-label fs-6 mb-1">Date fin</label>
+            <label class="form-label fs-6 mb-1" for="end_date">Date fin</label>
             <input
                 type="date"
                 class="form-control form-control-sm"
@@ -77,6 +78,7 @@ Variables optionnelles :
                 value="{{ end_date|date:'Y-m-d' }}"
                 min="{{ min_date|date:'Y-m-d' }}"
                 max="{{ max_date|date:'Y-m-d' }}"
+                aria-describedby="date-error"
             >
         </div>
         {% if extra_filter_name and not extra_filter_multiple and not extra_filter_radio %}
@@ -98,7 +100,7 @@ Variables optionnelles :
             </div>
         </div>
     </div>
-    <div id="date-error" class="alert alert-danger mt-2" style="display: none;">
+    <div id="date-error" class="alert alert-danger mt-2" role="alert" style="display: none;">
         <i class="ti ti-alert-circle me-1"></i>
         La date de début doit être antérieure à la date de fin.
     </div>

@@ -65,6 +65,11 @@
             .then(function(data) {
                 var plotConfig = (window.KiloWatch && window.KiloWatch.PLOT_CONFIG) || { responsive: true, displayModeBar: false };
                 Object.keys(data.charts).forEach(function(chartId) {
+                    var el = document.getElementById(chartId);
+                    if (el) {
+                        el.classList.remove('chart-error');
+                        el.removeAttribute('role');
+                    }
                     var chartData = data.charts[chartId];
                     Plotly.react(chartId, chartData.data, chartData.layout, plotConfig);
                 });

@@ -25,8 +25,12 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@18.0.5/lib/marked.umd.min.js"
+        integrity="sha384-MU0bL51BF1u980ujv+Pk0Z0qCjhzfBIEHIFPkUq81289nkiAr+q1jSxEkdlIeHLJ"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"
+        integrity="sha384-JEyTNhjM6R1ElGoJns4U2Ln4ofPcqzSsynQkmEc/KGy6336qAZl70tDLufbkla+3"
+        crossorigin="anonymous"></script>
 <script>
 (function () {
   // gfm:true (défaut) active les tableaux ; breaks:true rend les retours à la
@@ -82,10 +86,31 @@
     });
   }
 
+  let typingIndicator = null;
+
   function setPending(p) {
     sendBtn.disabled = p;
     input.disabled = p;
-    sendBtn.textContent = p ? "..." : "Envoyer";
+    input.setAttribute("aria-busy", p ? "true" : "false");
+    if (p) {
+      sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+      typingIndicator = document.createElement("div");
+      typingIndicator.className = "mb-3 d-flex justify-content-start";
+      typingIndicator.setAttribute("aria-live", "polite");
+      typingIndicator.innerHTML =
+        '<div class="px-3 py-2 rounded-3 shadow-sm chat-bubble chat-bubble-assistant chat-typing">' +
+        '<span class="chat-typing-dot"></span><span class="chat-typing-dot"></span><span class="chat-typing-dot"></span>' +
+        '<span class="visually-hidden">L\'assistant rédige une réponse…</span>' +
+        '</div>';
+      historyEl.appendChild(typingIndicator);
+      historyEl.scrollTop = historyEl.scrollHeight;
+    } else {
+      sendBtn.textContent = "Envoyer";
+      if (typingIndicator) {
+        typingIndicator.remove();
+        typingIndicator = null;
+      }
+    }
   }
 
   async function send(text) {

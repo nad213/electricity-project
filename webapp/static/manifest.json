@@ -1,0 +1,18 @@
+{
+  "name": "KiloWatch",
+  "short_name": "KiloWatch",
+  "description": "Visualisation des données électriques françaises : consommation, production par filière et échanges transfrontaliers.",
+  "lang": "fr",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#0F172A",
+  "icons": [
+    {
+      "src": "/static/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

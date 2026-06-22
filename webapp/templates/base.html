@@ -5,14 +5,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="KiloWatch — visualisation des données électriques françaises : consommation, production par filière et échanges transfrontaliers (données RTE éCO2mix / ODRE).">
+    <meta name="theme-color" content="#0F172A">
     <title>{% block title %}KiloWatch{% endblock %}</title>
     <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    {# apple-touch-icon : iOS Safari attend un PNG 180x180. Déposer webapp/static/apple-touch-icon.png pour activer. #}
+    <link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}">
+
+    {# Open Graph / Twitter Card — prévisualisation sur les réseaux sociaux.
+       og:image désactivé par défaut : déposer un PNG 1200x630 dans static/og.png
+       et décommenter la ligne ci-dessous pour activer les previews riches. #}
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="KiloWatch">
+    <meta property="og:title" content="{% block og_title %}KiloWatch — données électriques françaises{% endblock %}">
+    <meta property="og:description" content="Consommation, production par filière et échanges transfrontaliers du réseau électrique français (RTE éCO2mix / ODRE).">
+    <meta property="og:locale" content="fr_FR">
+    {# <meta property="og:image" content="{% static 'og.png' %}"> #}
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{% block twitter_title %}KiloWatch — données électriques françaises{% endblock %}">
+    <meta name="twitter:description" content="Consommation, production par filière et échanges transfrontaliers du réseau électrique français.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css" rel="stylesheet"/>
-    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet"/>
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css"
+          rel="stylesheet"
+          integrity="sha384-GgnF119bh9fxkKuWHRQYSgEe1rSp5jB0EJ2W8eMf8mjowfwhZP2H1u8n8xJUW3FQ"
+          crossorigin="anonymous"/>
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.44.0/dist/tabler-icons.min.css"
+          rel="stylesheet"
+          integrity="sha384-ccZHbezhtZWmNy0cg8odL0D/jFU5k5HIls9y78Qd6lWor7rpvFIZtK0fTFG4z456"
+          crossorigin="anonymous"/>
 
     <link rel="stylesheet" href="{% static 'css/style.css' %}?v=14">
 
@@ -164,7 +187,9 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"
+            integrity="sha384-skr6f2xmgHOAc9USAHvYxA0lNy9tzSr5JIkdr9ytaCy2C/ofOu+OWd+d/hsnEJFN"
+            crossorigin="anonymous"></script>
     <script src="{% static 'js/date-filter.js' %}?v=3"></script>
 </body>
 </html>

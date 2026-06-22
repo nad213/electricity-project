@@ -209,30 +209,24 @@ document.addEventListener('DOMContentLoaded', function () {
         var code = pre.querySelector('code');
         if (!code) return;
 
-        pre.classList.add('position-relative');
-        pre.style.paddingRight = '3rem';
+        pre.classList.add('position-relative', 'pre-with-copy');
 
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'btn btn-sm btn-icon position-absolute top-0 end-0 m-2';
+        btn.className = 'btn btn-sm btn-icon copy-btn';
         btn.title = 'Copier';
         btn.setAttribute('aria-label', 'Copier');
-        // Styles explicites : sur fond de code clair, un bouton blanc sans
-        // variante était invisible. Puce sombre semi-transparente + icône claire.
-        btn.style.background = 'rgba(15, 23, 42, 0.72)';
-        btn.style.border = 'none';
-        btn.style.color = '#fff';
         btn.innerHTML = '<i class="ti ti-copy"></i>';
 
         btn.addEventListener('click', function () {
             navigator.clipboard.writeText(code.innerText).then(function () {
                 var icon = btn.querySelector('i');
                 icon.className = 'ti ti-check';
-                btn.style.background = 'rgba(47, 179, 68, 0.9)';
+                btn.classList.add('copy-btn-done');
                 btn.title = 'Copié !';
                 setTimeout(function () {
                     icon.className = 'ti ti-copy';
-                    btn.style.background = 'rgba(15, 23, 42, 0.72)';
+                    btn.classList.remove('copy-btn-done');
                     btn.title = 'Copier';
                 }, 1500);
             });

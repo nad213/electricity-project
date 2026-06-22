@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Erreur serveur - KiloWatch{% endblock %}
+
+{% block page_header %}
+<div class="page-header d-print-none">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center py-3">
+            <div class="col">
+                <h1 class="page-title">Erreur serveur</h1>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6 text-center">
+        <div class="card">
+            <div class="card-body py-5">
+                <div class="icon-box mb-3 mx-auto" style="font-size:2rem;">
+                    <i class="ti ti-alert-triangle"></i>
+                </div>
+                <h2 class="mb-2 text-bright">Une erreur est survenue</h2>
+                <p class="text-muted mb-4">
+                    Le serveur a rencontré un problème inattendu. Réessayez dans quelques instants.
+                </p>
+                <a href="{% url 'consommation:accueil' %}" class="btn btn-primary">
+                    <i class="ti ti-home me-2"></i>Retour à l'accueil
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -40,19 +40,7 @@
                             </a>
                         </div>
 
-                        <div class="mt-2">
-                            <a data-bs-toggle="collapse" href="#src-production" class="text-muted small text-decoration-none" role="button" aria-expanded="false">
-                                <i class="ti ti-info-circle me-1"></i>Source et méthodologie
-                            </a>
-                            <div class="collapse" id="src-production">
-                                <div class="text-muted small mt-1 ps-1 border-start border-2">
-                                    <strong>Source :</strong><br>
-                                    <a href="https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr" class="text-muted" target="_blank">https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr</a><br>
-                                    <a href="https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/" class="text-muted" target="_blank">https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/</a><br><br>
-                                    <strong>Méthodologie :</strong> Les données de production par filière (nucléaire, gaz, charbon, fioul, hydraulique, éolien, solaire, bioénergies…) sont récupérées des 2 fichiers éco2mix mentionnés plus haut. La granularité temporelle peut varier entre ces fichiers (pas 30 min pour le fichier « Définitif », pas 15 min pour le fichier « Temps réel »). Les puissances de production (MW) sont affichées telles quelles, sans aucune modification.
-                                </div>
-                            </div>
-                        </div>
+                        {% include 'partials/_data_source.html' with collapse_id="src-production" source="<a href='https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr' class='text-muted' target='_blank'>https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr</a><br><a href='https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/' class='text-muted' target='_blank'>https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/</a>" methodologie="Les données de production par filière (nucléaire, gaz, charbon, fioul, hydraulique, éolien, solaire, bioénergies…) sont récupérées des 2 fichiers éco2mix mentionnés plus haut. La granularité temporelle peut varier entre ces fichiers (pas 30 min pour le fichier « Définitif », pas 15 min pour le fichier « Temps réel »). Les puissances de production (MW) sont affichées telles quelles, sans aucune modification." %}
                     </div>
                 </div>
             </div>
@@ -111,19 +99,7 @@
                             </div>
                         </div>
 
-                        <div class="mt-2">
-                            <a data-bs-toggle="collapse" href="#src-production-energie" class="text-muted small text-decoration-none" role="button" aria-expanded="false">
-                                <i class="ti ti-info-circle me-1"></i>Source et méthodologie
-                            </a>
-                            <div class="collapse" id="src-production-energie">
-                                <div class="text-muted small mt-1 ps-1 border-start border-2">
-                                    <strong>Source :</strong><br>
-                                    <a href="https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr" class="text-muted" target="_blank">https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr</a><br>
-                                    <a href="https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/" class="text-muted" target="_blank">https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/</a><br><br>
-                                    <strong>Méthodologie :</strong> L'énergie produite par filière est calculée à partir des puissances des 2 fichiers éco2mix. Le passage de puissance (MW) à énergie (MWh) se fait en sommant les puissances et en divisant par 4 (données du fichier « Temps réel », pas 15 min) ou par 2 (données du fichier « Définitif », pas 30 min). Les valeurs sont ensuite agrégées par mois et par année, puis exprimées en TWh.
-                                </div>
-                            </div>
-                        </div>
+                        {% include 'partials/_data_source.html' with collapse_id="src-production-energie" source="<a href='https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr' class='text-muted' target='_blank'>https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr</a><br><a href='https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/' class='text-muted' target='_blank'>https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/</a>" methodologie="L'énergie produite par filière est calculée à partir des puissances des 2 fichiers éco2mix. Le passage de puissance (MW) à énergie (MWh) se fait en sommant les puissances et en divisant par 4 (données du fichier « Temps réel », pas 15 min) ou par 2 (données du fichier « Définitif », pas 30 min). Les valeurs sont ensuite agrégées par mois et par année, puis exprimées en TWh." %}
                     </div>
                 </div>
             </div>
@@ -146,19 +122,7 @@
                                 Télécharger CSV
                             </a>
                         </div>
-                        <div class="mt-2">
-                            <a data-bs-toggle="collapse" href="#src-parc-installe" class="text-muted small text-decoration-none" role="button" aria-expanded="false">
-                                <i class="ti ti-info-circle me-1"></i>Source et méthodologie
-                            </a>
-                            <div class="collapse" id="src-parc-installe">
-                                <div class="text-muted small mt-1 ps-1 border-start border-2">
-                                    <strong>Source :</strong><br>
-                                    <a href="https://analysesetdonnees.rte-france.com/production/eolien" class="text-muted" target="_blank">https://analysesetdonnees.rte-france.com/production/eolien</a><br>
-                                    <a href="https://analysesetdonnees.rte-france.com/production/solaire" class="text-muted" target="_blank">https://analysesetdonnees.rte-france.com/production/solaire</a><br><br>
-                                    <strong>Méthodologie :</strong> RTE ne publie pas directement le parc installé mensuel ; il est déduit de la production mensuelle (MWh) et du facteur de charge moyen (%) publiés sur le portail Analyses et Données de RTE, selon la formule : Parc installé (MW) = Production (MWh) / (Facteur de charge × Nombre de jours du mois × 24 h). Le résultat est ensuite exprimé en GW.
-                                </div>
-                            </div>
-                        </div>
+                        {% include 'partials/_data_source.html' with collapse_id="src-parc-installe" source="<a href='https://analysesetdonnees.rte-france.com/production/eolien' class='text-muted' target='_blank'>https://analysesetdonnees.rte-france.com/production/eolien</a><br><a href='https://analysesetdonnees.rte-france.com/production/solaire' class='text-muted' target='_blank'>https://analysesetdonnees.rte-france.com/production/solaire</a>" methodologie="RTE ne publie pas directement le parc installé mensuel ; il est déduit de la production mensuelle (MWh) et du facteur de charge moyen (%) publiés sur le portail Analyses et Données de RTE, selon la formule : Parc installé (MW) = Production (MWh) / (Facteur de charge × Nombre de jours du mois × 24 h). Le résultat est ensuite exprimé en GW." %}
                     </div>
                 </div>
             </div>

@@ -54,17 +54,19 @@
             <div class="card-body">
                 <!-- Sélecteur de pays propre à ce graphique, indépendant des filtres du haut -->
                 <form id="echanges-annuel-form" class="mb-3">
-                    <label class="form-label fs-6 mb-1 d-block">Pays</label>
-                    <div class="d-flex flex-wrap gap-2">
-                        {% for key, label in pays_annuel_options.items %}
-                        <input type="radio" class="btn-check" name="pays_annuel"
-                               value="{{ key }}" id="annuel-pays-{{ key }}" autocomplete="off"
-                               {% if key == selected_pays_annuel %}checked{% endif %}>
-                        <label class="btn btn-sm btn-outline-primary" for="annuel-pays-{{ key }}">
-                            {{ label }}
-                        </label>
-                        {% endfor %}
-                    </div>
+                    <fieldset>
+                        <legend class="form-label fs-6 mb-1">Pays</legend>
+                        <div class="d-flex flex-wrap gap-2" role="group" aria-label="Pays">
+                            {% for key, label in pays_annuel_options.items %}
+                            <input type="radio" class="btn-check" name="pays_annuel"
+                                   value="{{ key }}" id="annuel-pays-{{ key }}" autocomplete="off"
+                                   {% if key == selected_pays_annuel %}checked{% endif %}>
+                            <label class="btn btn-sm btn-outline-primary" for="annuel-pays-{{ key }}">
+                                {{ label }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </fieldset>
                 </form>
 
                 <!-- Graphique -->
