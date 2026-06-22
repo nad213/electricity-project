@@ -9,8 +9,7 @@ KiloWatch.PLOT_CONFIG = { responsive: true, displayModeBar: false };
 
 /**
  * Rend un graphique Plotly à partir du JSON sérialisé par la vue Django.
- * Affiche un skeleton pendant le rendu et un message d'erreur en cas d'échec
- * (JSON corrompu, exception Plotly…).
+ * Affiche un message d'erreur en cas d'échec (JSON corrompu, exception Plotly…).
  * @param {string} id - id du div cible
  * @param {string} json - figure Plotly sérialisée (data + layout)
  * @param {Object} [config] - config Plotly (défaut : PLOT_CONFIG)
@@ -19,15 +18,12 @@ KiloWatch.renderChart = function(id, json, config) {
     var el = document.getElementById(id);
     if (!el) return;
 
-    el.classList.add('chart-loading');
     el.removeAttribute('aria-busy');
 
     try {
         var chart = JSON.parse(json);
         Plotly.newPlot(el, chart.data, chart.layout, config || KiloWatch.PLOT_CONFIG);
-        el.classList.remove('chart-loading');
     } catch (err) {
-        el.classList.remove('chart-loading');
         el.classList.add('chart-error');
         el.setAttribute('role', 'alert');
         el.innerHTML = '<div class="chart-error-msg"><i class="ti ti-alert-triangle me-1"></i>Le graphique n\'a pas pu être affiché.</div>';
