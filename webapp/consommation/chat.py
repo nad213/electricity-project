@@ -10,7 +10,9 @@ roles: user / assistant / tool).
 from __future__ import annotations
 
 import json
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
+
+import holidays as holidays_lib
 
 import pandas as pd
 try:
@@ -37,6 +39,7 @@ Règles :
 - Pour les questions de type « pic / record / maximum / minimum » sur une période, appelle TOUJOURS `get_peak` (pas `get_consommation`/`get_production` en raw — qui downsample et perdent le datetime exact).
 - La granularité `raw` est limitée à 31 jours. Au-delà, utilise `daily` ou `get_peak`.
 - N'affirme jamais qu'une donnée « s'arrête » à une année donnée sans le vérifier : fie-toi aux lignes réellement renvoyées par le tool (et à `get_overview`). Si tu résumes une série mensuelle en années, inclus la dernière année même partielle et précise le dernier mois disponible.
+- Pour toute question impliquant des jours ouvrés, jours ouvrables, jours fériés ou l'effet du calendrier sur la conso/production, utilise `get_calendrier` pour qualifier les jours, puis croise avec les données via `get_consommation` ou `get_production` en `granularity='daily'`. Rappel : jour ouvré = lundi-vendredi hors jours fériés ; jour ouvrable = lundi-samedi hors jours fériés.
 - Si une demande est ambiguë, pose une courte question avant d'appeler un tool."""
 
 
@@ -157,6 +160,30 @@ TOOLS = [
                 "top_n": {"type": "integer", "description": "Nombre de résultats à retourner (déjà triés). Uniquement pour granularity='monthly'."},
             },
             "required": ["granularity", "start", "end"],
+        },
+    },
+    {
+        "name": "get_calendrier",
+        "description": (
+            "Retourne la nature de chaque jour d'une plage : ouvré / non-ouvré, jour de semaine, férié et son nom. "
+            "À utiliser pour contextualiser les données de conso/production par type de jour (comparer un lundi ouvré "
+            "vs un jour férié, filtrer des jours ouvrés…). "
+            "Si summary=true, renvoie un compte agrégé (nb ouvrés, fériés, weekends) sans le détail jour par jour — "
+            "utile pour les longues périodes. "
+            "Définitions : jour ouvré = lundi-vendredi hors jours fériés ; "
+            "jour ouvrable = lundi-samedi hors jours fériés."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "start": {"type": "string", "description": "Date début ISO YYYY-MM-DD."},
+                "end": {"type": "string", "description": "Date fin ISO YYYY-MM-DD."},
+                "summary": {
+                    "type": "boolean",
+                    "description": "Si true, retourne un résumé agrégé plutôt que le détail jour par jour.",
+                },
+            },
+            "required": ["start", "end"],
         },
     },
     {
@@ -490,6 +517,67 @@ def _tool_get_echanges_energie(args: dict) -> dict:
     }
 
 
+_JOURS_SEMAINE = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
+
+_MAX_CALENDAR_DAYS = 400
+
+
+def _tool_get_calendrier(args: dict) -> dict:
+    start, end = _parse_dates(args)
+    if not start or not end:
+        return {"error": "start et end sont requis"}
+    nb_days = (end - start).days + 1
+    if nb_days > _MAX_CALENDAR_DAYS:
+        return {"error": f"Plage trop longue ({nb_days} jours > {_MAX_CALENDAR_DAYS}). Utilise summary=true ou réduis la période."}
+
+    years = range(start.year, end.year + 1)
+    fr_holidays = {}
+    for y in years:
+        fr_holidays.update(holidays_lib.France(years=y))
+
+    summary_mode = args.get("summary", False)
+    rows = []
+    counts = {"ouvrés": 0, "ouvrables": 0, "weekends": 0, "fériés": 0, "total": nb_days}
+
+    d = start
+    while d <= end:
+        wd = d.weekday()  # 0=lundi … 6=dimanche
+        is_weekend = wd >= 5
+        ferie_name = fr_holidays.get(d)
+        is_ferie = ferie_name is not None
+        is_ouvre = not is_weekend and not is_ferie
+        is_ouvrable = wd != 6 and not is_ferie  # lundi-samedi hors fériés
+
+        if is_weekend:
+            counts["weekends"] += 1
+        if is_ferie:
+            counts["fériés"] += 1
+        if is_ouvre:
+            counts["ouvrés"] += 1
+        if is_ouvrable:
+            counts["ouvrables"] += 1
+
+        if not summary_mode:
+            row = {
+                "date": d.isoformat(),
+                "jour": _JOURS_SEMAINE[wd],
+                "is_ouvre": is_ouvre,
+                "is_ouvrable": is_ouvrable,
+                "is_weekend": is_weekend,
+                "is_ferie": is_ferie,
+            }
+            if is_ferie:
+                row["nom_ferie"] = ferie_name
+            rows.append(row)
+
+        d += timedelta(days=1)
+
+    result = {"start": start.isoformat(), "end": end.isoformat(), "summary": counts}
+    if not summary_mode:
+        result["jours"] = rows
+    return result
+
+
 def _tool_get_peak(args: dict) -> dict:
     dataset = args["dataset"]
     direction = args.get("direction", "max")
@@ -534,6 +622,7 @@ _DISPATCH = {
     "get_echanges_energie": _tool_get_echanges_energie,
     "get_parc": _tool_get_parc,
     "get_dashboard": lambda args: _tool_get_dashboard(),
+    "get_calendrier": _tool_get_calendrier,
     "get_peak": _tool_get_peak,
 }
 
