@@ -12,9 +12,9 @@
     {# apple-touch-icon : iOS Safari attend un PNG 180x180. Déposer webapp/static/apple-touch-icon.png pour activer. #}
     <link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}">
 
-    {# Open Graph / Twitter Card — prévisualisation sur les réseaux sociaux.
+    {% comment %}Open Graph / Twitter Card — prévisualisation sur les réseaux sociaux.
        og:image désactivé par défaut : déposer un PNG 1200x630 dans static/og.png
-       et décommenter la ligne ci-dessous pour activer les previews riches. #}
+       et décommenter la ligne ci-dessous pour activer les previews riches.{% endcomment %}
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="KiloWatch">
     <meta property="og:title" content="{% block og_title %}KiloWatch — données électriques françaises{% endblock %}">
