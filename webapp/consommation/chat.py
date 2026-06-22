@@ -48,13 +48,15 @@ TOOLS = [
     },
     {
         "name": "get_consommation",
-        "description": "Consommation électrique française. Utilise `granularity` pour choisir l'agrégation. 'raw' = données demi-horaires en MW (limiter à quelques jours). 'daily' = moyenne quotidienne en MW. 'monthly' = totaux mensuels en MWh. 'annual' = totaux annuels en MWh.",
+        "description": "Consommation électrique française. Utilise `granularity` pour choisir l'agrégation. 'raw' = données demi-horaires en MW (limiter à quelques jours). 'daily' = moyenne quotidienne en MW. 'monthly' = totaux mensuels en MWh. 'annual' = totaux annuels en MWh. Pour 'monthly' : utilise `month` (1-12) pour filtrer sur un mois calendaire précis (ex. 2 = tous les mois de février de chaque année) et `top_n` pour ne garder que les N mois les plus consommateurs, déjà triés — à utiliser systématiquement pour les questions de type classement/record/palmarès sur un mois donné.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "granularity": {"type": "string", "enum": ["raw", "daily", "monthly", "annual"]},
                 "start": {"type": "string", "description": "Date de début ISO YYYY-MM-DD. Ignoré pour 'monthly' et 'annual' (renvoie tout)."},
                 "end": {"type": "string", "description": "Date de fin ISO YYYY-MM-DD."},
+                "month": {"type": "integer", "description": "Filtre sur un mois calendaire (1=janvier … 12=décembre). Uniquement pour granularity='monthly'. Le tri par consommation décroissante est appliqué automatiquement côté serveur."},
+                "top_n": {"type": "integer", "description": "Nombre de résultats à retourner (déjà triés par consommation décroissante). Uniquement pour granularity='monthly'."},
             },
             "required": ["granularity"],
         },
@@ -287,8 +289,15 @@ def _tool_get_consommation(args: dict) -> dict:
         df = services.get_annual_data()
         return _df_to_payload(df.rename(columns={"yearly_consumption": "value"}), "value", "MWh", force_full=True)
     if g == "monthly":
-        df = services.get_monthly_data()
-        return _df_to_payload(df.rename(columns={"monthly_consumption": "value"}), "value", "MWh", force_full=True)
+        df = services.get_monthly_data().rename(columns={"monthly_consumption": "value"})
+        month = args.get("month")
+        top_n = args.get("top_n")
+        if month is not None:
+            df = df[df["year_month"].str[5:7] == f"{int(month):02d}"]
+            df = df.sort_values("value", ascending=False).reset_index(drop=True)
+        if top_n is not None:
+            df = df.head(int(top_n))
+        return _df_to_payload(df, "value", "MWh", force_full=True)
 
     start, end = _parse_dates(args)
     if not start or not end:
