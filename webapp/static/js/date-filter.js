@@ -48,6 +48,13 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Chargement...';
 
+            // Overlay spinner sur chaque graphique pendant le fetch
+            var chartIds = [];
+            document.querySelectorAll('.chart-container > [id]').forEach(function(el) {
+                chartIds.push(el.id);
+                if (window.KiloWatch) KiloWatch._showOverlay(el.id);
+            });
+
             var params = new URLSearchParams(new FormData(form)).toString();
             var url = window.location.pathname + '?' + params;
 
@@ -65,6 +72,7 @@
             .then(function(data) {
                 var plotConfig = (window.KiloWatch && window.KiloWatch.PLOT_CONFIG) || { responsive: true, displayModeBar: false };
                 Object.keys(data.charts).forEach(function(chartId) {
+                    if (window.KiloWatch) KiloWatch._hideOverlay(chartId);
                     var el = document.getElementById(chartId);
                     if (el) {
                         el.classList.remove('chart-error');
@@ -83,6 +91,7 @@
                 });
             })
             .catch(function(err) {
+                if (window.KiloWatch) chartIds.forEach(function(id) { KiloWatch._hideOverlay(id); });
                 showError(err.message || 'Erreur lors de la mise à jour des graphiques.');
             })
             .finally(function() {

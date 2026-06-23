@@ -134,9 +134,12 @@
 </div>
 
 <script>
-{# Rendu des graphiques ; resize des onglets et scrollspy gérés par charts.js #}
-KiloWatch.renderChart('chart-puissance', '{{ graph_puissance|escapejs }}');
-KiloWatch.renderChart('chart-annuel', '{{ graph_annuel|escapejs }}');
-KiloWatch.renderChart('chart-mensuel', '{{ graph_mensuel|escapejs }}');
+{# Chargement AJAX des graphiques au DOMContentLoaded ; resize/scrollspy gérés par charts.js #}
+document.addEventListener('DOMContentLoaded', function() {
+    KiloWatch.loadCharts(
+        window.location.pathname + window.location.search,
+        ['chart-puissance', 'chart-annuel', 'chart-mensuel']
+    );
+});
 </script>
 {% endblock %}

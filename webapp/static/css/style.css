@@ -257,6 +257,34 @@ body {
     min-height: 400px;
     background-color: transparent;
     border-radius: 0.5rem;
+    position: relative;
+}
+
+/* Overlay de chargement : div réel injecté dans .chart-container par JS,
+   par-dessus le div Plotly (pseudo-éléments sur le div Plotly sont écrasés
+   par son contexte de stacking interne). */
+.chart-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    background: rgba(15, 23, 42, 0.55);
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.chart-overlay::after {
+    content: '';
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-top-color: var(--text-muted, #94a3b8);
+    border-right-color: var(--text-muted, #94a3b8);
+    animation: chart-spin 0.7s linear infinite;
+}
+@keyframes chart-spin {
+    to { transform: rotate(360deg); }
 }
 
 /* État d'erreur des charts */

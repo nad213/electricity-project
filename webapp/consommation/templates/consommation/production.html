@@ -157,10 +157,12 @@
 </div>
 
 <script>
-{# Rendu des graphiques ; resize des onglets et scrollspy gérés par charts.js #}
-KiloWatch.renderChart('chart-production', '{{ graph_production|escapejs }}');
-KiloWatch.renderChart('chart-production-annuel', '{{ graph_production_annuel|escapejs }}');
-KiloWatch.renderChart('chart-production-mensuel', '{{ graph_production_mensuel|escapejs }}');
-KiloWatch.renderChart('chart-parc-installe', '{{ graph_parc_installe|escapejs }}');
+{# Chargement AJAX des graphiques au DOMContentLoaded ; resize/scrollspy gérés par charts.js #}
+document.addEventListener('DOMContentLoaded', function() {
+    KiloWatch.loadCharts(
+        window.location.pathname + window.location.search,
+        ['chart-production', 'chart-production-annuel', 'chart-production-mensuel', 'chart-parc-installe']
+    );
+});
 </script>
 {% endblock %}

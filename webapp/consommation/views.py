@@ -901,7 +901,10 @@ def accueil(request):
 @handle_validation_errors
 def index(request):
     """
-    Main view - displays consumption data with Plotly charts
+    Main view - displays consumption data with Plotly charts.
+    Initial page load returns the skeleton immediately (dates resolved, no chart
+    data). AJAX requests (X-Requested-With: XMLHttpRequest) run the heavy DuckDB
+    queries and return chart JSON.
     """
     # Get available min/max dates
     min_date, max_date = get_date_range()
@@ -911,54 +914,46 @@ def index(request):
         request, min_date, max_date, session_key='dates_conso'
     )
 
-    # Load data
-    df_puissance = get_puissance_data(start_date, end_date)
-    df_annuel = get_annual_data()
-    df_mensuel = get_monthly_data()
-
-    # ========== CHART 1: Power curve ==========
-    graph_puissance = create_line_chart(
-        df_puissance,
-        x_col='date_heure',
-        y_col='consommation',
-        color=Colors.ACCENT,
-        y_label='Consommation'
-    )
-
-    # ========== CHART 2: Annual consumption ==========
-    graph_annuel = create_bar_chart(
-        df_annuel,
-        x_col='year',
-        y_col='yearly_consumption',
-        color=Colors.ACCENT  # Amber
-    )
-
-    # ========== CHART 3: Monthly consumption ==========
-    graph_mensuel = create_bar_chart(
-        df_mensuel,
-        x_col='year_month',
-        y_col='monthly_consumption',
-        color=Colors.SECONDARY,
-        tickangle=45,
-        x_date_format='%B %Y'
-    )
-    
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # Load data and build charts only for AJAX calls
+        df_puissance = get_puissance_data(start_date, end_date)
+        df_annuel = get_annual_data()
+        df_mensuel = get_monthly_data()
+
+        graph_puissance = create_line_chart(
+            df_puissance,
+            x_col='date_heure',
+            y_col='consommation',
+            color=Colors.ACCENT,
+            y_label='Consommation'
+        )
+        graph_annuel = create_bar_chart(
+            df_annuel,
+            x_col='year',
+            y_col='yearly_consumption',
+            color=Colors.ACCENT
+        )
+        graph_mensuel = create_bar_chart(
+            df_mensuel,
+            x_col='year_month',
+            y_col='monthly_consumption',
+            color=Colors.SECONDARY,
+            tickangle=45,
+            x_date_format='%B %Y'
+        )
         return JsonResponse({'charts': {
             'chart-puissance': json.loads(graph_puissance),
             'chart-annuel': json.loads(graph_annuel),
             'chart-mensuel': json.loads(graph_mensuel),
         }})
 
+    # Initial page load: return skeleton (no chart data, charts load via AJAX)
     context = {
         'titre': 'Consommation',
         'min_date': min_date,
         'max_date': max_date,
         'start_date': start_date,
         'end_date': end_date,
-        'graph_puissance': graph_puissance,
-        'graph_annuel': graph_annuel,
-        'graph_mensuel': graph_mensuel,
     }
 
     return render(request, 'consommation/index.html', context)
@@ -967,7 +962,9 @@ def index(request):
 @handle_validation_errors
 def production(request):
     """
-    Production page - displays production data with load curve by sector and stacked bar charts
+    Production page - displays production data with load curve by sector and stacked bar charts.
+    Initial page load returns the skeleton immediately (filters resolved, no chart data).
+    AJAX requests (X-Requested-With: XMLHttpRequest) run the heavy DuckDB queries.
     """
     # Get available min/max dates
     min_date, max_date = get_production_date_range()
@@ -984,59 +981,51 @@ def production(request):
         request, min_date, max_date, session_key='dates_production'
     )
 
-    # Load production data for the line chart
-    df_production = get_production_data_multi(start_date, end_date, filieres_selected)
-
-    # Create production curve chart (one line per selected filière)
-    graph_production = create_multi_line_chart(
-        df_production,
-        x_col='date_heure',
-        filieres=filieres_selected,
-        colors=FILIERE_COLORS,
-        labels=filieres
-    )
-
-    # Load annual and monthly aggregated data
-    df_annual = get_production_annual_data()
-    df_monthly = get_production_monthly_data()
-
-    # Load installed capacity data
-    df_parc = get_parc_installe_data()
-    graph_parc_installe = create_parc_installe_chart(df_parc)
-
-    # Get colors and labels from centralized constants (cached)
-    colors, labels = get_production_colors_and_labels()
-
-    # Create stacked bar charts
-    graph_production_annuel = create_stacked_bar_chart(
-        df_annual,
-        x_col='year',
-        y_cols=get_filiere_columns('annual'),
-        colors=colors,
-        labels=labels,
-        unit='TWh',
-        divisor=1_000_000,
-        decimals=1,
-    )
-
-    # Real date (first of month) so the axis/hover can show French month names
-    df_monthly['annee_mois'] = pd.to_datetime(
-        df_monthly['year'].astype(str) + '-' + df_monthly['month'].astype(str).str.zfill(2) + '-01'
-    )
-
-    graph_production_mensuel = create_stacked_bar_chart(
-        df_monthly,
-        x_col='annee_mois',
-        y_cols=get_filiere_columns('monthly'),
-        colors=colors,
-        labels=labels,
-        unit='TWh',
-        divisor=1_000_000,
-        decimals=1,
-        x_date_format='%B %Y',
-    )
-
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # Load data and build charts only for AJAX calls
+        df_production = get_production_data_multi(start_date, end_date, filieres_selected)
+        graph_production = create_multi_line_chart(
+            df_production,
+            x_col='date_heure',
+            filieres=filieres_selected,
+            colors=FILIERE_COLORS,
+            labels=filieres
+        )
+
+        df_annual = get_production_annual_data()
+        df_monthly = get_production_monthly_data()
+        df_parc = get_parc_installe_data()
+        graph_parc_installe = create_parc_installe_chart(df_parc)
+
+        colors, labels = get_production_colors_and_labels()
+
+        graph_production_annuel = create_stacked_bar_chart(
+            df_annual,
+            x_col='year',
+            y_cols=get_filiere_columns('annual'),
+            colors=colors,
+            labels=labels,
+            unit='TWh',
+            divisor=1_000_000,
+            decimals=1,
+        )
+
+        # Real date (first of month) so the axis/hover can show French month names
+        df_monthly['annee_mois'] = pd.to_datetime(
+            df_monthly['year'].astype(str) + '-' + df_monthly['month'].astype(str).str.zfill(2) + '-01'
+        )
+        graph_production_mensuel = create_stacked_bar_chart(
+            df_monthly,
+            x_col='annee_mois',
+            y_cols=get_filiere_columns('monthly'),
+            colors=colors,
+            labels=labels,
+            unit='TWh',
+            divisor=1_000_000,
+            decimals=1,
+            x_date_format='%B %Y',
+        )
+
         return JsonResponse({'charts': {
             'chart-production': json.loads(graph_production),
             'chart-production-annuel': json.loads(graph_production_annuel),
@@ -1044,6 +1033,7 @@ def production(request):
             'chart-parc-installe': json.loads(graph_parc_installe),
         }})
 
+    # Initial page load: return skeleton (no chart data, charts load via AJAX)
     context = {
         'titre': 'Production',
         'min_date': min_date,
@@ -1052,10 +1042,6 @@ def production(request):
         'end_date': end_date,
         'filieres_selected': filieres_selected,
         'filieres': filieres,
-        'graph_production': graph_production,
-        'graph_production_annuel': graph_production_annuel,
-        'graph_production_mensuel': graph_production_mensuel,
-        'graph_parc_installe': graph_parc_installe,
     }
 
     return render(request, 'consommation/production.html', context)
@@ -1064,7 +1050,11 @@ def production(request):
 @handle_validation_errors
 def echanges(request):
     """
-    Échanges page - displays commercial exchange data with load curve by country
+    Échanges page - displays commercial exchange data with load curve by country.
+    Initial page load returns the skeleton immediately (filters resolved, no chart data).
+    AJAX requests (X-Requested-With: XMLHttpRequest) run the heavy DuckDB queries.
+    The two charts are independent: the top form refreshes 'chart-echanges' only,
+    the bottom pays_annuel selector refreshes 'chart-echanges-annuel' only.
     """
     # Get available min/max dates
     min_date, max_date = get_echanges_date_range()
@@ -1099,40 +1089,35 @@ def echanges(request):
         request, min_date, max_date, session_key='dates_echanges'
     )
 
-    # Load echanges data for the line chart (one column per selected country)
-    df_echanges = get_echanges_data_multi(start_date, end_date, pays_selected)
-
-    # Create echanges curve chart (one line per selected country)
-    graph_echanges = create_multi_line_chart(
-        df_echanges,
-        x_col='date_heure',
-        filieres=pays_selected,
-        colors=PAYS_ECHANGES_COLORS,
-        labels=pays_disponibles,
-    )
-
-    # Annual import/export volumes — always over the full available history and
-    # for its own selected country, independent of the top filters.
-    df_echanges_annuel = get_echanges_annual_import_export(min_date, max_date, pays_annuel)
-    graph_echanges_annuel = create_import_export_chart(
-        df_echanges_annuel,
-        x_col='annee',
-        import_col='import_mwh',
-        export_col='export_mwh',
-        x_date_format=None,
-    )
-
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         # Each form refreshes only its own chart, so the two stay independent:
         # the bottom selector sends `pays_annuel`, the top form does not.
         if 'pays_annuel' in request.GET:
+            df_echanges_annuel = get_echanges_annual_import_export(min_date, max_date, pays_annuel)
+            graph_echanges_annuel = create_import_export_chart(
+                df_echanges_annuel,
+                x_col='annee',
+                import_col='import_mwh',
+                export_col='export_mwh',
+                x_date_format=None,
+            )
             return JsonResponse({'charts': {
                 'chart-echanges-annuel': json.loads(graph_echanges_annuel),
             }})
+
+        df_echanges = get_echanges_data_multi(start_date, end_date, pays_selected)
+        graph_echanges = create_multi_line_chart(
+            df_echanges,
+            x_col='date_heure',
+            filieres=pays_selected,
+            colors=PAYS_ECHANGES_COLORS,
+            labels=pays_disponibles,
+        )
         return JsonResponse({'charts': {
             'chart-echanges': json.loads(graph_echanges),
         }})
 
+    # Initial page load: return skeleton (no chart data, charts load via AJAX)
     context = {
         'titre': 'Échanges commerciaux',
         'min_date': min_date,
@@ -1144,9 +1129,6 @@ def echanges(request):
         'selected_pays': pays_selected,
         'pays_annuel_options': pays_annuel_options,
         'selected_pays_annuel': pays_annuel,
-        'graph_echanges': graph_echanges,
-        'graph_echanges_annuel': graph_echanges_annuel,
-        'row_count': len(df_echanges),
     }
 
     return render(request, 'consommation/echanges.html', context)
