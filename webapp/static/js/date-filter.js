@@ -48,55 +48,60 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Chargement...';
 
-            // Overlay spinner sur chaque graphique pendant le fetch
+            // Overlay spinner uniquement sur les graphiques dynamiques (pas data-chart-static)
             var chartIds = [];
-            document.querySelectorAll('.chart-container > [id]').forEach(function(el) {
+            document.querySelectorAll('.chart-container > [id]:not([data-chart-static])').forEach(function(el) {
                 chartIds.push(el.id);
                 if (window.KiloWatch) KiloWatch._showOverlay(el.id);
             });
 
             var params = new URLSearchParams(new FormData(form)).toString();
-            var url = window.location.pathname + '?' + params;
+            var url = window.location.pathname + '?_dynamic_only=1&' + params;
 
-            fetch(url, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            })
-            .then(function(response) {
-                if (!response.ok) {
-                    return response.text().then(function(text) {
-                        throw new Error(text || 'Erreur serveur (' + response.status + ')');
+            // Double requestAnimationFrame : garantit que le navigateur peigne
+            // l'overlay avant le fetch. Sans ça, si le serveur répond vite
+            // (local + cache Parquet), l'overlay est retiré avant le prochain
+            // paint et n'est jamais visible.
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    fetch(url, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                    .then(function(response) {
+                        if (!response.ok) {
+                            return response.text().then(function(text) {
+                                throw new Error(text || 'Erreur serveur (' + response.status + ')');
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(function(data) {
+                        var plotConfig = (window.KiloWatch && KiloWatch.PLOT_CONFIG) || { responsive: true, displayModeBar: false };
+                        Object.keys(data.charts).forEach(function(chartId) {
+                            if (window.KiloWatch) KiloWatch._hideOverlay(chartId);
+                            var el = document.getElementById(chartId);
+                            if (el) {
+                                el.classList.remove('chart-error');
+                                el.removeAttribute('role');
+                            }
+                            var chartData = data.charts[chartId];
+                            Plotly.react(chartId, chartData.data, chartData.layout, plotConfig);
+                        });
+                        window.history.replaceState(null, '', window.location.pathname + '?' + params);
+                        document.querySelectorAll('a[href*="export"]:not([data-static-export])').forEach(function(link) {
+                            var baseUrl = link.href.split('?')[0];
+                            link.href = baseUrl + '?' + params;
+                        });
+                    })
+                    .catch(function(err) {
+                        if (window.KiloWatch) chartIds.forEach(function(id) { KiloWatch._hideOverlay(id); });
+                        showError(err.message || 'Erreur lors de la mise à jour des graphiques.');
+                    })
+                    .finally(function() {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalHTML;
                     });
-                }
-                return response.json();
-            })
-            .then(function(data) {
-                var plotConfig = (window.KiloWatch && window.KiloWatch.PLOT_CONFIG) || { responsive: true, displayModeBar: false };
-                Object.keys(data.charts).forEach(function(chartId) {
-                    if (window.KiloWatch) KiloWatch._hideOverlay(chartId);
-                    var el = document.getElementById(chartId);
-                    if (el) {
-                        el.classList.remove('chart-error');
-                        el.removeAttribute('role');
-                    }
-                    var chartData = data.charts[chartId];
-                    Plotly.react(chartId, chartData.data, chartData.layout, plotConfig);
                 });
-                // Mettre à jour l'URL (pour que refresh/bookmark fonctionnent)
-                window.history.replaceState(null, '', url);
-                // Mettre à jour les liens d'export CSV avec les nouveaux paramètres
-                // (sauf ceux marqués data-static-export, qui gèrent leurs propres params)
-                document.querySelectorAll('a[href*="export"]:not([data-static-export])').forEach(function(link) {
-                    var baseUrl = link.href.split('?')[0];
-                    link.href = baseUrl + '?' + params;
-                });
-            })
-            .catch(function(err) {
-                if (window.KiloWatch) chartIds.forEach(function(id) { KiloWatch._hideOverlay(id); });
-                showError(err.message || 'Erreur lors de la mise à jour des graphiques.');
-            })
-            .finally(function() {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalHTML;
             });
         });
 

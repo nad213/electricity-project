@@ -80,32 +80,36 @@ KiloWatch.renderChart = function(id, json, config) {
 KiloWatch.loadCharts = function(url, targetIds) {
     targetIds.forEach(function(id) { KiloWatch._showOverlay(id); });
 
-    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-        .then(function(response) {
-            if (!response.ok) throw new Error('HTTP ' + response.status);
-            return response.json();
-        })
-        .then(function(data) {
-            Object.keys(data.charts).forEach(function(id) {
-                var el = document.getElementById(id);
-                if (!el) return;
-                KiloWatch._hideOverlay(id);
-                try {
-                    var c = data.charts[id];
-                    Plotly.newPlot(el, c.data, c.layout, KiloWatch.PLOT_CONFIG);
-                } catch (err) {
-                    _chartError(el);
-                    if (window.console) console.error('KiloWatch.loadCharts(' + id + '):', err);
-                }
-            });
-        })
-        .catch(function(err) {
-            targetIds.forEach(function(id) {
-                var el = document.getElementById(id);
-                if (el) _chartError(el);
-            });
-            if (window.console) console.error('KiloWatch.loadCharts:', err);
+    requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function(response) {
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    return response.json();
+                })
+                .then(function(data) {
+                    Object.keys(data.charts).forEach(function(id) {
+                        var el = document.getElementById(id);
+                        if (!el) return;
+                        KiloWatch._hideOverlay(id);
+                        try {
+                            var c = data.charts[id];
+                            Plotly.newPlot(el, c.data, c.layout, KiloWatch.PLOT_CONFIG);
+                        } catch (err) {
+                            _chartError(el);
+                            if (window.console) console.error('KiloWatch.loadCharts(' + id + '):', err);
+                        }
+                    });
+                })
+                .catch(function(err) {
+                    targetIds.forEach(function(id) {
+                        var el = document.getElementById(id);
+                        if (el) _chartError(el);
+                    });
+                    if (window.console) console.error('KiloWatch.loadCharts:', err);
+                });
         });
+    });
 };
 
 document.addEventListener('DOMContentLoaded', function() {

@@ -139,16 +139,20 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!checked) return;
         KiloWatch._showOverlay('chart-echanges-annuel');
         var url = window.location.pathname + '?pays_annuel=' + encodeURIComponent(checked.value);
-        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                Object.keys(data.charts).forEach(function(id) {
-                    KiloWatch._hideOverlay(id);
-                    var c = data.charts[id];
-                    Plotly.react(id, c.data, c.layout, KiloWatch.PLOT_CONFIG);
-                });
-            })
-            .catch(function() { KiloWatch._hideOverlay('chart-echanges-annuel'); });
+        requestAnimationFrame(function() {
+            requestAnimationFrame(function() {
+                fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        Object.keys(data.charts).forEach(function(id) {
+                            KiloWatch._hideOverlay(id);
+                            var c = data.charts[id];
+                            Plotly.react(id, c.data, c.layout, KiloWatch.PLOT_CONFIG);
+                        });
+                    })
+                    .catch(function() { KiloWatch._hideOverlay('chart-echanges-annuel'); });
+            });
+        });
     });
 })();
 </script>
