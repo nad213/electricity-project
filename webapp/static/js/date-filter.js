@@ -52,7 +52,7 @@
             var chartIds = [];
             document.querySelectorAll('.chart-container > [id]:not([data-chart-static])').forEach(function(el) {
                 chartIds.push(el.id);
-                if (window.KiloWatch) KiloWatch._showOverlay(el.id);
+                if (window.StatElec) StatElec._showOverlay(el.id);
             });
 
             var params = new URLSearchParams(new FormData(form)).toString();
@@ -76,9 +76,9 @@
                         return response.json();
                     })
                     .then(function(data) {
-                        var plotConfig = (window.KiloWatch && KiloWatch.PLOT_CONFIG) || { responsive: true, displayModeBar: false };
+                        var plotConfig = (window.StatElec && StatElec.PLOT_CONFIG) || { responsive: true, displayModeBar: false };
                         Object.keys(data.charts).forEach(function(chartId) {
-                            if (window.KiloWatch) KiloWatch._hideOverlay(chartId);
+                            if (window.StatElec) StatElec._hideOverlay(chartId);
                             var el = document.getElementById(chartId);
                             if (el) {
                                 el.classList.remove('chart-error');
@@ -94,7 +94,7 @@
                         });
                     })
                     .catch(function(err) {
-                        if (window.KiloWatch) chartIds.forEach(function(id) { KiloWatch._hideOverlay(id); });
+                        if (window.StatElec) chartIds.forEach(function(id) { StatElec._hideOverlay(id); });
                         showError(err.message || 'Erreur lors de la mise à jour des graphiques.');
                     })
                     .finally(function() {
