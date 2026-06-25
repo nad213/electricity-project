@@ -212,7 +212,7 @@ def create_line_chart(df, x_col, y_col, color=None, y_label='Valeur'):
     return fig.to_json()
 
 
-def create_multi_line_chart(df, x_col, filieres, colors, labels):
+def create_multi_line_chart(df, x_col, filieres, colors, labels, y_axis_arrows=False):
     """
     Creates a Plotly line chart with one line per filière, each with its own
     color and a legend.
@@ -223,6 +223,9 @@ def create_multi_line_chart(df, x_col, filieres, colors, labels):
         filieres: List of filière keys (also the column names in df)
         colors: dict {filiere_key: hex_color}
         labels: dict {filiere_key: French label}
+        y_axis_arrows: When True, add discreet '↑ export' / '↓ import'
+            annotations at the top/bottom of the plot to disambiguate the sign
+            of a signed series (used by the échanges curve).
 
     Returns:
         JSON string of the Plotly figure
@@ -256,6 +259,15 @@ def create_multi_line_chart(df, x_col, filieres, colors, labels):
 
     fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
     fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR, zerolinecolor=ChartConfig.GRID_COLOR)
+
+    if y_axis_arrows:
+        for text, y, yanchor in (('↑ export', 1, 'top'), ('↓ import', 0, 'bottom')):
+            fig.add_annotation(
+                text=text, xref='paper', yref='paper',
+                x=0, y=y, xanchor='left', yanchor=yanchor,
+                showarrow=False,
+                font=dict(size=11, color=ChartConfig.TEXT_COLOR), opacity=0.6,
+            )
 
     return fig.to_json()
 
@@ -1109,12 +1121,18 @@ def echanges(request):
             }})
 
         df_echanges = get_echanges_data_multi(start_date, end_date, pays_selected)
+        # Le fichier source est signé positif = import ; on inverse le signe pour
+        # l'affichage afin que la courbe suive la même orientation que le graphe
+        # annuel (export vers le haut, import vers le bas). L'export CSV applique
+        # la même inversion, écran et fichier restent cohérents.
+        df_echanges[pays_selected] = -df_echanges[pays_selected]
         graph_echanges = create_multi_line_chart(
             df_echanges,
             x_col='date_heure',
             filieres=pays_selected,
             colors=PAYS_ECHANGES_COLORS,
             labels=pays_disponibles,
+            y_axis_arrows=True,
         )
         return JsonResponse({'charts': {
             'chart-echanges': json.loads(graph_echanges),
@@ -1327,6 +1345,11 @@ def export_echanges_csv(request):
 
     # Load data (wide: one column per selected country)
     df = get_echanges_data_multi(start_date, end_date, pays_selected)
+
+    # Le fichier source est signé positif = import ; on inverse le signe pour
+    # adopter la même convention que la courbe affichée (export positif, import
+    # négatif). Écran et CSV restent ainsi cohérents.
+    df[pays_selected] = -df[pays_selected]
 
     # Export to CSV
     pays_slug = '_'.join(pays_selected)
