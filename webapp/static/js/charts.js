@@ -88,18 +88,23 @@ StatElec.loadCharts = function(url, targetIds) {
                     return response.json();
                 })
                 .then(function(data) {
-                    Object.keys(data.charts).forEach(function(id) {
+                    var charts = (data && data.charts) || {};
+                    Object.keys(charts).forEach(function(id) {
                         var el = document.getElementById(id);
                         if (!el) return;
                         StatElec._hideOverlay(id);
                         try {
-                            var c = data.charts[id];
+                            var c = charts[id];
                             Plotly.newPlot(el, c.data, c.layout, StatElec.PLOT_CONFIG);
                         } catch (err) {
                             _chartError(el);
                             if (window.console) console.error('StatElec.loadCharts(' + id + '):', err);
                         }
                     });
+                    // Filet de sécurité : retire l'overlay de toute cible demandée
+                    // que la réponse n'aurait pas renvoyée, pour éviter un spinner
+                    // qui tourne indéfiniment.
+                    targetIds.forEach(function(id) { StatElec._hideOverlay(id); });
                 })
                 .catch(function(err) {
                     targetIds.forEach(function(id) {

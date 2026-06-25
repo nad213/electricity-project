@@ -69,9 +69,10 @@
                     </fieldset>
                 </form>
 
-                <!-- Graphique -->
+                <!-- Graphique : indépendant des dates/pays du haut, d'où data-chart-static
+                     (sinon date-filter.js lui pose un overlay spinner jamais retiré). -->
                 <div class="chart-container">
-                    <div id="chart-echanges-annuel"></div>
+                    <div id="chart-echanges-annuel" data-chart-static></div>
                 </div>
 
                 <!-- Download button : CSV détaillé (tous les pays, toutes les années) -->
