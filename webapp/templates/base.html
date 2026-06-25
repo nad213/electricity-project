@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="KiloWatch — visualisation des données électriques françaises : consommation, production par filière et échanges transfrontaliers (données RTE éCO2mix / ODRE).">
+    <meta name="description" content="StatElec — visualisation des données électriques françaises : consommation, production par filière et échanges transfrontaliers (données RTE éCO2mix / ODRE).">
     <meta name="theme-color" content="#0F172A">
-    <title>{% block title %}KiloWatch{% endblock %}</title>
+    <title>{% block title %}StatElec{% endblock %}</title>
     <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
     <link rel="manifest" href="{% static 'manifest.json' %}">
     {# apple-touch-icon : iOS Safari attend un PNG 180x180. Déposer webapp/static/apple-touch-icon.png pour activer. #}
@@ -16,13 +16,13 @@
        og:image désactivé par défaut : déposer un PNG 1200x630 dans static/og.png
        et décommenter la ligne ci-dessous pour activer les previews riches.{% endcomment %}
     <meta property="og:type" content="website">
-    <meta property="og:site_name" content="KiloWatch">
-    <meta property="og:title" content="{% block og_title %}KiloWatch — données électriques françaises{% endblock %}">
+    <meta property="og:site_name" content="StatElec">
+    <meta property="og:title" content="{% block og_title %}StatElec — données électriques françaises{% endblock %}">
     <meta property="og:description" content="Consommation, production par filière et échanges transfrontaliers du réseau électrique français (RTE éCO2mix / ODRE).">
     <meta property="og:locale" content="fr_FR">
     {# <meta property="og:image" content="{% static 'og.png' %}"> #}
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="{% block twitter_title %}KiloWatch — données électriques françaises{% endblock %}">
+    <meta name="twitter:title" content="{% block twitter_title %}StatElec — données électriques françaises{% endblock %}">
     <meta name="twitter:description" content="Consommation, production par filière et échanges transfrontaliers du réseau électrique français.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -49,7 +49,7 @@
                 <span class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3 mb-0">
                     <a href="{% url 'consommation:accueil' %}" class="text-decoration-none d-flex align-items-center">
                         <i class="ti ti-bolt me-2 navbar-brand-icon"></i>
-                        <span>KiloWatch</span>
+                        <span>StatElec</span>
                     </a>
                 </span>
 

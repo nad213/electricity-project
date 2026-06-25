@@ -2,7 +2,7 @@
 
 {% block head_scripts %}{% include "partials/_plotly.html" %}{% endblock %}
 
-{% block title %}Consommation - KiloWatch{% endblock %}
+{% block title %}Consommation - StatElec{% endblock %}
 
 {% block page_title %}
     <i class="ti ti-chart-line me-2"></i>
@@ -136,7 +136,7 @@
 <script>
 {# Chargement AJAX des graphiques au DOMContentLoaded ; resize/scrollspy gérés par charts.js #}
 document.addEventListener('DOMContentLoaded', function() {
-    KiloWatch.loadCharts(
+    StatElec.loadCharts(
         window.location.pathname + window.location.search,
         ['chart-puissance', 'chart-annuel', 'chart-mensuel']
     );

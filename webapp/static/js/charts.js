@@ -3,9 +3,9 @@
  * juste après Plotly). Factorise ce qui était copié-collé dans chaque template :
  * rendu des graphiques, resize au changement d'onglet, scrollspy de la sidebar.
  */
-window.KiloWatch = window.KiloWatch || {};
+window.StatElec = window.StatElec || {};
 
-KiloWatch.PLOT_CONFIG = { responsive: true, displayModeBar: false };
+StatElec.PLOT_CONFIG = { responsive: true, displayModeBar: false };
 
 // Markup d'erreur réutilisé par renderChart et loadCharts.
 var _CHART_ERROR_HTML =
@@ -13,7 +13,7 @@ var _CHART_ERROR_HTML =
     'Le graphique n\'a pas pu être affiché.</div>';
 
 function _chartError(el) {
-    KiloWatch._hideOverlay(el.id);
+    StatElec._hideOverlay(el.id);
     el.classList.add('chart-error');
     el.setAttribute('role', 'alert');
     el.innerHTML = _CHART_ERROR_HTML;
@@ -24,7 +24,7 @@ function _chartError(el) {
  * L'overlay est un vrai élément DOM (les pseudo-éléments sont écrasés par
  * le contexte de stacking interne de Plotly).
  */
-KiloWatch._showOverlay = function(id) {
+StatElec._showOverlay = function(id) {
     var el = document.getElementById(id);
     if (!el) return;
     var container = el.parentElement;
@@ -39,7 +39,7 @@ KiloWatch._showOverlay = function(id) {
 /**
  * Retire l'overlay spinner du .chart-container parent du div id donné.
  */
-KiloWatch._hideOverlay = function(id) {
+StatElec._hideOverlay = function(id) {
     var el = document.getElementById(id);
     if (!el) return;
     var container = el.parentElement;
@@ -55,18 +55,18 @@ KiloWatch._hideOverlay = function(id) {
  * @param {string} json - figure Plotly sérialisée (data + layout)
  * @param {Object} [config] - config Plotly (défaut : PLOT_CONFIG)
  */
-KiloWatch.renderChart = function(id, json, config) {
+StatElec.renderChart = function(id, json, config) {
     var el = document.getElementById(id);
     if (!el) return;
 
-    KiloWatch._hideOverlay(id);
+    StatElec._hideOverlay(id);
 
     try {
         var chart = JSON.parse(json);
-        Plotly.newPlot(el, chart.data, chart.layout, config || KiloWatch.PLOT_CONFIG);
+        Plotly.newPlot(el, chart.data, chart.layout, config || StatElec.PLOT_CONFIG);
     } catch (err) {
         _chartError(el);
-        if (window.console) console.error('KiloWatch.renderChart(' + id + '):', err);
+        if (window.console) console.error('StatElec.renderChart(' + id + '):', err);
     }
 };
 
@@ -77,8 +77,8 @@ KiloWatch.renderChart = function(id, json, config) {
  * @param {string}   url       - URL à fetcher (avec éventuels query params)
  * @param {string[]} targetIds - ids des divs à charger
  */
-KiloWatch.loadCharts = function(url, targetIds) {
-    targetIds.forEach(function(id) { KiloWatch._showOverlay(id); });
+StatElec.loadCharts = function(url, targetIds) {
+    targetIds.forEach(function(id) { StatElec._showOverlay(id); });
 
     requestAnimationFrame(function() {
         requestAnimationFrame(function() {
@@ -91,13 +91,13 @@ KiloWatch.loadCharts = function(url, targetIds) {
                     Object.keys(data.charts).forEach(function(id) {
                         var el = document.getElementById(id);
                         if (!el) return;
-                        KiloWatch._hideOverlay(id);
+                        StatElec._hideOverlay(id);
                         try {
                             var c = data.charts[id];
-                            Plotly.newPlot(el, c.data, c.layout, KiloWatch.PLOT_CONFIG);
+                            Plotly.newPlot(el, c.data, c.layout, StatElec.PLOT_CONFIG);
                         } catch (err) {
                             _chartError(el);
-                            if (window.console) console.error('KiloWatch.loadCharts(' + id + '):', err);
+                            if (window.console) console.error('StatElec.loadCharts(' + id + '):', err);
                         }
                     });
                 })
@@ -106,7 +106,7 @@ KiloWatch.loadCharts = function(url, targetIds) {
                         var el = document.getElementById(id);
                         if (el) _chartError(el);
                     });
-                    if (window.console) console.error('KiloWatch.loadCharts:', err);
+                    if (window.console) console.error('StatElec.loadCharts:', err);
                 });
         });
     });
