@@ -1,23 +1,23 @@
 /*
- * StatElec - Dark Modern Theme
+ * StatElec — thème nuit (bleu nuit RTE + ambre étincelle)
  */
 
-/* ========== Google Fonts ========== */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* Fonts chargées via <link> non bloquant dans base.html :
+   Inter (corps), Space Grotesk (KPI, chasse tabulaire). */
 
 /* ========== CSS Variables ========== */
 :root {
-    --bg: #0F172A;
+    --bg: #0A1A2F;
     --surface: #1E293B;
     --surface-hover: #334155;
     --border: #334155;
     --border-light: #475569;
-    --accent: #22D3EE;
-    --accent-hover: #67E8F9;
-    --accent-glow: rgba(34, 211, 238, 0.08);
-    --accent-glow-strong: rgba(34, 211, 238, 0.15);
-    --amber: #FBBF24;
-    --amber-glow: rgba(251, 191, 36, 0.15);
+    --accent: #F5B700;
+    --accent-hover: #FFCB2D;
+    /* Teinte fonctionnelle (badges/hover/code) + anneau de focus —
+       pas un glow décoratif. */
+    --accent-soft: rgba(245, 183, 0, 0.12);
+    --focus-ring: rgba(245, 183, 0, 0.4);
     --text: #F1F5F9;
     --text-secondary: #94A3B8;
     --text-muted: #64748B;
@@ -29,8 +29,8 @@
        au lieu de tomber sur les couleurs claires par défaut de Tabler. */
     --tblr-body-color: #F1F5F9;
     --tblr-body-color-rgb: 241, 245, 249;
-    --tblr-body-bg: #0F172A;
-    --tblr-body-bg-rgb: 15, 23, 42;
+    --tblr-body-bg: #0A1A2F;
+    --tblr-body-bg-rgb: 10, 26, 47;
     --tblr-emphasis-color: #F1F5F9;
     --tblr-secondary-color: #94A3B8;
     --tblr-tertiary-color: #64748B;
@@ -39,8 +39,8 @@
     --tblr-border-color-translucent: rgba(255, 255, 255, 0.08);
     --tblr-secondary-bg: #1E293B;
     --tblr-tertiary-bg: #334155;
-    --tblr-link-color: #22D3EE;
-    --tblr-link-hover-color: #67E8F9;
+    --tblr-link-color: #F5B700;
+    --tblr-link-hover-color: #FFCB2D;
 }
 
 /* ========== Global Styles ========== */
@@ -62,7 +62,7 @@ body {
 
 /* ========== Navbar ========== */
 .navbar-pastel {
-    background-color: rgba(15, 23, 42, 0.85);
+    background-color: rgba(10, 26, 47, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
@@ -152,12 +152,11 @@ body {
     border: 1px solid var(--border);
     border-radius: 0.5rem;
     box-shadow: none;
-    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    transition: border-color 0.2s ease;
 }
 
 .card:hover {
     background-color: var(--surface);
-    box-shadow: 0 0 20px rgba(34, 211, 238, 0.04);
     border-color: var(--border-light);
 }
 
@@ -194,7 +193,7 @@ body {
 }
 
 .btn-outline-primary:hover {
-    background-color: var(--accent-glow);
+    background-color: var(--accent-soft);
     border-color: var(--accent);
     color: var(--accent);
 }
@@ -235,7 +234,7 @@ body {
 
 .form-control:focus, .form-select:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent-glow-strong);
+    box-shadow: 0 0 0 2px var(--focus-ring);
     background-color: var(--surface);
     color: var(--text);
 }
@@ -267,7 +266,7 @@ body {
     position: absolute;
     inset: 0;
     z-index: 10;
-    background: rgba(15, 23, 42, 0.55);
+    background: rgba(10, 26, 47, 0.55);
     border-radius: 0.5rem;
     display: flex;
     align-items: center;
@@ -338,6 +337,8 @@ body {
 }
 
 .stat-value {
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    font-variant-numeric: tabular-nums;
     font-size: 1.75rem;
     font-weight: 700;
     color: var(--text);
@@ -346,6 +347,8 @@ body {
 }
 
 .stat-value-sm {
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    font-variant-numeric: tabular-nums;
     font-size: 1.25rem;
     font-weight: 700;
     color: var(--text);
@@ -371,7 +374,7 @@ body {
 }
 
 .stat-icon-blue {
-    background-color: var(--accent-glow-strong);
+    background-color: var(--accent-soft);
     color: var(--accent);
 }
 
@@ -540,7 +543,7 @@ body {
 
     .navbar-pastel .nav-link.active,
     .navbar-pastel .nav-item.active .nav-link {
-        background-color: var(--accent-glow);
+        background-color: var(--accent-soft);
     }
 }
 
@@ -631,7 +634,7 @@ body {
 /* ========== Code & blocs préformatés (page API) ========== */
 code {
     color: var(--accent-hover);
-    background-color: var(--accent-glow-strong);
+    background-color: var(--accent-soft);
     padding: 0.1em 0.35em;
     border-radius: 4px;
     font-size: 0.875em;
@@ -666,14 +669,14 @@ pre code {
     position: absolute;
     top: 0.5rem;
     right: 0.5rem;
-    background: rgba(15, 23, 42, 0.72);
+    background: rgba(10, 26, 47, 0.72);
     border: none;
     color: #fff;
 }
 
 .copy-btn:hover {
     color: #fff;
-    background: rgba(15, 23, 42, 0.9);
+    background: rgba(10, 26, 47, 0.9);
 }
 
 .copy-btn-done {
