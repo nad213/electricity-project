@@ -51,22 +51,23 @@ TOOLS = [
     },
     {
         "name": "get_consommation",
-        "description": "Consommation électrique française. Utilise `granularity` pour choisir l'agrégation. 'raw' = données demi-horaires en MW (limiter à quelques jours). 'daily' = moyenne quotidienne en MW. 'monthly' = totaux mensuels en MWh. 'annual' = totaux annuels en MWh. Pour 'monthly' : utilise `month` (1-12) pour filtrer sur un mois calendaire précis (ex. 2 = tous les mois de février de chaque année) et `top_n` pour ne garder que les N mois les plus consommateurs, déjà triés — à utiliser systématiquement pour les questions de type classement/record/palmarès sur un mois donné.",
+        "description": "Consommation électrique française. Utilise `granularity` pour choisir l'agrégation. 'raw' = données demi-horaires en MW (limiter à quelques jours). 'daily' = moyenne quotidienne en MW. 'monthly' = totaux mensuels en MWh. 'annual' = totaux annuels en MWh. Pour 'monthly' : utilise `month` (1-12) pour filtrer sur un mois calendaire précis (ex. 2 = tous les mois de février de chaque année), `order` pour choisir le tri ('value' = classement par conso pour les questions record/palmarès ; 'recent' = du plus récent au plus ancien pour les questions « les N derniers/récents février ») et `top_n` pour ne garder que les N premiers résultats déjà triés.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "granularity": {"type": "string", "enum": ["raw", "daily", "monthly", "annual"]},
                 "start": {"type": "string", "description": "Date de début ISO YYYY-MM-DD. Ignoré pour 'monthly' et 'annual' (renvoie tout)."},
                 "end": {"type": "string", "description": "Date de fin ISO YYYY-MM-DD."},
-                "month": {"type": "integer", "description": "Filtre sur un mois calendaire (1=janvier … 12=décembre). Uniquement pour granularity='monthly'. Le tri par consommation décroissante est appliqué automatiquement côté serveur."},
-                "top_n": {"type": "integer", "description": "Nombre de résultats à retourner (déjà triés par consommation décroissante). Uniquement pour granularity='monthly'."},
+                "month": {"type": "integer", "description": "Filtre sur un mois calendaire (1=janvier … 12=décembre). Uniquement pour granularity='monthly'."},
+                "order": {"type": "string", "enum": ["value", "recent"], "description": "Tri appliqué quand `month` est utilisé. 'value' (défaut) = consommation décroissante (classement/record/palmarès). 'recent' = du mois le plus récent au plus ancien (pour « les N derniers/récents <mois> »)."},
+                "top_n": {"type": "integer", "description": "Nombre de résultats à retourner (après tri selon `order`). Uniquement pour granularity='monthly'."},
             },
             "required": ["granularity"],
         },
     },
     {
         "name": "get_production",
-        "description": "Production électrique française par filière. 'raw' = demi-horaire MW, 'daily' = moyenne quotidienne MW, 'monthly' = MWh mensuels, 'annual' = MWh annuels. Pour 'monthly' : utilise `month` (1-12) pour filtrer sur un mois calendaire précis (ex. 7 = tous les mois de juillet de chaque année) et `top_n` pour ne garder que les N mois les plus productifs, déjà triés — à utiliser systématiquement pour les questions de type classement/record/palmarès sur un mois donné.",
+        "description": "Production électrique française par filière. 'raw' = demi-horaire MW, 'daily' = moyenne quotidienne MW, 'monthly' = MWh mensuels, 'annual' = MWh annuels. Pour 'monthly' : utilise `month` (1-12) pour filtrer sur un mois calendaire précis (ex. 7 = tous les mois de juillet de chaque année), `order` pour choisir le tri ('value' = classement par production pour les questions record/palmarès ; 'recent' = du plus récent au plus ancien pour « les N derniers/récents juillet ») et `top_n` pour ne garder que les N premiers résultats déjà triés.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -74,8 +75,9 @@ TOOLS = [
                 "granularity": {"type": "string", "enum": ["raw", "daily", "monthly", "annual"]},
                 "start": {"type": "string", "description": "Date début ISO. Ignoré pour 'monthly'/'annual'."},
                 "end": {"type": "string", "description": "Date fin ISO."},
-                "month": {"type": "integer", "description": "Filtre sur un mois calendaire (1=janvier … 12=décembre). Uniquement pour granularity='monthly'. Le tri par production décroissante est appliqué automatiquement côté serveur."},
-                "top_n": {"type": "integer", "description": "Nombre de résultats à retourner (déjà triés par production décroissante). Uniquement pour granularity='monthly'."},
+                "month": {"type": "integer", "description": "Filtre sur un mois calendaire (1=janvier … 12=décembre). Uniquement pour granularity='monthly'."},
+                "order": {"type": "string", "enum": ["value", "recent"], "description": "Tri appliqué quand `month` est utilisé. 'value' (défaut) = production décroissante (classement/record/palmarès). 'recent' = du mois le plus récent au plus ancien (pour « les N derniers/récents <mois> »)."},
+                "top_n": {"type": "integer", "description": "Nombre de résultats à retourner (après tri selon `order`). Uniquement pour granularity='monthly'."},
             },
             "required": ["filiere", "granularity"],
         },
@@ -140,9 +142,10 @@ TOOLS = [
             "Convention : import = entrant vers la France, export = sortant (deux volumes positifs distincts). "
             "À privilégier sur get_echanges (qui ne renvoie que de la puissance MW) pour toute question de "
             "VOLUME importé/exporté sur une période. "
-            "Pour 'monthly' : utilise `month` (1-12) pour filtrer sur un mois calendaire, `sort_by` "
-            "('import_mwh' ou 'export_mwh') pour le sens du classement et `top_n` pour les N résultats — "
-            "tri appliqué automatiquement côté serveur."
+            "Pour 'monthly' : utilise `month` (1-12) pour filtrer sur un mois calendaire, `order` "
+            "('value' = classement par volume / 'recent' = du plus récent au plus ancien pour « les N "
+            "derniers <mois> »), `sort_by` ('import_mwh' ou 'export_mwh', sens du volume classé quand "
+            "order='value') et `top_n` pour les N résultats — tri appliqué côté serveur."
         ),
         "input_schema": {
             "type": "object",
@@ -156,8 +159,9 @@ TOOLS = [
                 "start": {"type": "string", "description": "Date de début ISO YYYY-MM-DD."},
                 "end": {"type": "string", "description": "Date de fin ISO YYYY-MM-DD."},
                 "month": {"type": "integer", "description": "Filtre sur un mois calendaire (1=janvier … 12=décembre). Uniquement pour granularity='monthly'."},
-                "sort_by": {"type": "string", "enum": ["import_mwh", "export_mwh"], "description": "Colonne de tri pour le classement (volumes positifs). Uniquement pour granularity='monthly'. Défaut 'import_mwh'."},
-                "top_n": {"type": "integer", "description": "Nombre de résultats à retourner (déjà triés). Uniquement pour granularity='monthly'."},
+                "order": {"type": "string", "enum": ["value", "recent"], "description": "Tri appliqué quand `month` est utilisé. 'value' (défaut) = volume décroissant selon `sort_by` (classement/record). 'recent' = du mois le plus récent au plus ancien (pour « les N derniers <mois> »)."},
+                "sort_by": {"type": "string", "enum": ["import_mwh", "export_mwh"], "description": "Colonne de tri pour le classement (volumes positifs). Uniquement pour granularity='monthly' avec order='value'. Défaut 'import_mwh'."},
+                "top_n": {"type": "integer", "description": "Nombre de résultats à retourner (après tri selon `order`). Uniquement pour granularity='monthly'."},
             },
             "required": ["granularity", "start", "end"],
         },
@@ -329,7 +333,10 @@ def _tool_get_consommation(args: dict) -> dict:
         top_n = args.get("top_n")
         if month is not None:
             df = df[df["year_month"].str[5:7] == f"{int(month):02d}"]
-            df = df.sort_values("value", ascending=False).reset_index(drop=True)
+            if args.get("order") == "recent":
+                df = df.sort_values("year_month", ascending=False).reset_index(drop=True)
+            else:
+                df = df.sort_values("value", ascending=False).reset_index(drop=True)
         if top_n is not None:
             df = df.head(int(top_n))
         return _df_to_payload(df, "value", "MWh", force_full=True)
@@ -369,7 +376,10 @@ def _tool_get_production(args: dict) -> dict:
         top_n = args.get("top_n")
         if month is not None:
             df = df[df["year_month"].str[5:7] == f"{int(month):02d}"]
-            df = df.sort_values("value", ascending=False).reset_index(drop=True)
+            if args.get("order") == "recent":
+                df = df.sort_values("year_month", ascending=False).reset_index(drop=True)
+            else:
+                df = df.sort_values("value", ascending=False).reset_index(drop=True)
         if top_n is not None:
             df = df.head(int(top_n))
         return _df_to_payload(df, "value", "MWh", force_full=True)
@@ -488,7 +498,9 @@ def _tool_get_echanges_energie(args: dict) -> dict:
         top_n = args.get("top_n")
         if month is not None:
             df = df[df["mois"].str[5:7] == f"{int(month):02d}"]
-            if sort_by in ("import_mwh", "export_mwh"):
+            if args.get("order") == "recent":
+                df = df.sort_values("mois", ascending=False).reset_index(drop=True)
+            elif sort_by in ("import_mwh", "export_mwh"):
                 df = df.sort_values(sort_by, ascending=False).reset_index(drop=True)
         if top_n is not None:
             df = df.head(int(top_n))
