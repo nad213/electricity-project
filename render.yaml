@@ -40,7 +40,7 @@ services:
       - key: MISTRAL_API_KEY
         sync: false
       - key: CHAT_MODEL
-        value: "mistral-small-latest"
+        value: "mistral-medium-latest"
       # How often the web service re-checks S3 ETags (seconds). Default: 3600.
       # Set to a value slightly above your ETL run interval so fresh data is
       # picked up within one TTL cycle after each nightly run.

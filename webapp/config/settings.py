@@ -57,7 +57,7 @@ OIDC_UI_LOCALES = os.getenv('OIDC_UI_LOCALES', 'fr')
 
 # Chatbot (Mistral API)
 MISTRAL_API_KEY = os.getenv('MISTRAL_API_KEY', '')
-CHAT_MODEL = os.getenv('CHAT_MODEL', 'mistral-small-latest')
+CHAT_MODEL = os.getenv('CHAT_MODEL', 'mistral-medium-latest')
 CHAT_MAX_TURNS = int(os.getenv('CHAT_MAX_TURNS', '30'))
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
