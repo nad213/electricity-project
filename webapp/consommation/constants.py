@@ -41,6 +41,10 @@ class ChartConfig:
     MARGIN_WITH_LEGEND = dict(l=50, r=20, t=20, b=60)
     MARGIN_NO_LEGEND = dict(l=50, r=20, t=20, b=40)
     MARGIN_DEFAULT = dict(l=50, r=20, t=20, b=40)
+    # Bulle de survol unifiée (hovermode='x unified') — regroupe toutes les
+    # séries à la position de la souris. Utiliser HOVERLABEL avec hovermode.
+    HOVERMODE = 'x unified'
+    HOVERLABEL = dict(bgcolor='#1E293B', bordercolor='#475569', font=dict(color='#F1F5F9', size=11))
 
 
 # ========== Filières de production ==========

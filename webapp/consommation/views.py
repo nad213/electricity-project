@@ -192,7 +192,7 @@ def create_line_chart(df, x_col, y_col, color=None, y_label='Valeur'):
     # Custom hover template (French locale: space as thousands separator)
     fig.update_layout(separators=", ")
     fig.update_traces(
-        hovertemplate=f"Date: %{{x|%d/%m/%Y %H:%M}}<br>{y_label}: %{{y:,.0f}} MW<extra></extra>"
+        hovertemplate=f"{y_label}: %{{y:,.0f}} MW<extra></extra>"
     )
 
     fig.update_layout(
@@ -204,9 +204,11 @@ def create_line_chart(df, x_col, y_col, color=None, y_label='Valeur'):
         plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
         paper_bgcolor=ChartConfig.PAPER_COLOR,
         font=dict(color=ChartConfig.TEXT_COLOR),
+        hovermode=ChartConfig.HOVERMODE,
+        hoverlabel=ChartConfig.HOVERLABEL,
     )
 
-    fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
+    fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR, hoverformat='%d/%m/%Y %H:%M')
     fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR, zerolinecolor=ChartConfig.GRID_COLOR)
 
     return fig.to_json()
@@ -241,7 +243,7 @@ def create_multi_line_chart(df, x_col, filieres, colors, labels, y_axis_arrows=F
             name=label,
             mode='lines',
             line=dict(color=colors.get(filiere, Colors.PRIMARY)),
-            hovertemplate=f"Date: %{{x|%d/%m/%Y %H:%M}}<br>{label}: %{{y:,.0f}} MW<extra></extra>",
+            hovertemplate=f"{label}: %{{y:,.0f}} MW<extra></extra>",
         ))
 
     fig.update_layout(separators=", ")
@@ -255,9 +257,11 @@ def create_multi_line_chart(df, x_col, filieres, colors, labels, y_axis_arrows=F
         plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
         paper_bgcolor=ChartConfig.PAPER_COLOR,
         font=dict(color=ChartConfig.TEXT_COLOR),
+        hovermode=ChartConfig.HOVERMODE,
+        hoverlabel=ChartConfig.HOVERLABEL,
     )
 
-    fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
+    fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR, hoverformat='%d/%m/%Y %H:%M')
     fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR, zerolinecolor=ChartConfig.GRID_COLOR)
 
     if y_axis_arrows:
@@ -304,11 +308,11 @@ def create_bar_chart(df, x_col, y_col, color=None, tickangle=0, y_label='Consomm
         color_discrete_sequence=[color],
     )
 
-    # Custom hover template (French locale: space as thousands separator)
-    x_hover = f"%{{x|{x_date_format}}}" if x_date_format else "%{x}"
+    # Custom hover template (French locale: space as thousands separator).
+    # En hover unifié, la période s'affiche dans l'en-tête de la bulle.
     fig.update_layout(separators=", ")
     fig.update_traces(
-        hovertemplate=f"Période: {x_hover}<br>{y_label}: %{{y:,.1f}} TWh<extra></extra>"
+        hovertemplate=f"{y_label}: %{{y:,.1f}} TWh<extra></extra>"
     )
 
     fig.update_layout(
@@ -319,10 +323,12 @@ def create_bar_chart(df, x_col, y_col, color=None, tickangle=0, y_label='Consomm
         plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
         paper_bgcolor=ChartConfig.PAPER_COLOR,
         font=dict(color=ChartConfig.TEXT_COLOR),
+        hovermode=ChartConfig.HOVERMODE,
+        hoverlabel=ChartConfig.HOVERLABEL,
     )
     fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR, tickangle=tickangle)
     if x_date_format:
-        fig.update_xaxes(tickformat=x_date_format)
+        fig.update_xaxes(tickformat=x_date_format, hoverformat=x_date_format)
     fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR)
 
     return fig.to_json()
@@ -376,12 +382,8 @@ def create_stacked_bar_chart(df, x_col, y_cols, colors, labels, unit='MWh', divi
             y=-0.2,
             xanchor="center",
         ),
-        hovermode='x unified',
-        hoverlabel=dict(
-            bgcolor='#1E293B',
-            bordercolor='#475569',
-            font=dict(color='#F1F5F9', size=11),
-        ),
+        hovermode=ChartConfig.HOVERMODE,
+        hoverlabel=ChartConfig.HOVERLABEL,
     )
     fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
     if x_date_format:
@@ -454,12 +456,8 @@ def create_import_export_chart(df, x_col, import_col, export_col, unit='TWh', di
             y=-0.2,
             xanchor="center",
         ),
-        hovermode='x unified',
-        hoverlabel=dict(
-            bgcolor='#1E293B',
-            bordercolor='#475569',
-            font=dict(color='#F1F5F9', size=11),
-        ),
+        hovermode=ChartConfig.HOVERMODE,
+        hoverlabel=ChartConfig.HOVERLABEL,
     )
     fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
     if x_date_format:
@@ -670,7 +668,7 @@ def create_mini_line_chart(df, x_col, y_col):
     fig = px.line(df, x=x_col, y=y_col, color_discrete_sequence=[Colors.ACCENT])
     fig.update_layout(separators=", ")
     fig.update_traces(
-        hovertemplate="Date: %{x|%H:%M}<br>Consommation: %{y:,.0f} MW<extra></extra>"
+        hovertemplate="Consommation: %{y:,.0f} MW<extra></extra>"
     )
     fig.update_layout(
         showlegend=False,
@@ -681,8 +679,10 @@ def create_mini_line_chart(df, x_col, y_col):
         plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
         paper_bgcolor=ChartConfig.PAPER_COLOR,
         font=dict(color=ChartConfig.TEXT_COLOR),
+        hovermode=ChartConfig.HOVERMODE,
+        hoverlabel=ChartConfig.HOVERLABEL,
     )
-    fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
+    fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR, hoverformat='%H:%M')
     fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR, zerolinecolor=ChartConfig.GRID_COLOR)
 
     return fig.to_json()
@@ -728,12 +728,8 @@ def create_parc_installe_chart(df):
         paper_bgcolor=ChartConfig.PAPER_COLOR,
         font=dict(color=ChartConfig.TEXT_COLOR),
         legend=dict(orientation='h', x=0.5, y=-0.2, xanchor='center'),
-        hovermode='x unified',
-        hoverlabel=dict(
-            bgcolor='#1E293B',
-            bordercolor='#475569',
-            font=dict(color='#F1F5F9', size=11),
-        ),
+        hovermode=ChartConfig.HOVERMODE,
+        hoverlabel=ChartConfig.HOVERLABEL,
     )
     fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR)
     fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR, zerolinecolor=ChartConfig.GRID_COLOR)
@@ -779,12 +775,8 @@ def create_stacked_area_chart(df, x_col, y_cols, colors, labels):
         plot_bgcolor=ChartConfig.BACKGROUND_COLOR,
         paper_bgcolor=ChartConfig.PAPER_COLOR,
         font=dict(color=ChartConfig.TEXT_COLOR),
-        hovermode='x unified',
-        hoverlabel=dict(
-            bgcolor='#1E293B',
-            bordercolor='#475569',
-            font=dict(color='#F1F5F9', size=11),
-        ),
+        hovermode=ChartConfig.HOVERMODE,
+        hoverlabel=ChartConfig.HOVERLABEL,
     )
     fig.update_xaxes(gridcolor=ChartConfig.GRID_COLOR, tickformat='%H:%M')
     fig.update_yaxes(gridcolor=ChartConfig.GRID_COLOR, zerolinecolor=ChartConfig.GRID_COLOR)
