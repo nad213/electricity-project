@@ -43,8 +43,8 @@ S3_PATHS = {
 # Directory where Parquet files are downloaded from S3.  /tmp is ephemeral on
 # Render (cleared on each deploy), which is intentional — clean slate on boot.
 PARQUET_CACHE_DIR = os.getenv('PARQUET_CACHE_DIR', '/tmp/parquet_cache')
-# How often (seconds) to re-check S3 ETags for freshness.  Default: 1 hour.
-PARQUET_CACHE_CHECK_TTL = int(os.getenv('PARQUET_CACHE_CHECK_TTL', '3600'))
+# How often (seconds) to re-check S3 ETags for freshness.  Default: 10 minutes.
+PARQUET_CACHE_CHECK_TTL = int(os.getenv('PARQUET_CACHE_CHECK_TTL', '600'))
 
 # OIDC Configuration (provider-agnostic via OpenID Connect discovery).
 # OIDC_ISSUER is the base URL of the IdP, e.g. https://<instance>.zitadel.cloud
