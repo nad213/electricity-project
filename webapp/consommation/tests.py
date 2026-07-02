@@ -429,10 +429,10 @@ class FiltresSessionTests(TestCase):
         result = views.validate_and_get_dates(request, self.MIN, self.MAX, session_key="dates_conso")
         self.assertEqual(result, (date(2025, 6, 1), date(2025, 12, 31)))
 
-    def test_sans_params_ni_session_defaut_15_jours(self):
+    def test_sans_params_ni_session_defaut_7_jours(self):
         request = self._request()
         result = views.validate_and_get_dates(request, self.MIN, self.MAX, session_key="dates_conso")
-        self.assertEqual(result, (self.MAX - timedelta(days=15), self.MAX))
+        self.assertEqual(result, (self.MAX - timedelta(days=7), self.MAX))
 
     def test_session_perimee_recalee_dans_la_plage(self):
         # end mémorisé au-delà du max disponible → recalé sur max, sans erreur
@@ -443,13 +443,13 @@ class FiltresSessionTests(TestCase):
     def test_session_entierement_hors_plage_defaut(self):
         request = self._request(session={"dates_conso": {"start": "2019-01-01", "end": "2019-12-31"}})
         result = views.validate_and_get_dates(request, self.MIN, self.MAX, session_key="dates_conso")
-        self.assertEqual(result, (self.MAX - timedelta(days=15), self.MAX))
+        self.assertEqual(result, (self.MAX - timedelta(days=7), self.MAX))
 
     def test_session_corrompue_defaut_sans_exception(self):
         for corrompu in ("n'importe quoi", {"start": "pas-une-date", "end": "2026-01-01"}, {"start": "2026-01-01"}):
             request = self._request(session={"dates_conso": corrompu})
             result = views.validate_and_get_dates(request, self.MIN, self.MAX, session_key="dates_conso")
-            self.assertEqual(result, (self.MAX - timedelta(days=15), self.MAX))
+            self.assertEqual(result, (self.MAX - timedelta(days=7), self.MAX))
 
     def test_params_explicites_prioritaires_sur_la_session(self):
         request = self._request(
@@ -463,7 +463,7 @@ class FiltresSessionTests(TestCase):
         # cas des exports CSV : ni lecture...
         request = self._request(session={"dates_conso": {"start": "2025-06-01", "end": "2025-12-31"}})
         result = views.validate_and_get_dates(request, self.MIN, self.MAX)
-        self.assertEqual(result, (self.MAX - timedelta(days=15), self.MAX))
+        self.assertEqual(result, (self.MAX - timedelta(days=7), self.MAX))
         # ...ni écriture
         request = self._request("start_date=2026-01-01&end_date=2026-02-01")
         views.validate_and_get_dates(request, self.MIN, self.MAX)

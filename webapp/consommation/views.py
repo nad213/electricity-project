@@ -97,8 +97,8 @@ def validate_and_get_dates(request, min_date, max_date, session_key=None):
     submitted period: GET parameters are stored in the session, and a
     request without them reuses the stored period instead of the default.
     """
-    # Default dates (last 15 days)
-    default_start = max_date - timedelta(days=15)
+    # Default dates (last 7 days)
+    default_start = max_date - timedelta(days=7)
 
     explicit = 'start_date' in request.GET or 'end_date' in request.GET
     if not explicit and session_key:
