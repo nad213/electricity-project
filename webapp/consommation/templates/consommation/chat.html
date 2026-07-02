@@ -38,6 +38,11 @@
   marked.setOptions({ gfm: true, breaks: true });
 
   const STORAGE_KEY = "kilowatch_chat_history";
+  const STORAGE_TS_KEY = "kilowatch_chat_ts";
+  // Durée de vie du fil, alignée sur la session Django (SESSION_COOKIE_AGE=3600).
+  // Mode glissant : chaque message repousse l'expiration → reset après 1 h SANS
+  // activité, comme la déconnexion / reset des filtres.
+  const CHAT_TTL_MS = 3600 * 1000;
   const historyEl = document.getElementById("chat-history");
   const form = document.getElementById("chat-form");
   const input = document.getElementById("chat-input");
@@ -49,11 +54,27 @@
     return m ? decodeURIComponent(m.pop()) : "";
   }
 
+  function clearHistory() {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_TS_KEY);
+  }
+
+  // Purge le fil s'il date de plus de CHAT_TTL_MS depuis la dernière activité.
+  // Un historique sans timestamp (ancien format) est considéré comme expiré.
+  function purgeIfExpired() {
+    if (!localStorage.getItem(STORAGE_KEY)) return;
+    const ts = parseInt(localStorage.getItem(STORAGE_TS_KEY) || "0", 10);
+    if (!ts || Date.now() - ts > CHAT_TTL_MS) clearHistory();
+  }
+
   function loadHistory() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
     catch { return []; }
   }
-  function saveHistory(h) { localStorage.setItem(STORAGE_KEY, JSON.stringify(h)); }
+  function saveHistory(h) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(h));
+    localStorage.setItem(STORAGE_TS_KEY, String(Date.now()));
+  }
 
   function extractText(content) {
     if (typeof content === "string") return content;
@@ -161,10 +182,11 @@
 
   clearBtn.addEventListener("click", () => {
     if (!confirm("Effacer la conversation ?")) return;
-    localStorage.removeItem(STORAGE_KEY);
+    clearHistory();
     location.reload();
   });
 
+  purgeIfExpired();
   renderAll();
 })();
 </script>
