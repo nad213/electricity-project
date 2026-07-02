@@ -21,35 +21,15 @@ resource "aws_lambda_function" "odre_eco2mix" {
   }
 }
 
-resource "aws_cloudwatch_event_rule" "daily_trigger_odre_1" {
-  name                = "trigger-odre-eco2mix-0607"
-  schedule_expression = "cron(7 6 * * ? *)" # 06:07 UTC
+# Declenchement horaire. La lambda vérifie `data_processed` et ne re-télécharge/re-transforme
+# que si la source a bougé, donc les runs sans nouveauté sont des no-op (2 GET métadonnées + early-return).
+resource "aws_cloudwatch_event_rule" "live_trigger_odre" {
+  name                = "trigger-odre-eco2mix-hourly"
+  schedule_expression = "rate(1 hour)"
 }
 
-resource "aws_cloudwatch_event_rule" "daily_trigger_odre_2" {
-  name                = "trigger-odre-eco2mix-1219"
-  schedule_expression = "cron(19 12 * * ? *)" # 12:19 UTC
-}
-
-resource "aws_cloudwatch_event_rule" "daily_trigger_odre_3" {
-  name                = "trigger-odre-eco2mix-1810"
-  schedule_expression = "cron(10 18 * * ? *)" # 18:10 UTC
-}
-
-resource "aws_cloudwatch_event_target" "trigger_odre_1" {
-  rule      = aws_cloudwatch_event_rule.daily_trigger_odre_1.name
-  target_id = "odre_eco2mix"
-  arn       = aws_lambda_function.odre_eco2mix.arn
-}
-
-resource "aws_cloudwatch_event_target" "trigger_odre_2" {
-  rule      = aws_cloudwatch_event_rule.daily_trigger_odre_2.name
-  target_id = "odre_eco2mix"
-  arn       = aws_lambda_function.odre_eco2mix.arn
-}
-
-resource "aws_cloudwatch_event_target" "trigger_odre_3" {
-  rule      = aws_cloudwatch_event_rule.daily_trigger_odre_3.name
+resource "aws_cloudwatch_event_target" "trigger_odre_live" {
+  rule      = aws_cloudwatch_event_rule.live_trigger_odre.name
   target_id = "odre_eco2mix"
   arn       = aws_lambda_function.odre_eco2mix.arn
 }

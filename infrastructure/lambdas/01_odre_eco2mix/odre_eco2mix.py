@@ -1,6 +1,7 @@
 import os
 import io
 import csv
+import json
 import requests
 import boto3
 import pandas as pd
@@ -8,26 +9,71 @@ from datetime import datetime
 
 ODRE_FILES = [
     {
+        "dataset_id": "eco2mix-national-tr",
         "url": "https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/eco2mix-national-tr/exports/parquet?lang=fr&timezone=Europe%2FBerlin",
         "file_name": "eco2mix-national-tr.parquet",
     },
     {
+        "dataset_id": "eco2mix-national-cons-def",
         "url": "https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/eco2mix-national-cons-def/exports/parquet?lang=fr&timezone=Europe%2FBerlin",
         "file_name": "eco2mix-national-cons-def.parquet",
     },
 ]
 
+# Petit fichier d'etat S3 : {file_name: data_processed} vu au dernier download reussi.
+FRESHNESS_STATE_KEY = "state/odre_freshness.json"
+
 
 # ---------------------------------------------------------------------------
-# Download
+# Download conditionnel
 # ---------------------------------------------------------------------------
+
+def fetch_data_processed(dataset_id):
+    """Lit le signal de fraicheur ODRE (metas.default.data_processed) sans telecharger le parquet.
+
+    `data_processed` bouge a chaque refresh du dataset (toutes les 15 min pour le TR).
+    NE PAS utiliser `modified` : c'est la date de modif des metadonnees, figee.
+    """
+    meta_url = f"https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/{dataset_id}"
+    resp = requests.get(meta_url, timeout=30)
+    resp.raise_for_status()
+    return resp.json().get("metas", {}).get("default", {}).get("data_processed")
+
+
+def load_freshness_state(s3, bucket):
+    try:
+        obj = s3.get_object(Bucket=bucket, Key=FRESHNESS_STATE_KEY)
+        return json.loads(obj["Body"].read())
+    except Exception:
+        return {}
+
+
+def save_freshness_state(s3, bucket, state):
+    s3.put_object(Bucket=bucket, Key=FRESHNESS_STATE_KEY, Body=json.dumps(state))
+
 
 def download_files(s3, bucket):
-    """Telecharge les fichiers ODRE et les stocke dans 01_downloaded/."""
+    """Telecharge les fichiers ODRE qui ont change, retourne True si au moins un a bouge.
+
+    Compare `data_processed` (metadonnees ODRE) a l'etat precedent stocke sur S3.
+    On ne re-telecharge le parquet que si le signal a change (ou si l'etat est absent).
+    L'etat n'est mis a jour qu'APRES un upload reussi, pour ne jamais 'marquer a jour'
+    un fichier qu'on n'a pas su telecharger.
+    """
+    state = load_freshness_state(s3, bucket)
+    any_changed = False
+
     for entry in ODRE_FILES:
-        url = entry["url"]
         file_name = entry["file_name"]
-        print(f"INFO: Downloading {file_name} from {url}")
+        current = fetch_data_processed(entry["dataset_id"])
+        previous = state.get(file_name)
+
+        if current is not None and current == previous:
+            print(f"SKIP: {file_name} unchanged (data_processed={current})")
+            continue
+
+        url = entry["url"]
+        print(f"INFO: {file_name} changed ({previous} -> {current}), downloading from {url}")
         response = requests.get(url, stream=True)
         response.raise_for_status()
         buffer = io.BytesIO()
@@ -37,6 +83,14 @@ def download_files(s3, bucket):
         s3_key = f"01_downloaded/odre/{file_name}"
         s3.upload_fileobj(Fileobj=buffer, Bucket=bucket, Key=s3_key)
         print(f"SUCCESS: Uploaded to s3://{bucket}/{s3_key}")
+
+        state[file_name] = current
+        any_changed = True
+
+    if any_changed:
+        save_freshness_state(s3, bucket, state)
+
+    return any_changed
 
 
 # ---------------------------------------------------------------------------
@@ -386,7 +440,12 @@ def lambda_handler(event, context):
     s3 = boto3.client('s3')
 
     try:
-        download_files(s3, S3_BUCKET)
+        if not download_files(s3, S3_BUCKET):
+            print("No source file changed since last run, skipping transform.")
+            return {
+                'statusCode': 200,
+                'body': "No change (both ODRE sources up to date). Transform skipped."
+            }
 
         df_tr_full, df_cons_def_full, tr_key, cons_def_key = load_source_files(s3, S3_BUCKET, S3_PREFIX_IN)
         log_sources(s3, S3_BUCKET, df_tr_full, df_cons_def_full, tr_key, cons_def_key)

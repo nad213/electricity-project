@@ -72,28 +72,12 @@ resource "aws_iam_role_policy_attachment" "lambda_common_attach" {
 # --------------------------------------------
 # Lambda Permissions: Allow EventBridge to invoke odre_eco2mix
 # --------------------------------------------
-resource "aws_lambda_permission" "allow_cloudwatch_odre_1" {
-  statement_id  = "AllowExecutionFromCloudWatchOdre1"
+resource "aws_lambda_permission" "allow_cloudwatch_odre_live" {
+  statement_id  = "AllowExecutionFromCloudWatchOdreLive"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.odre_eco2mix.function_name
   principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.daily_trigger_odre_1.arn
-}
-
-resource "aws_lambda_permission" "allow_cloudwatch_odre_2" {
-  statement_id  = "AllowExecutionFromCloudWatchOdre2"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.odre_eco2mix.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.daily_trigger_odre_2.arn
-}
-
-resource "aws_lambda_permission" "allow_cloudwatch_odre_3" {
-  statement_id  = "AllowExecutionFromCloudWatchOdre3"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.odre_eco2mix.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.daily_trigger_odre_3.arn
+  source_arn    = aws_cloudwatch_event_rule.live_trigger_odre.arn
 }
 
 # --------------------------------------------
