@@ -195,6 +195,17 @@ DATABASES = {
 # Session configuration - use signed cookies (no database required)
 SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 
+# La session porte à la fois l'état de connexion OIDC et la mémoire des filtres
+# des graphiques (dates_conso, dates_production, dates_echanges…). On la limite
+# à 1 h : passé ce délai depuis la dernière écriture de session (login ou
+# soumission d'un filtre), l'utilisateur est déconnecté et les filtres
+# reviennent à leurs valeurs par défaut.
+SESSION_COOKIE_AGE = 3600
+# Mode glissant : chaque requête réécrit la session, ce qui repousse
+# l'expiration d'1 h. La déconnexion / reset des filtres intervient donc après
+# 1 h d'inactivité réelle, pas 1 h après la connexion.
+SESSION_SAVE_EVERY_REQUEST = True
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
