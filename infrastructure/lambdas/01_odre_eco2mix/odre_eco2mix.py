@@ -62,6 +62,28 @@ def merge_with_existing(s3, bucket, key, new_df, merge_key):
     return result.sort_values(merge_key).reset_index(drop=True)
 
 
+def prune_realtime_in_consolidated_zone(df):
+    """Supprime les points temps reel situes dans la zone deja couverte par le consolide.
+
+    Les points "Real-Time Data" (pas 15 min, provisoires) sont systematiquement biaises
+    par rapport au "Consolidated Data" (pas 30 min, definitif) : les intercaler produit des
+    'dents de scie'. On ne garde le temps reel que strictement au-dela de la frontiere du
+    consolide (max des horodatages consolides). Purge aussi l'historique deja pollue reinjecte
+    par merge_with_existing.
+    """
+    if "source" not in df.columns:
+        return df
+    consolidated = df.loc[df["source"] == "Consolidated Data", "date_heure"]
+    if consolidated.empty:
+        return df
+    cons_max = consolidated.max()
+    keep = ~((df["source"] == "Real-Time Data") & (df["date_heure"] <= cons_max))
+    dropped = int((~keep).sum())
+    if dropped:
+        print(f"Pruned {dropped} real-time rows in consolidated zone (<= {cons_max})")
+    return df[keep].reset_index(drop=True)
+
+
 def load_source_files(s3, bucket, prefix_in):
     """Lit les 2 fichiers parquet source une seule fois."""
     tr_key = f"{prefix_in}/eco2mix-national-tr.parquet"
@@ -125,6 +147,7 @@ def transform_conso(s3, bucket, prefix_out, df_tr_full, df_cons_def_full):
     df_result = pd.concat([df_cons_def_unique, df_tr_unique], ignore_index=True)
 
     df_result = merge_with_existing(s3, bucket, f"{prefix_out}/consommation_france_puissance.parquet", df_result, "date_heure")
+    df_result = prune_realtime_in_consolidated_zone(df_result)
     buf = io.BytesIO()
     df_result.to_parquet(buf, index=False)
     buf.seek(0)
@@ -212,6 +235,7 @@ def transform_production(s3, bucket, prefix_out, df_tr_full, df_cons_def_full):
     print(f"[production] After NULL filter: {len(df_result)} rows")
 
     df_result = merge_with_existing(s3, bucket, f"{prefix_out}/production_france_detail.parquet", df_result, "date_heure")
+    df_result = prune_realtime_in_consolidated_zone(df_result)
     buf = io.BytesIO()
     df_result.to_parquet(buf, index=False)
     buf.seek(0)
@@ -307,6 +331,7 @@ def transform_echanges(s3, bucket, prefix_out, df_tr_full, df_cons_def_full):
     print(f"[echanges] After NULL filter: {len(df_result)} rows")
 
     df_result = merge_with_existing(s3, bucket, f"{prefix_out}/echanges_france_detail.parquet", df_result, "date_heure")
+    df_result = prune_realtime_in_consolidated_zone(df_result)
     buf = io.BytesIO()
     df_result.to_parquet(buf, index=False)
     buf.seek(0)
