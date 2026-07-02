@@ -20,11 +20,14 @@ try:
 except ImportError:  # mistralai >= 2.x a déplacé Mistral sous le sous-paquet client
     from mistralai.client import Mistral
 from django.conf import settings
+from django.utils import timezone
 
 from . import services
 
 
 SYSTEM_PROMPT = """Tu es un assistant qui aide à explorer les données électriques françaises (source RTE / ODRÉ).
+
+Date du jour : {today} (fuseau Europe/Paris). Toute expression relative — « hier », « aujourd'hui », « ce mois-ci », « cette année », « le mois dernier », etc. — se calcule par rapport à cette date, PAS à tes connaissances internes. Les données ont parfois un léger retard : si la donnée « d'hier » n'existe pas encore, appelle `get_overview` pour connaître la dernière date réellement disponible et dis-le à l'utilisateur.
 
 Règles :
 - Réponds toujours en français, de manière concise.
@@ -42,6 +45,20 @@ Règles :
 - N'affirme jamais qu'une donnée « s'arrête » à une année donnée sans le vérifier : fie-toi aux lignes réellement renvoyées par le tool (et à `get_overview`). Si tu résumes une série mensuelle en années, inclus la dernière année même partielle et précise le dernier mois disponible.
 - Pour toute question impliquant des jours ouvrés, jours ouvrables, jours fériés ou l'effet du calendrier sur la conso/production, utilise `get_calendrier` pour qualifier les jours, puis croise avec les données via `get_consommation` ou `get_production` en `granularity='daily'`. Rappel : jour ouvré = lundi-vendredi hors jours fériés ; jour ouvrable = lundi-samedi hors jours fériés.
 - Si une demande est ambiguë, pose une courte question avant d'appeler un tool."""
+
+
+def _build_system_prompt() -> str:
+    """Prompt système avec la date du jour (Europe/Paris) injectée à chaque appel.
+
+    Sans cette date, le modèle résout « hier » / « aujourd'hui » d'après ses
+    connaissances internes (année erronée) au lieu de la date réelle.
+    """
+    d = timezone.localdate()
+    jours = ("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche")
+    mois = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet",
+            "août", "septembre", "octobre", "novembre", "décembre")
+    today = f"{jours[d.weekday()]} {d.day} {mois[d.month - 1]} {d.year} ({d.isoformat()})"
+    return SYSTEM_PROMPT.format(today=today)
 
 
 TOOLS = [
@@ -699,7 +716,7 @@ class ChatService:
             resp = self.client.chat.complete(
                 model=self.model,
                 max_tokens=2048,
-                messages=[{"role": "system", "content": SYSTEM_PROMPT}] + history,
+                messages=[{"role": "system", "content": _build_system_prompt()}] + history,
                 tools=MISTRAL_TOOLS,
                 tool_choice="auto",
             )
