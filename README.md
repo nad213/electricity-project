@@ -1,167 +1,55 @@
-# Electricity Project - Énergie France
+# Electricity Project — Énergie France
 
-Projet unifié pour la visualisation des données de consommation et production électrique en France.
+Plateforme de visualisation des données électriques françaises : consommation, production par filière, échanges transfrontaliers. Application publiée sur <https://electricity-project-1.onrender.com/>.
+
+Sources : **ODRE** (eco2mix temps réel + consolidé) et **RTE** (production éolien/solaire, puissance max installée).
 
 ## Architecture
 
 ```
-electricity-project/
-├── infrastructure/          # Infrastructure AWS (Terraform + Lambdas)
-│   ├── terraform/          # Configuration Terraform
-│   └── lambdas/            # Fonctions Lambda Python
-├── webapp/                 # Application web Django
-│   ├── config/            # Configuration Django
-│   ├── consommation/      # App Django principale
-│   ├── templates/         # Templates HTML
-│   └── static/            # Fichiers CSS/JS
-└── scripts/               # Scripts utilitaires
+ODRE + RTE → Lambdas ETL (AWS, eu-west-3) → S3 (Parquet) → Django + DuckDB → Plotly / API v1 / Chatbot
 ```
 
-## Flux de données
+Deux composants, qui ne communiquent que par S3 :
 
-```
-Cron CloudWatch (quotidien 6h UTC)
-    ↓
-Lambda 00: csv_to_sqs
-    → Envoie les URLs des CSVs dans une queue SQS
-    ↓
-Lambda 01: downloader
-    → Télécharge les CSVs depuis l'API data.gouv.fr
-    → Stocke dans S3 (raw data)
-    ↓
-Lambda 02: transform (7h UTC)
-    → Transforme les CSVs en Parquet
-    → Agrège par période (puissance, mensuel, annuel)
-    → Stocke dans S3 (processed data)
-    ↓
-Django Web App
-    → Lit les Parquet depuis S3
-    → Affiche graphiques interactifs (Plotly)
-```
+- **`infrastructure/`** — pipeline ETL serverless : 3 lambdas Python + Terraform
+- **`webapp/`** — application Django : visualisations, API publique (`/api/v1/docs`), chatbot
 
-## Infrastructure AWS
+## Documentation
 
-### Ressources déployées
+La documentation technique complète est dans [`docs/`](docs/README.md) :
+architecture, pipeline ETL, pièges métier des données, webapp, API, déploiement, décisions d'architecture.
 
-- **S3 Bucket** : Stockage des données brutes (CSV) et transformées (Parquet)
-- **SQS Queue** : Queue de téléchargement
-- **Lambda Functions** :
-  - `00_csv_to_sqs` : Initialise les téléchargements
-  - `01_downloader` : Télécharge les fichiers CSV
-  - `02_transform_odre_eco2mix` : Transforme les données eCO2mix (conso, production, échanges)
-- **CloudWatch Events** : Déclencheurs quotidiens (cron)
+## Démarrage rapide
 
-### Déploiement infrastructure
-
-```bash
-cd infrastructure/terraform
-
-# Initialiser Terraform
-terraform init
-
-# Vérifier le plan
-terraform plan
-
-# Déployer
-terraform apply
-```
-
-### Construction des Lambdas
-
-```bash
-cd infrastructure/terraform
-
-# Build tous les packages Lambda
-./zip_lambda.sh
-```
-
-## Application Web Django
-
-### Installation locale
+### Webapp en local
 
 ```bash
 cd webapp
-
-# Créer un environnement virtuel
-python -m venv venv
-source venv/bin/activate  # ou venv\Scripts\activate sur Windows
-
-# Installer les dépendances
-pip install django plotly boto3 python-dotenv pandas pyarrow
-
-# Configurer les variables d'environnement
-cp .env.example .env
-# Éditer .env avec vos clés AWS
-
-# Lancer le serveur de développement
-python manage.py runserver
+cp .env.example .env          # première fois : remplir les variables
+python -m venv venv && venv/bin/pip install -r requirements.txt
+venv/bin/python manage.py runserver 8000
 ```
-
-### Configuration
-
-Créer un fichier `.env` dans `webapp/` :
-
-```env
-AWS_S3_REGION=eu-west-3
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-S3_PATH_PUISSANCE=s3://your-bucket/consommation_france_puissance.parquet
-S3_PATH_ANNUEL=s3://your-bucket/consommation_annuelle.parquet
-S3_PATH_MENSUEL=s3://your-bucket/consommation_mensuelle.parquet
-```
-
-## Technologies utilisées
 
 ### Infrastructure
-- **Terraform** : Infrastructure as Code
-- **AWS Lambda** : Traitement serverless
-- **Python 3.9** : Runtime Lambda
-- **Pandas** : Transformation des données
-- **Boto3** : SDK AWS pour Python
 
-### Application Web
-- **Django 6.0** : Framework web
-- **Plotly** : Graphiques interactifs
-- **Pandas** : Manipulation de données
-- **PyArrow** : Lecture de fichiers Parquet
+```bash
+cd infrastructure/terraform
+bash zip_lambda.sh            # packager les lambdas
+terraform apply
+```
 
-## Sources de données
+### Tester les lambdas en local
 
-Données issues de [data.gouv.fr](https://www.data.gouv.fr) :
-- eCO2mix national consolidé (consommation)
-- eCO2mix national temps réel (consommation)
-- Production par filière
+```bash
+python run_lambdas_local.py
+```
 
-## Structure des données
+## Déploiement
 
-### Consommation puissance
-- `date_heure` : Date et heure
-- `consommation` : Puissance en MW
-- `source` : "Données Consolidées" ou "Temps Réel"
-
-### Consommation annuelle
-- `annee` : Année
-- `consommation_annuelle` : Total en MWh
-
-### Consommation mensuelle
-- `annee_mois_str` : Format "2024-01"
-- `consommation_mensuelle` : Total en MWh
-
-## Développement
-
-### Prérequis
-
-- Python 3.9+
-- Terraform 1.0+
-- AWS CLI configuré
-- Compte AWS avec permissions appropriées
-
-### Variables d'environnement
-
-Les clés AWS doivent être configurées :
-- Via `.env` pour Django
-- Via AWS CLI ou variables d'environnement pour Terraform
+- **Webapp** : Render.com, auto-deploy sur push `master` (`render.yaml`)
+- **Infrastructure** : `terraform apply` manuel
 
 ## Licence
 
-Projet personnel - Données publiques
+Projet personnel — données publiques (ODRE / RTE).
