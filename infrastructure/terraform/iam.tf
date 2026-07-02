@@ -32,7 +32,8 @@ resource "aws_iam_policy" "lambda_common_policy" {
         Resource = [
           "${aws_s3_bucket.elecshiny_bucket.arn}/01_downloaded/*",
           "${aws_s3_bucket.elecshiny_bucket.arn}/02_clean/*",
-          "${aws_s3_bucket.elecshiny_bucket.arn}/logs/*"
+          "${aws_s3_bucket.elecshiny_bucket.arn}/logs/*",
+          "${aws_s3_bucket.elecshiny_bucket.arn}/state/*"
         ]
       },
       # S3 Permissions (write downloaded files, clean data, and logs)
@@ -44,7 +45,8 @@ resource "aws_iam_policy" "lambda_common_policy" {
         Resource = [
           "${aws_s3_bucket.elecshiny_bucket.arn}/01_downloaded/*",
           "${aws_s3_bucket.elecshiny_bucket.arn}/02_clean/*",
-          "${aws_s3_bucket.elecshiny_bucket.arn}/logs/*"
+          "${aws_s3_bucket.elecshiny_bucket.arn}/logs/*",
+          "${aws_s3_bucket.elecshiny_bucket.arn}/state/*"
         ]
       },
       # CloudWatch Logs Permissions (required for Lambda)
