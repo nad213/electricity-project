@@ -18,10 +18,26 @@
     <form id="chat-form" class="border-top p-2 d-flex gap-2 align-items-end">
       <textarea id="chat-input" class="form-control" rows="2" placeholder="Votre question..." required></textarea>
       <button id="chat-send" type="submit" class="btn btn-primary">Envoyer</button>
-      <button id="chat-clear" type="button" class="btn btn-outline-secondary" title="Réinitialiser la conversation">
+      <button id="chat-clear" type="button" class="btn btn-outline-secondary" title="Réinitialiser la conversation"
+              data-bs-toggle="modal" data-bs-target="#chat-clear-modal">
         <i class="ti ti-trash"></i>
       </button>
     </form>
+  </div>
+</div>
+
+<div class="modal" id="chat-clear-modal" tabindex="-1" aria-labelledby="chat-clear-modal-title" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div class="modal-title" id="chat-clear-modal-title">Effacer la conversation ?</div>
+        <div class="text-muted">L'historique de ce fil sera supprimé.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button id="chat-clear-confirm" type="button" class="btn btn-danger ms-auto">Effacer</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -47,7 +63,6 @@
   const form = document.getElementById("chat-form");
   const input = document.getElementById("chat-input");
   const sendBtn = document.getElementById("chat-send");
-  const clearBtn = document.getElementById("chat-clear");
 
   function getCookie(name) {
     const m = document.cookie.match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)");
@@ -180,8 +195,9 @@
     }
   });
 
-  clearBtn.addEventListener("click", () => {
-    if (!confirm("Effacer la conversation ?")) return;
+  // L'ouverture de la modale de confirmation est gérée par Tabler via
+  // data-bs-toggle sur le bouton corbeille ; ici on ne traite que la validation.
+  document.getElementById("chat-clear-confirm").addEventListener("click", () => {
     clearHistory();
     location.reload();
   });

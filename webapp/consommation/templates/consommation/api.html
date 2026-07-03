@@ -94,9 +94,10 @@
                             {% if key.is_active %}
                             <form method="post"
                                   action="{% url 'consommation:revoke_api_key' key.id %}"
-                                  onsubmit="return confirm('Révoquer la clé « {{ key.label }} » ? Cette action est définitive.');">
+                                  data-key-label="{{ key.label }}">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        data-bs-toggle="modal" data-bs-target="#revoke-key-modal">
                                     Révoquer
                                 </button>
                             </form>
@@ -110,6 +111,23 @@
         {% else %}
         <p class="text-muted mb-0">Vous n'avez pas encore de clé.</p>
         {% endif %}
+    </div>
+</div>
+
+<div class="modal" id="revoke-key-modal" tabindex="-1" aria-labelledby="revoke-key-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-body">
+                <div class="modal-title" id="revoke-key-modal-title">
+                    Révoquer la clé « <span id="revoke-key-label"></span> » ?
+                </div>
+                <div class="text-muted">Cette action est définitive.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button id="revoke-key-confirm" type="button" class="btn btn-danger ms-auto">Révoquer</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -203,6 +221,25 @@ curl -H "Authorization: Bearer $ELF_KEY" \
 </div>
 
 <script>
+// Modale de confirmation de révocation, partagée entre toutes les clés :
+// à l'ouverture, on retrouve le formulaire de la ligne cliquée (relatedTarget)
+// pour afficher son libellé et le soumettre si l'utilisateur confirme.
+(function () {
+    var modal = document.getElementById('revoke-key-modal');
+    if (!modal) return;
+
+    var pendingForm = null;
+
+    modal.addEventListener('show.bs.modal', function (event) {
+        pendingForm = event.relatedTarget.closest('form');
+        document.getElementById('revoke-key-label').textContent = pendingForm.dataset.keyLabel;
+    });
+
+    document.getElementById('revoke-key-confirm').addEventListener('click', function () {
+        if (pendingForm) pendingForm.submit();
+    });
+})();
+
 // Ajoute un bouton « copier » sur chaque bloc <pre><code> de la page API.
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.page-body pre').forEach(function (pre) {
