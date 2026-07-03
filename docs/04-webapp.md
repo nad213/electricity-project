@@ -23,6 +23,10 @@ Application Django 6 (`webapp/`), une seule app : `consommation`. Elle lit les P
 - **API** (`/api/`) — self-service de clés d'API (réservé aux connectés)
 - **Chat** (`/chat/`) — chatbot (réservé aux connectés)
 
+### Thème sombre (`static/css/style.css`)
+
+L'UI s'appuie sur Tabler (CDN, thème clair par défaut) passé en sombre par remap des variables `--tblr-*` dans `:root` + surcharges par composant. **Le remap est partiel** : un composant Tabler utilisé pour la première fois peut tomber sur des variables non remappées et sortir blanc avec du texte clair illisible (cas des modales, corrigé en 7759e86). Au premier usage d'un composant, vérifier son rendu et ajouter la section correspondante dans `style.css`. Certains utilitaires Tabler (`.link-*`) sont posés en `!important` — la surcharge doit l'être aussi.
+
 ### Chargement AJAX des graphiques
 
 Consommation, Production et Échanges retournent d'abord un squelette (formulaire + `<div aria-busy>`), puis `KiloWatch.loadCharts()` (`static/js/charts.js`) refait la même requête en XHR au `DOMContentLoaded`. Les vues détectent `X-Requested-With: XMLHttpRequest` et renvoient alors un `JsonResponse({'charts': {id: {data, layout}}})` au lieu du HTML. L'accueil reste en SSR.
