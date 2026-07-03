@@ -13,7 +13,7 @@ from unittest import mock
 import pandas as pd
 from django.contrib.sessions.backends.signed_cookies import SessionStore
 from django.core.cache import cache
-from django.test import Client, RequestFactory, TestCase
+from django.test import Client, RequestFactory, TestCase, override_settings
 from django.utils import timezone
 
 from ninja.testing import TestClient
@@ -355,6 +355,110 @@ class ChatParcToolTests(TestCase):
 
     def test_mode_inconnu_renvoie_erreur(self):
         self.assertIn("error", chat._tool_get_parc({"mode": "n_importe_quoi"}))
+
+
+class ChatPruneHistoryTests(TestCase):
+    """Élagage de la plomberie tool-use de l'historique (`chat._prune_tool_history`)
+    et son application dans `ChatService.run` : les messages `tool` et les
+    `tool_calls` des tours passés ne doivent plus être renvoyés à Mistral ni
+    comptés dans le budget max_turns — mais la boucle du tour COURANT doit
+    garder sa plomberie (exigence du format API)."""
+
+    def test_prune_retire_tool_et_tool_calls(self):
+        history = [
+            {"role": "user", "content": "conso hier ?"},
+            {"role": "assistant", "content": "", "tool_calls": [
+                {"id": "a", "type": "function",
+                 "function": {"name": "get_overview", "arguments": "{}"}}]},
+            {"role": "tool", "name": "get_overview", "tool_call_id": "a", "content": "{}"},
+            {"role": "assistant", "content": "Voici la conso."},
+        ]
+        self.assertEqual(chat._prune_tool_history(history), [
+            {"role": "user", "content": "conso hier ?"},
+            {"role": "assistant", "content": "Voici la conso."},
+        ])
+
+    def test_prune_garde_le_texte_d_un_assistant_avec_tool_calls(self):
+        history = [{"role": "assistant", "content": "Je regarde.", "tool_calls": [{"id": "a"}]}]
+        self.assertEqual(chat._prune_tool_history(history),
+                         [{"role": "assistant", "content": "Je regarde."}])
+
+    # ---- helpers pour mocker l'API Mistral ---- #
+
+    def _fake_resp(self, content=None, tool_calls=None):
+        msg = mock.Mock()
+        msg.content = content
+        msg.tool_calls = tool_calls
+        return mock.Mock(choices=[mock.Mock(message=msg)],
+                         usage=mock.Mock(prompt_tokens=10, completion_tokens=5))
+
+    def _fake_tool_call(self, call_id="call_1", name="get_overview", arguments="{}"):
+        tc = mock.Mock()
+        tc.id = call_id
+        tc.function.name = name  # affecté après coup : `name` est réservé par Mock()
+        tc.function.arguments = arguments
+        return tc
+
+    @override_settings(MISTRAL_API_KEY="test-key")
+    def test_run_renvoie_un_historique_sans_plomberie_tool(self):
+        with mock.patch.object(chat, "Mistral") as MockMistral, \
+             mock.patch.object(chat, "_run_tool", return_value='{"ok": true}'):
+            complete = MockMistral.return_value.chat.complete
+            complete.side_effect = [
+                self._fake_resp(tool_calls=[self._fake_tool_call()]),
+                self._fake_resp(content="La conso était de 55 GW."),
+            ]
+            result = chat.ChatService().run([{"role": "user", "content": "conso hier ?"}])
+
+        # L'historique renvoyé au frontend ne contient que du texte.
+        self.assertEqual(result["reply"], "La conso était de 55 GW.")
+        self.assertEqual(result["messages"], [
+            {"role": "user", "content": "conso hier ?"},
+            {"role": "assistant", "content": "La conso était de 55 GW."},
+        ])
+        # Mais PENDANT la boucle, le 2e appel API a bien reçu la plomberie
+        # complète du tour courant (assistant tool_calls + résultat tool).
+        in_loop = complete.call_args_list[1].kwargs["messages"]
+        self.assertIn("tool", [m["role"] for m in in_loop])
+
+    @override_settings(MISTRAL_API_KEY="test-key")
+    def test_run_elague_un_historique_entrant_au_format_ancien(self):
+        # Historique stocké côté navigateur AVANT ce changement : il embarque
+        # encore la plomberie tool des tours passés — elle ne doit pas repartir
+        # vers Mistral.
+        legacy = [
+            {"role": "user", "content": "conso hier ?"},
+            {"role": "assistant", "content": "", "tool_calls": [
+                {"id": "a", "type": "function",
+                 "function": {"name": "get_overview", "arguments": "{}"}}]},
+            {"role": "tool", "name": "get_overview", "tool_call_id": "a", "content": "{}"},
+            {"role": "assistant", "content": "55 GW."},
+            {"role": "user", "content": "et avant-hier ?"},
+        ]
+        with mock.patch.object(chat, "Mistral") as MockMistral:
+            complete = MockMistral.return_value.chat.complete
+            complete.side_effect = [self._fake_resp(content="54 GW.")]
+            result = chat.ChatService().run(legacy)
+
+        sent = complete.call_args.kwargs["messages"]
+        self.assertNotIn("tool", [m["role"] for m in sent])
+        self.assertTrue(all("tool_calls" not in m for m in sent))
+        self.assertEqual(result["messages"][-1], {"role": "assistant", "content": "54 GW."})
+
+    @override_settings(MISTRAL_API_KEY="test-key", CHAT_MAX_TURNS=1)
+    def test_les_messages_tool_ne_comptent_plus_dans_max_turns(self):
+        # max_turns=1 ⇒ budget de 2 messages. L'historique fait 4 messages dont
+        # 2 tool : élagué, il tient dans le budget et ne doit plus être rejeté.
+        history = [
+            {"role": "user", "content": "q"},
+            {"role": "tool", "name": "t", "tool_call_id": "a", "content": "{}"},
+            {"role": "tool", "name": "t", "tool_call_id": "b", "content": "{}"},
+            {"role": "assistant", "content": "r"},
+        ]
+        with mock.patch.object(chat, "Mistral") as MockMistral:
+            MockMistral.return_value.chat.complete.side_effect = [self._fake_resp(content="ok")]
+            result = chat.ChatService().run(history)
+        self.assertNotIn("error", result)
 
 
 class ChatEchangesEnergieToolTests(TestCase):

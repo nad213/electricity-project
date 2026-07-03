@@ -51,6 +51,8 @@ Défauts de TTL : 600 s dans `settings.py`, **3600 s en prod** (posé par `rende
 
 Boucle tool-use **stateless** sur l'API Mistral (`CHAT_MODEL`, défaut `mistral-medium-latest` en prod) : le client envoie tout l'historique à chaque tour, le serveur ne stocke rien. Les tools exposés sont de minces wrappers de `services.py` (`get_overview`, `get_consommation`, `get_production`, `get_echanges`, `get_echanges_energie`, `get_peak`, `get_parc`, `get_calendrier`…).
 
+**Élagage de l'historique** (`_prune_tool_history`) : les messages `tool` et les `tool_calls` des tours passés sont retirés de l'historique — à l'entrée de `run()` (compat avec les historiques déjà stockés côté navigateur) et de l'historique renvoyé au frontend. Seuls les échanges texte user/assistant sont conservés et comptés dans `CHAT_MAX_TURNS` ; le modèle rappelle un tool s'il a besoin des chiffres bruts. La plomberie tool-use du tour **courant** est en revanche conservée pendant la boucle (exigence du format API : un `tool_calls` doit être immédiatement suivi de ses résultats).
+
 Points d'attention encodés dans le prompt système :
 
 - La **date du jour** (Europe/Paris) est injectée à chaque appel — sans elle le modèle résout « hier » sur ses connaissances internes.

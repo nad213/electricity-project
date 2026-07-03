@@ -691,6 +691,28 @@ def _content_to_text(content) -> str:
     return str(content)
 
 
+def _prune_tool_history(messages: list[dict]) -> list[dict]:
+    """Retire la plomberie tool-use des tours PRÉCÉDENTS de l'historique.
+
+    Les messages `tool` (gros JSON de données) et les `tool_calls` ne servent
+    plus une fois la réponse texte produite : le modèle peut rappeler un tool.
+    Les renvoyer à chaque tour coûte des tokens et consomme le budget
+    `max_turns`. À ne jamais appliquer au milieu de la boucle d'un tour : l'API
+    exige qu'un `tool_calls` soit immédiatement suivi de ses résultats.
+    """
+    pruned = []
+    for m in messages:
+        if m.get("role") == "tool":
+            continue
+        if m.get("role") == "assistant" and m.get("tool_calls"):
+            text = m.get("content") or ""
+            if not text:
+                continue
+            m = {"role": "assistant", "content": text}
+        pruned.append(m)
+    return pruned
+
+
 class ChatService:
     def __init__(self):
         if not settings.MISTRAL_API_KEY:
@@ -706,10 +728,12 @@ class ChatService:
         (without the system message — il est ajouté à chaque appel).
         Returns {"reply": str, "messages": updated_history, "usage": {...}}.
         """
-        if len(messages) > self.max_turns * 2:
+        # L'historique entrant est élagué de la plomberie tool-use des tours
+        # passés (y compris celle d'historiques stockés avant ce changement) :
+        # le contrôle de longueur ne compte donc que les vrais échanges.
+        history = _prune_tool_history(messages)
+        if len(history) > self.max_turns * 2:
             return {"error": f"Conversation trop longue (>{self.max_turns} tours)"}
-
-        history = list(messages)
         usage_totals = {"input": 0, "output": 0}
 
         for _ in range(10):  # hard cap on tool-use iterations
@@ -730,7 +754,10 @@ class ChatService:
             if not tool_calls:
                 text = _content_to_text(msg.content)
                 history.append({"role": "assistant", "content": text})
-                return {"reply": text, "messages": history, "usage": usage_totals}
+                # L'historique renvoyé au frontend (donc stocké et resoumis au
+                # tour suivant) est élagué : les tool calls du tour courant ont
+                # déjà servi, seule la réponse texte reste utile.
+                return {"reply": text, "messages": _prune_tool_history(history), "usage": usage_totals}
 
             # On stocke des dicts JSON-sérialisables (l'historique fait l'aller-retour
             # avec le frontend) — pas les objets SDK.
@@ -764,4 +791,4 @@ class ChatService:
                     "content": result_json,
                 })
 
-        return {"error": "Trop d'itérations tool-use", "messages": history, "usage": usage_totals}
+        return {"error": "Trop d'itérations tool-use", "messages": _prune_tool_history(history), "usage": usage_totals}
