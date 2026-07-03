@@ -460,6 +460,35 @@ body {
     color: var(--text-secondary) !important;
 }
 
+/* ========== Modales ========== */
+/* Tabler pose le fond des modales sur --tblr-bg-surface (non remappé en
+   :root) : sans ces règles, la modale reste blanche avec du texte clair. */
+.modal-content {
+    background-color: var(--surface);
+    border: 1px solid var(--border-light);
+    color: var(--text);
+}
+
+.modal-header,
+.modal-footer {
+    background-color: transparent;
+    border-color: var(--border);
+}
+
+.modal-title {
+    color: var(--text);
+}
+
+/* Le gris link-secondary de Tabler (posé en !important) est illisible
+   sur --surface : on le surcharge au même niveau, ciblé aux modales. */
+.modal .btn-link.link-secondary {
+    color: var(--text-secondary) !important;
+}
+
+.modal .btn-link.link-secondary:hover {
+    color: var(--text) !important;
+}
+
 /* ========== Alerts ========== */
 .alert {
     background-color: var(--surface);
