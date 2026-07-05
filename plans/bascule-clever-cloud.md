@@ -70,8 +70,13 @@ Postgres Clever, puis le service Render est éteint.
    racine — contrairement aux hooks), `CC_POST_BUILD_HOOK=bash clevercloud/post_build.sh`,
    secrets `CLEVER_TOKEN`/`CLEVER_SECRET` posés. Branche déployée et validée sur
    statelec.cleverapps.io (toutes pages 200).
-3. Merger la branche de A+B sur `master` → premier deploy auto via le workflow.
-4. Désactiver l'autoDeploy Render (sinon deux prods en parallèle), observer quelques jours.
+3. ~~Merger sur `master`~~ **fait le 2026-07-05** (merge `d990f4d`) : workflow
+   `Deploy Webapp` passé au vert (1 min 07), site en 200 après deploy. Validations
+   préalables toutes OK : OIDC (⚠️ redirect_uri avec slash final), chat (piège :
+   guillemets à ne PAS coller dans la console env Clever), API + throttling 429.
+4. **→ prochaine action** : désactiver l'autoDeploy Render (sinon deux prods en
+   parallèle — le deploy Render du merge échouera de toute façon, build.sh supprimé),
+   observer quelques jours.
 5. Supprimer le service + la Postgres Render (pas d'export : clés test uniquement).
 
 ## Fichiers concernés
