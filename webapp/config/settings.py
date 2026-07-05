@@ -40,8 +40,8 @@ S3_PATHS = {
 }
 
 # Local Parquet cache (see consommation/data_cache.py)
-# Directory where Parquet files are downloaded from S3.  /tmp is ephemeral on
-# Render (cleared on each deploy), which is intentional — clean slate on boot.
+# Directory where Parquet files are downloaded from S3.  /tmp is ephemeral in
+# prod (cleared on each deploy), which is intentional — clean slate on boot.
 PARQUET_CACHE_DIR = os.getenv('PARQUET_CACHE_DIR', '/tmp/parquet_cache')
 # How often (seconds) to re-check S3 ETags for freshness.  Default: 10 minutes.
 PARQUET_CACHE_CHECK_TTL = int(os.getenv('PARQUET_CACHE_CHECK_TTL', '600'))
@@ -97,7 +97,7 @@ if DEBUG:
 # GitHub Codespaces: the app is reached via a forwarded *.app.github.dev URL
 # behind a TLS-terminating proxy.  Trust that host and its X-Forwarded-Proto so
 # request.build_absolute_uri() yields https — required for the OIDC callback.
-# Only active inside a Codespace; no effect on local dev or Render.
+# Only active inside a Codespace; no effect on local dev or prod.
 _codespace_name = os.getenv('CODESPACE_NAME')
 if _codespace_name:
     _fwd_domain = os.getenv('GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN', 'app.github.dev')
@@ -122,7 +122,8 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
-# Nombre de proxys de confiance devant l'app (Render = 1). Indique à Django
+# Nombre de proxys de confiance devant l'app (Clever Cloud : nginx local = 1,
+# à revérifier si le throttling voit des IPs anormales). Indique à Django
 # Ninja de prendre la dernière IP de X-Forwarded-For (celle ajoutée par le
 # proxy = client réel) pour identifier les clients du throttling, au lieu de
 # concaténer tout l'en-tête — qui est falsifiable et permettrait de contourner
@@ -180,7 +181,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Les données de visualisation viennent de S3 (DuckDB), PAS d'une base. La base
 # ne sert qu'à un usage léger : stocker les clés d'API générées par les
 # utilisateurs (cf. consommation/models.py).
-# - En prod : `DATABASE_URL` pointe vers la Postgres (Render/Neon/…).
+# - En prod : `DATABASE_URL` pointe vers la Postgres (add-on Clever Cloud/…).
 # - En local sans `DATABASE_URL` : fallback SQLite (fichier db.sqlite3) pour
 #   pouvoir tester sans dépendre d'une base distante.
 import dj_database_url

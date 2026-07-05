@@ -43,5 +43,5 @@ Throttling **par clé** (django-ninja `AuthRateThrottle`), deux fenêtres régla
 
 ```bash
 curl -H "Authorization: Bearer elf_live_xxxxx" \
-  "https://electricity-project-1.onrender.com/api/v1/energie_conso?debut=2025-01-01&fin=2025-12-31"
+  "https://statelec.cleverapps.io/api/v1/energie_conso?debut=2025-01-01&fin=2025-12-31"
 ```

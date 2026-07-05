@@ -1,6 +1,6 @@
 # Webapp Django
 
-Application Django 6 (`webapp/`), une seule app : `consommation`. Elle lit les Parquet produits par l'ETL, trace des graphiques Plotly, et expose une API publique et un chatbot. Prod : Gunicorn + WhiteNoise sur Render.
+Application Django 6 (`webapp/`), une seule app : `consommation`. Elle lit les Parquet produits par l'ETL, trace des graphiques Plotly, et expose une API publique et un chatbot. Prod : Gunicorn + WhiteNoise sur Clever Cloud.
 
 ## Structure du module `consommation/`
 
@@ -41,9 +41,9 @@ Cycle de `ensure_local_parquet(key)` :
 2. Sinon, sous un lock par clé (double-checked locking, workers Gunicorn) : `head_object` S3 → ETag identique ⇒ rafraîchit le timestamp ; ETag différent ou fichier absent ⇒ retéléchargement atomique (`.tmp` + `rename`).
 3. **Dégradation** : sur erreur réseau, sert la copie locale périmée ; sans copie locale, retourne l'URL `s3://…` et `get_duckdb_connection()` bascule sur `httpfs`.
 
-Au démarrage (hors `migrate`/`collectstatic`/`test`), `apps.py` lance un thread daemon de warmup qui pré-télécharge tous les fichiers de `settings.S3_PATHS`. `/tmp` étant éphémère sur Render, chaque déploiement repart d'un cache propre.
+Au démarrage (hors `migrate`/`collectstatic`/`test`), `apps.py` lance un thread daemon de warmup qui pré-télécharge tous les fichiers de `settings.S3_PATHS`. `/tmp` étant éphémère sur Clever Cloud, chaque déploiement repart d'un cache propre.
 
-Défauts de TTL : 600 s dans `settings.py`, **3600 s en prod** (posé par `render.yaml`, à garder légèrement au-dessus de la cadence ETL).
+Défauts de TTL : 600 s dans `settings.py`, **3600 s en prod** (variable d'env Clever, à garder légèrement au-dessus de la cadence ETL).
 
 ## Sessions et authentification
 

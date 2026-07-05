@@ -1,0 +1,12 @@
+{
+  "apps": [
+    {
+      "app_id": "app_40af04af-fece-4f06-83c7-6083a2283aef",
+      "org_id": "orga_39e241b5-cf6f-4a7d-a9ff-1ad3ca4637c5",
+      "deploy_url": "https://push-n3-par-clevercloud-customers.services.clever-cloud.com/app_40af04af-fece-4f06-83c7-6083a2283aef.git",
+      "git_ssh_url": "git+ssh://git@push-n3-par-clevercloud-customers.services.clever-cloud.com/app_40af04af-fece-4f06-83c7-6083a2283aef.git",
+      "name": "statelec",
+      "alias": "statelec"
+    }
+  ]
+}

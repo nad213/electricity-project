@@ -1,0 +1,36 @@
+name: Deploy Webapp
+
+# Réplique l'autoDeploy Render : chaque push sur master déploie la webapp sur
+# Clever Cloud. `clever deploy` pousse l'historique git vers le remote de l'app
+# (d'où fetch-depth: 0) ; l'app cible est résolue via .clever.json (alias statelec).
+# Secrets requis : CLEVER_TOKEN / CLEVER_SECRET (clever login puis
+# ~/.config/clever-cloud/clever-tools.json).
+
+on:
+  push:
+    branches: [master]
+
+concurrency:
+  group: webapp-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLEVER_TOKEN: ${{ secrets.CLEVER_TOKEN }}
+      CLEVER_SECRET: ${{ secrets.CLEVER_SECRET }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install clever-tools
+        run: npm install -g clever-tools
+
+      - name: Deploy
+        # --force : le remote Clever n'est qu'un mécanisme de deploy, pas un
+        # miroir — un force-push dessus est sans risque et évite les échecs si
+        # l'historique a divergé (rebase, deploy manuel intermédiaire).
+        run: clever deploy --alias statelec --force

@@ -1,6 +1,6 @@
 # Electricity Project — Énergie France
 
-Plateforme de visualisation des données électriques françaises : consommation, production par filière, échanges transfrontaliers. Application publiée sur <https://electricity-project-1.onrender.com/>.
+Plateforme de visualisation des données électriques françaises : consommation, production par filière, échanges transfrontaliers. Application publiée sur <https://statelec.cleverapps.io/>.
 
 Sources : **ODRE** (eco2mix temps réel + consolidé) et **RTE** (production éolien/solaire, puissance max installée).
 
@@ -47,7 +47,7 @@ python run_lambdas_local.py
 
 ## Déploiement
 
-- **Webapp** : Render.com, auto-deploy sur push `master` (`render.yaml`)
+- **Webapp** : Clever Cloud, auto-deploy sur push `master` (GitHub Actions → `clever deploy`)
 - **Infrastructure** : `terraform apply` manuel
 
 ## Licence
