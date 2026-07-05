@@ -61,9 +61,11 @@ Postgres Clever, puis le service Render est éteint.
 ### D. Bascule et décommissionnement
 
 1. Valider sur Clever : login OIDC, chat, API avec clé migrée, warmup cache.
-2. Côté Clever, mettre à jour les env vars : `CC_RUN_COMMAND=bash clevercloud/run.sh` et
-   `CC_POST_BUILD_HOOK=bash clevercloud/post_build.sh` (remplacent les commandes inline).
-   Côté GitHub : créer les secrets `CLEVER_TOKEN` / `CLEVER_SECRET`.
+2. ~~Env vars Clever + secrets GitHub~~ **fait le 2026-07-05** :
+   `CC_RUN_COMMAND=bash ../clevercloud/run.sh` (⚠️ le run part de `$APP_FOLDER`, pas de la
+   racine — contrairement aux hooks), `CC_POST_BUILD_HOOK=bash clevercloud/post_build.sh`,
+   secrets `CLEVER_TOKEN`/`CLEVER_SECRET` posés. Branche déployée et validée sur
+   statelec.cleverapps.io (toutes pages 200).
 3. Merger la branche de A+B sur `master` → premier deploy auto via le workflow.
 4. Désactiver l'autoDeploy Render (sinon deux prods en parallèle), observer quelques jours.
 5. Supprimer le service + la Postgres Render (après export final des clés).
@@ -85,7 +87,9 @@ Postgres Clever, puis le service Render est éteint.
   en dernier, juste avant la bascule.
 - **URL cassante** : pas de redirect possible depuis onrender.com après extinction.
 - **Secrets GitHub Actions** : `CLEVER_TOKEN`/`CLEVER_SECRET` à créer ; sinon fallback
-  manuel `git push clever master`.
+  manuel `git push clever master`. ⚠️ Le token Clever **expire le 2027-07-04** (champ
+  `expirationDate` de `~/.config/clever-cloud/clever-tools.json`) : refaire `clever login`
+  et mettre à jour les deux secrets avant cette date, sinon le workflow échouera.
 - La config effective Render est celle du **dashboard**, pas `render.yaml` — vérifier au
   moment du décommissionnement qu'aucune env var prod n'a été oubliée dans la note
   `notes/clever-cloud-webapp.md`.
