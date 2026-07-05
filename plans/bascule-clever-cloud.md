@@ -47,10 +47,12 @@ Postgres Clever, puis le service Render est éteint.
 
 ### C. Ops (bloquants avant la bascule, hors code)
 
-1. **OIDC IdP** (toujours en attente) : ajouter `https://statelec.cleverapps.io/callback`
-   aux redirect URIs et `https://statelec.cleverapps.io/` aux post-logout URIs.
-2. **Clés d'API** : `pg_dump` de la table depuis la Postgres Render → restore dans l'add-on
-   Clever (ou régénération si peu de clés). Règle l'échéance Render ~2026-09-03.
+1. ~~OIDC IdP~~ **fait le 2026-07-05** : URIs ajoutées côté Zitadel — ⚠️ le `redirect_uri`
+   envoyé par l'app a un **slash final** (`…/callback/`), l'entrée IdP doit l'avoir aussi
+   (comparaison exacte). Reste à valider par un login réel dans le navigateur.
+2. ~~Clés d'API~~ **abandonné le 2026-07-05** : pas de migration — uniquement des
+   utilisateurs test, qui régénéreront leurs clés depuis `/api/` sur la nouvelle instance.
+   L'échéance Postgres Render (~2026-09-03) devient sans objet une fois Render éteint.
 3. **Vérifier `NINJA_NUM_PROXIES`** sur Clever : nginx local + LB Sozu devant → la
    profondeur X-Forwarded-For n'est peut-être pas 1 comme sur Render. Tester avec une
    requête réelle avant d'activer le throttling en confiance.
@@ -60,7 +62,9 @@ Postgres Clever, puis le service Render est éteint.
 
 ### D. Bascule et décommissionnement
 
-1. Valider sur Clever : login OIDC, chat, API avec clé migrée, warmup cache.
+1. Valider sur Clever : login OIDC (navigateur), chat, génération d'une clé d'API depuis
+   `/api/` + un appel authentifié (permet aussi de vérifier `NINJA_NUM_PROXIES`).
+   Warmup cache déjà validé (pages 200 à ~100 ms).
 2. ~~Env vars Clever + secrets GitHub~~ **fait le 2026-07-05** :
    `CC_RUN_COMMAND=bash ../clevercloud/run.sh` (⚠️ le run part de `$APP_FOLDER`, pas de la
    racine — contrairement aux hooks), `CC_POST_BUILD_HOOK=bash clevercloud/post_build.sh`,
@@ -68,7 +72,7 @@ Postgres Clever, puis le service Render est éteint.
    statelec.cleverapps.io (toutes pages 200).
 3. Merger la branche de A+B sur `master` → premier deploy auto via le workflow.
 4. Désactiver l'autoDeploy Render (sinon deux prods en parallèle), observer quelques jours.
-5. Supprimer le service + la Postgres Render (après export final des clés).
+5. Supprimer le service + la Postgres Render (pas d'export : clés test uniquement).
 
 ## Fichiers concernés
 
