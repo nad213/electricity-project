@@ -1,6 +1,6 @@
 # Architecture
 
-Plateforme de visualisation des données électriques françaises (consommation, production par filière, échanges transfrontaliers). Application publiée sur <https://electricity-project-1.onrender.com/>.
+Plateforme de visualisation des données électriques françaises (consommation, production par filière, échanges transfrontaliers). Application publiée sur <https://statelec.cleverapps.io/>.
 
 ## Vue d'ensemble
 
@@ -19,7 +19,7 @@ flowchart LR
         S3[("S3<br/>Parquet")]
     end
 
-    subgraph Render["Render.com"]
+    subgraph Clever["Clever Cloud"]
         DJ["Django + DuckDB<br/>cache Parquet local"]
         PG[("Postgres<br/>clés d'API")]
     end
@@ -43,7 +43,7 @@ Les deux composants ne communiquent **que par S3** : aucun appel direct entre le
 ## Choix structurants
 
 - **Pas de base de données pour les données métier** : les Parquet sur S3 sont la « base », interrogée en SQL par DuckDB. Voir [decisions/001-duckdb-parquet-s3.md](decisions/001-duckdb-parquet-s3.md).
-- **Postgres uniquement pour les clés d'API** (une seule table) : le système de fichiers de Render est éphémère, il faut un stockage qui survit aux redéploiements. Voir [decisions/002-postgres-render-api-keys.md](decisions/002-postgres-render-api-keys.md).
+- **Postgres uniquement pour les clés d'API** (une seule table) : le système de fichiers de l'hébergeur est éphémère, il faut un stockage qui survit aux redéploiements. Voir [decisions/002-postgres-render-api-keys.md](decisions/002-postgres-render-api-keys.md) et [decisions/004-hebergement-clever-cloud.md](decisions/004-hebergement-clever-cloud.md).
 - **Sessions en cookies signés** (`signed_cookies`) : aucun état de session côté serveur.
 - **Auth OIDC générique** (Authlib + discovery) : l'IdP est interchangeable via `OIDC_ISSUER`.
 
@@ -60,8 +60,8 @@ Les deux composants ne communiquent **que par S3** : aucun appel direct entre le
 | API publique | django-ninja (Swagger sur `/api/v1/docs`) |
 | Chatbot | API Mistral (boucle tool-use) |
 | Auth | OIDC (Authlib) |
-| Hébergement webapp | Render.com |
+| Hébergement webapp | Clever Cloud (+ add-on Postgres) |
 
 ## Dépôts et branches
 
-Monorepo. `master` = production (auto-déployée sur Render), `recette` = branche de recette.
+Monorepo. `master` = production (auto-déployée sur Clever Cloud via GitHub Actions), `recette` = branche de recette.

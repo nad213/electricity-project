@@ -9,7 +9,7 @@ Documentation de référence du projet. Chaque fichier est autonome ; l'ordre su
 | [03-donnees.md](03-donnees.md) | Sources de données, schémas Parquet, pièges métier |
 | [04-webapp.md](04-webapp.md) | Application Django : pages, cache Parquet, sessions, auth, chatbot |
 | [05-api.md](05-api.md) | API publique v1 : endpoints, authentification, limites |
-| [06-deploiement.md](06-deploiement.md) | Déploiement Render + Terraform, variables d'environnement |
+| [06-deploiement.md](06-deploiement.md) | Déploiement Clever Cloud + Terraform, variables d'environnement |
 | [decisions/](decisions/) | Décisions d'architecture (ADRs), datées |
 
 ## Conventions

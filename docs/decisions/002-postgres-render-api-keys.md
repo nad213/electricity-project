@@ -1,6 +1,6 @@
 # ADR 002 — Postgres Render pour les clés d'API
 
-**Statut : adopté, à revoir avant septembre 2026** (expiration du free tier Postgres Render ~2026-09-03)
+**Statut : remplacé par [ADR 004](004-hebergement-clever-cloud.md)** (juillet 2026) — la Postgres vit désormais dans un add-on Clever Cloud, ce qui règle l'échéance du free tier Render (~2026-09-03). Le raisonnement ci-dessous (« un stockage qui survit aux redéploiements ») reste valable.
 
 ## Contexte
 
