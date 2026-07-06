@@ -48,6 +48,8 @@ suppression IdP se font ensemble. Couvre aussi le droit à l'effacement (RGPD).
   console Clever : **pas de guillemets** autour de la valeur).
 - Noter la **date d'expiration du PAT** choisie à la création (même piège que le
   token Clever qui expire 2027-07-04) → l'inscrire dans ce plan une fois créé.
+- ✅ Fait le 2026-07-06 : service user `statelec-account-deletion`, PAT posé sur
+  Clever (`ZITADEL_SERVICE_TOKEN`), **expiration du PAT : 2033-12-07**.
 
 ### 4. Anonymisation — `consommation/models.py`
 
