@@ -36,6 +36,7 @@ Posées dans la console Clever ou via `clever env` (référence locale : `webapp
 - `S3_PATH_*` — un chemin `s3://…` par fichier Parquet (puissance, annuel, mensuel, production ×3, échanges, RTE ×5)
 - `DATABASE_URL` — valeur de `POSTGRESQL_ADDON_URI` injectée par l'add-on Postgres
 - `OIDC_ISSUER` / `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET`
+- `ZITADEL_SERVICE_TOKEN` — PAT d'un service user Zitadel (rôle Org User Manager), active la fermeture de compte in-app (vide = bouton masqué). ⚠️ Le PAT a une **date d'expiration** fixée à sa création dans la console Zitadel — la noter ici et renouveler avant échéance (même piège que le token Clever)
 - `MISTRAL_API_KEY`, `CHAT_MODEL` (prod : `mistral-medium-latest`)
 - `PARQUET_CACHE_CHECK_TTL=3600` — à garder un peu au-dessus de la cadence ETL
 - `NINJA_NUM_PROXIES=1`, et éventuels `API_THROTTLE_*`, `API_MAX_RANGE_DAYS`

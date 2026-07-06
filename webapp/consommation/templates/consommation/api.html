@@ -111,6 +111,12 @@
         {% else %}
         <p class="text-muted mb-0">Vous n'avez pas encore de clé.</p>
         {% endif %}
+        {% if account_deletion_enabled %}
+        <p class="text-muted small mt-3 mb-0">
+            Vous pouvez aussi <a href="{% url 'consommation:delete_account' %}">supprimer votre compte</a>
+            à tout moment — vos clés seront révoquées et votre adresse email effacée.
+        </p>
+        {% endif %}
     </div>
 </div>
 

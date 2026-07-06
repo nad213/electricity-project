@@ -3,6 +3,7 @@ from . import views
 from . import auth_views
 from . import chat_views
 from . import api_key_views
+from . import account_views
 
 app_name = 'consommation'
 
@@ -11,6 +12,7 @@ urlpatterns = [
     path('login/', auth_views.login, name='login'),
     path('callback/', auth_views.callback, name='callback'),
     path('logout/', auth_views.logout, name='logout'),
+    path('compte/supprimer/', account_views.delete_account, name='delete_account'),
 
     # Chatbot
     path('chat/', chat_views.chat_page, name='chat'),

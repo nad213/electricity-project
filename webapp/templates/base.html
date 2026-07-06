@@ -132,6 +132,12 @@
                                 <a class="dropdown-item" href="{% url 'consommation:logout' %}">
                                     <i class="ti ti-logout me-2"></i>Se déconnecter
                                 </a>
+                                {% if account_deletion_enabled %}
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item text-danger" href="{% url 'consommation:delete_account' %}">
+                                    <i class="ti ti-user-x me-2"></i>Supprimer mon compte
+                                </a>
+                                {% endif %}
                             </div>
                         </li>
                         {% else %}

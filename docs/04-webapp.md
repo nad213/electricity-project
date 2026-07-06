@@ -13,6 +13,7 @@ Application Django 6 (`webapp/`), une seule app : `consommation`. Elle lit les P
 | `api.py` / `api_auth.py` / `api_key_views.py` | API publique v1 (voir [05-api.md](05-api.md)) |
 | `models.py` | `ApiKey` — unique modèle en base |
 | `auth.py` / `auth_views.py` / `context_processors.py` | OIDC : login/callback/logout, infos utilisateur dans les templates |
+| `idp_admin.py` / `account_views.py` | Fermeture de compte (suppression chez Zitadel + anonymisation locale) |
 | `chat.py` / `chat_views.py` | Chatbot (boucle tool-use Mistral) |
 | `management/commands/refresh_data.py` | Rafraîchit le cache Parquet (`--force` pour tout retélécharger) |
 
@@ -50,6 +51,7 @@ Défauts de TTL : 600 s dans `settings.py`, **3600 s en prod** (variable d'env C
 - **Sessions en cookies signés** (`SESSION_ENGINE = signed_cookies`) — aucun stockage serveur. Expiration glissante d'**1 h** (`SESSION_COOKIE_AGE = 3600` + `SESSION_SAVE_EVERY_REQUEST`), qui expire aussi les filtres mémorisés. L'historique local du chat expire pareillement après 1 h d'inactivité (côté client).
 - **OIDC générique** (Authlib) : tous les endpoints sont découverts via `/.well-known/openid-configuration` de `OIDC_ISSUER` — n'importe quel IdP conforme (Zitadel, Keycloak, Auth0…) fonctionne en changeant trois variables d'env (`OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`). L'identité en session (`user.sub`, email) sert de propriétaire aux clés d'API.
 - **Base de données** : Postgres en prod via `DATABASE_URL` (dj-database-url), fallback SQLite en local. Une seule table applicative (`ApiKey`).
+- **Fermeture de compte** (`account_views.py`) : entrée « Supprimer mon compte » dans le menu utilisateur → page de confirmation `compte/supprimer/` (taper `SUPPRIMER`) → POST **tout-ou-rien** : dans une même transaction, `ApiKey.anonymize_user()` (révocation + `user_email` vidé + `user_sub` → `deleted:<hash>`, lignes conservées pour l'audit) puis suppression de l'utilisateur chez l'IdP ; si l'appel IdP échoue, rollback local. La suppression d'utilisateur n'étant pas du OIDC standard, elle est isolée dans `idp_admin.py` (**Zitadel-spécifique** : API User v2, PAT `ZITADEL_SERVICE_TOKEN` d'un service user Org User Manager) — `auth.py` reste provider-agnostic. Sans `ZITADEL_SERVICE_TOKEN`, la fonctionnalité est masquée. Pas de logout RP-initiated après suppression : Zitadel termine lui-même les sessions du compte supprimé.
 
 ## Chatbot (`chat.py`)
 

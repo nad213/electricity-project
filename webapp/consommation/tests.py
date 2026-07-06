@@ -11,6 +11,8 @@ from datetime import date, timedelta
 from unittest import mock
 
 import pandas as pd
+import requests
+from django.conf import settings as django_settings
 from django.contrib.sessions.backends.signed_cookies import SessionStore
 from django.core.cache import cache
 from django.test import Client, RequestFactory, TestCase, override_settings
@@ -616,3 +618,125 @@ class FiltresSessionTests(TestCase):
             views.resolve_multi_filter(
                 request, "filiere", "filiere_production", self.OPTIONS, default=["nucleaire"], label="Filière"
             )
+
+
+class ApiKeyAnonymizeTests(TestCase):
+    """`ApiKey.anonymize_user` : révocation + effacement des données personnelles,
+    sans toucher aux clés des autres utilisateurs ni aux dates d'audit."""
+
+    SUB = "user-oidc-123"
+
+    def test_anonymise_revoque_et_preserve_l_audit(self):
+        active = _make_key("elf_anon_active", "active")
+        ApiKey.objects.filter(pk=active.pk).update(
+            user_sub=self.SUB, user_email="jean@exemple.fr")
+        vieille_revocation = timezone.now() - timedelta(days=3)
+        revoked = ApiKey.objects.create(
+            user_sub=self.SUB, user_email="jean@exemple.fr", label="revoquee",
+            key_hash=api_auth.hash_key("elf_anon_revoked"), prefix="elf_anon",
+            revoked_at=vieille_revocation)
+        autre = _make_key("elf_anon_autre", "autre-utilisateur")
+
+        count = ApiKey.anonymize_user(self.SUB)
+        self.assertEqual(count, 2)
+
+        active.refresh_from_db()
+        revoked.refresh_from_db()
+        autre.refresh_from_db()
+        # La clé active est révoquée ; la date de l'ancienne révocation est préservée.
+        self.assertIsNotNone(active.revoked_at)
+        self.assertEqual(revoked.revoked_at, vieille_revocation)
+        # Plus aucune donnée personnelle, mais les lignes restent groupées.
+        for key in (active, revoked):
+            self.assertEqual(key.user_email, "")
+            self.assertTrue(key.user_sub.startswith("deleted:"))
+            self.assertNotIn(self.SUB, key.user_sub)
+        self.assertEqual(active.user_sub, revoked.user_sub)
+        # L'autre utilisateur n'est pas touché.
+        self.assertEqual(autre.user_sub, "test|autre-utilisateur")
+        self.assertIsNone(autre.revoked_at)
+
+
+@override_settings(ZITADEL_SERVICE_TOKEN="pat-test", SECURE_SSL_REDIRECT=False)
+class AccountDeletionTests(TestCase):
+    """Vue `compte/supprimer/` : garde-fous d'accès, confirmation, et flow
+    tout-ou-rien (échec Zitadel ⇒ rollback de l'anonymisation locale)."""
+
+    SUB = "user-oidc-123"
+    URL = "/compte/supprimer/"
+
+    def setUp(self):
+        self.client = Client()
+        self.key = _make_key("elf_del_key", "a-supprimer")
+        ApiKey.objects.filter(pk=self.key.pk).update(
+            user_sub=self.SUB, user_email="jean@exemple.fr")
+
+    def _login(self):
+        session = self.client.session
+        session["user"] = {"sub": self.SUB, "email": "jean@exemple.fr", "name": "Jean"}
+        session.save()
+        self.client.cookies[django_settings.SESSION_COOKIE_NAME] = session.session_key
+
+    def test_get_non_connecte_redirige_vers_login(self):
+        resp = self.client.get(self.URL)
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/login/", resp.url)
+
+    def test_post_non_connecte_redirige_vers_login_sans_rien_changer(self):
+        with mock.patch("consommation.account_views.delete_idp_user") as idp:
+            resp = self.client.post(self.URL, {"confirm": "SUPPRIMER"})
+        idp.assert_not_called()
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/login/", resp.url)
+        self.key.refresh_from_db()
+        self.assertEqual(self.key.user_sub, self.SUB)
+        self.assertIsNone(self.key.revoked_at)
+
+    @override_settings(ZITADEL_SERVICE_TOKEN="")
+    def test_fonctionnalite_desactivee_redirige_accueil(self):
+        self._login()
+        resp = self.client.get(self.URL)
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.url, "/")
+
+    def test_get_connecte_affiche_la_confirmation(self):
+        self._login()
+        resp = self.client.get(self.URL)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "SUPPRIMER")
+
+    def test_mauvaise_confirmation_ne_change_rien(self):
+        self._login()
+        with mock.patch("consommation.account_views.delete_idp_user") as idp:
+            resp = self.client.post(self.URL, {"confirm": "supprimer"})
+        idp.assert_not_called()
+        self.assertEqual(resp.status_code, 200)
+        self.key.refresh_from_db()
+        self.assertEqual(self.key.user_sub, self.SUB)
+        self.assertIsNone(self.key.revoked_at)
+
+    def test_echec_zitadel_rollback_local(self):
+        self._login()
+        with mock.patch("consommation.account_views.delete_idp_user",
+                        side_effect=requests.RequestException("boom")):
+            resp = self.client.post(self.URL, {"confirm": "SUPPRIMER"})
+        # Rien n'a changé : ni révocation ni anonymisation (rollback).
+        self.assertEqual(resp.status_code, 200)
+        self.key.refresh_from_db()
+        self.assertEqual(self.key.user_sub, self.SUB)
+        self.assertEqual(self.key.user_email, "jean@exemple.fr")
+        self.assertIsNone(self.key.revoked_at)
+
+    def test_succes_anonymise_et_deconnecte(self):
+        self._login()
+        with mock.patch("consommation.account_views.delete_idp_user") as idp:
+            resp = self.client.post(self.URL, {"confirm": "SUPPRIMER"})
+        idp.assert_called_once_with(self.SUB)
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.url, "/")
+        self.key.refresh_from_db()
+        self.assertTrue(self.key.user_sub.startswith("deleted:"))
+        self.assertEqual(self.key.user_email, "")
+        self.assertIsNotNone(self.key.revoked_at)
+        # Session locale vidée : l'utilisateur n'est plus connecté.
+        self.assertNotIn("user", self.client.session)

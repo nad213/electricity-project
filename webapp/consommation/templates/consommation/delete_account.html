@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Supprimer mon compte - StatElec{% endblock %}
+{% block page_title %}Supprimer mon compte{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">Supprimer mon compte</h3>
+            </div>
+            <div class="card-body">
+                <p>Cette action est <strong>définitive</strong> :</p>
+                <ul>
+                    <li>votre compte ({{ user_info.email }}) sera supprimé — vous ne pourrez plus vous connecter ;</li>
+                    {% if active_keys %}
+                    <li>vos {{ active_keys }} clé{{ active_keys|pluralize }} d'API active{{ active_keys|pluralize }} cesser{{ active_keys|pluralize:"a,ont" }} immédiatement de fonctionner ;</li>
+                    {% endif %}
+                    <li>votre adresse email sera effacée de nos enregistrements.</li>
+                </ul>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Tapez <strong>{{ confirm_word }}</strong> pour confirmer</label>
+                        <input type="text" name="confirm" class="form-control" autocomplete="off"
+                               autofocus required placeholder="{{ confirm_word }}">
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'consommation:accueil' %}" class="btn">Annuler</a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="ti ti-user-x me-2"></i>Supprimer définitivement
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

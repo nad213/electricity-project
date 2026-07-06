@@ -54,6 +54,10 @@ OIDC_CLIENT_SECRET = os.getenv('OIDC_CLIENT_SECRET', '')
 OIDC_SCOPES = os.getenv('OIDC_SCOPES', 'openid profile email')
 # Langue forcée de l'UI de login de l'IdP (ui_locales). Vide = langue du navigateur.
 OIDC_UI_LOCALES = os.getenv('OIDC_UI_LOCALES', 'fr')
+# PAT d'un service user Zitadel (rôle Org User Manager) — permet la fermeture de
+# compte in-app (suppression de l'utilisateur chez l'IdP, cf. idp_admin.py).
+# Vide = fonctionnalité masquée. ⚠️ Zitadel-spécifique, et le PAT expire.
+ZITADEL_SERVICE_TOKEN = os.getenv('ZITADEL_SERVICE_TOKEN', '')
 
 # Chatbot (Mistral API)
 MISTRAL_API_KEY = os.getenv('MISTRAL_API_KEY', '')
