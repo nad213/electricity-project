@@ -198,6 +198,18 @@ body {
     color: var(--accent);
 }
 
+.btn-outline-secondary {
+    color: var(--text-secondary);
+    border-color: var(--border-light);
+    background-color: transparent;
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--surface-hover);
+    border-color: var(--border-light);
+    color: var(--text);
+}
+
 /* ========== Tabs ========== */
 .nav-tabs {
     border-bottom-color: var(--border);

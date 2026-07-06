@@ -7,29 +7,24 @@
 {% block page_header %}
 <div class="page-header d-print-none">
     <div class="container-xl">
-        <div class="row g-2 align-items-center py-3">
-            <div class="col">
-                <h1 class="page-title">Le réseau électrique aujourd'hui</h1>
-                <p class="text-muted mb-2 text-sm">
-                    Consommation, production et échanges électriques français, mis à jour quotidiennement.
-                </p>
-                <p class="mb-0 text-sm d-flex align-items-center flex-wrap gap-2">
-                    <a href="https://github.com/nad213/electricity-project" target="_blank" rel="noopener">
-                        <i class="ti ti-brand-github me-1"></i>Code source
-                    </a>
-                    <span class="text-muted">·</span>
-                    <a href="https://github.com/nad213/electricity-project#readme" target="_blank" rel="noopener">
-                        <i class="ti ti-article me-1"></i>En savoir plus sur le projet
-                    </a>
-                </p>
-            </div>
+        <div class="py-3">
+            <h1 class="page-title mb-2">Le réseau électrique aujourd'hui</h1>
+            <p class="text-muted mb-1 text-sm">
+                Consommation, production et échanges électriques français, mis à jour toutes les heures.
+            </p>
             {% if has_dashboard_data %}
-            <div class="col-auto">
-                <span class="text-muted text-xs">
-                    <i class="ti ti-calendar me-1"></i>Dernières données — {{ dashboard_date|date:"d/m/Y à H\hi" }}
-                </span>
-            </div>
+            <p class="text-muted text-xs mb-2">
+                <i class="ti ti-calendar me-1"></i>Dernières données — {{ dashboard_date|date:"d/m/Y à H\hi" }}
+            </p>
             {% endif %}
+            <div class="d-flex flex-wrap gap-2">
+                <a href="https://github.com/nad213/electricity-project" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">
+                    <i class="ti ti-brand-github me-1"></i>Code source
+                </a>
+                <a href="https://github.com/nad213/electricity-project#readme" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">
+                    <i class="ti ti-article me-1"></i>La démarche du projet
+                </a>
+            </div>
         </div>
     </div>
 </div>
