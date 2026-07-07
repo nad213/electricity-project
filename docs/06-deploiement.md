@@ -12,6 +12,8 @@
 
 App `statelec` (`app_40af04af-fece-4f06-83c7-6083a2283aef`, runtime **Python**, instance XS 1 Go), domaine <https://statelec.cleverapps.io/>. Le fichier `.clever.json` à la racine lie le repo à l'app pour la CLI `clever-tools`.
 
+> ℹ️ L'application s'appelle **Buzzelec** (renommage 2026-07-07) mais les identifiants techniques gardent `statelec` : app et alias Clever, domaine `statelec.cleverapps.io`, add-on Postgres `statelec-postegredb`, service account Zitadel `statelec-account-deletion`. Renommer le domaine/l'app serait une opération console Clever séparée (+ mise à jour des redirect URIs Zitadel).
+
 ### Mécanique de déploiement
 
 - **Auto-deploy** : le workflow `.github/workflows/webapp-deploy.yml` lance `clever deploy --alias statelec --force` sur chaque push `master` (secrets GitHub `CLEVER_TOKEN` / `CLEVER_SECRET`).

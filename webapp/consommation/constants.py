@@ -1,5 +1,5 @@
 """
-Constantes centralisées pour l'application StatElec.
+Constantes centralisées pour l'application Buzzelec.
 
 Ce fichier regroupe toutes les couleurs, configurations de graphiques,
 et mappings utilisés dans l'application pour éviter la redondance.

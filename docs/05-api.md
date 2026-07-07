@@ -1,4 +1,4 @@
-# API publique v1 (StatElec)
+# API publique v1 (Buzzelec)
 
 API JSON en lecture seule (django-ninja), montée sous `/api/v1/`. Documentation interactive Swagger : `/api/v1/docs`. Elle réutilise directement `services.py` — les endpoints ne font que valider les paramètres et sérialiser.
 

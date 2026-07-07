@@ -3,9 +3,9 @@
  * juste après Plotly). Factorise ce qui était copié-collé dans chaque template :
  * rendu des graphiques, resize au changement d'onglet, scrollspy de la sidebar.
  */
-window.StatElec = window.StatElec || {};
+window.Buzzelec = window.Buzzelec || {};
 
-StatElec.PLOT_CONFIG = { responsive: true, displayModeBar: false };
+Buzzelec.PLOT_CONFIG = { responsive: true, displayModeBar: false };
 
 // Markup d'erreur réutilisé par renderChart et loadCharts.
 var _CHART_ERROR_HTML =
@@ -13,7 +13,7 @@ var _CHART_ERROR_HTML =
     'Le graphique n\'a pas pu être affiché.</div>';
 
 function _chartError(el) {
-    StatElec._hideOverlay(el.id);
+    Buzzelec._hideOverlay(el.id);
     el.classList.add('chart-error');
     el.setAttribute('role', 'alert');
     el.innerHTML = _CHART_ERROR_HTML;
@@ -24,7 +24,7 @@ function _chartError(el) {
  * L'overlay est un vrai élément DOM (les pseudo-éléments sont écrasés par
  * le contexte de stacking interne de Plotly).
  */
-StatElec._showOverlay = function(id) {
+Buzzelec._showOverlay = function(id) {
     var el = document.getElementById(id);
     if (!el) return;
     var container = el.parentElement;
@@ -39,7 +39,7 @@ StatElec._showOverlay = function(id) {
 /**
  * Retire l'overlay spinner du .chart-container parent du div id donné.
  */
-StatElec._hideOverlay = function(id) {
+Buzzelec._hideOverlay = function(id) {
     var el = document.getElementById(id);
     if (!el) return;
     var container = el.parentElement;
@@ -55,18 +55,18 @@ StatElec._hideOverlay = function(id) {
  * @param {string} json - figure Plotly sérialisée (data + layout)
  * @param {Object} [config] - config Plotly (défaut : PLOT_CONFIG)
  */
-StatElec.renderChart = function(id, json, config) {
+Buzzelec.renderChart = function(id, json, config) {
     var el = document.getElementById(id);
     if (!el) return;
 
-    StatElec._hideOverlay(id);
+    Buzzelec._hideOverlay(id);
 
     try {
         var chart = JSON.parse(json);
-        Plotly.newPlot(el, chart.data, chart.layout, config || StatElec.PLOT_CONFIG);
+        Plotly.newPlot(el, chart.data, chart.layout, config || Buzzelec.PLOT_CONFIG);
     } catch (err) {
         _chartError(el);
-        if (window.console) console.error('StatElec.renderChart(' + id + '):', err);
+        if (window.console) console.error('Buzzelec.renderChart(' + id + '):', err);
     }
 };
 
@@ -77,8 +77,8 @@ StatElec.renderChart = function(id, json, config) {
  * @param {string}   url       - URL à fetcher (avec éventuels query params)
  * @param {string[]} targetIds - ids des divs à charger
  */
-StatElec.loadCharts = function(url, targetIds) {
-    targetIds.forEach(function(id) { StatElec._showOverlay(id); });
+Buzzelec.loadCharts = function(url, targetIds) {
+    targetIds.forEach(function(id) { Buzzelec._showOverlay(id); });
 
     requestAnimationFrame(function() {
         requestAnimationFrame(function() {
@@ -92,26 +92,26 @@ StatElec.loadCharts = function(url, targetIds) {
                     Object.keys(charts).forEach(function(id) {
                         var el = document.getElementById(id);
                         if (!el) return;
-                        StatElec._hideOverlay(id);
+                        Buzzelec._hideOverlay(id);
                         try {
                             var c = charts[id];
-                            Plotly.newPlot(el, c.data, c.layout, StatElec.PLOT_CONFIG);
+                            Plotly.newPlot(el, c.data, c.layout, Buzzelec.PLOT_CONFIG);
                         } catch (err) {
                             _chartError(el);
-                            if (window.console) console.error('StatElec.loadCharts(' + id + '):', err);
+                            if (window.console) console.error('Buzzelec.loadCharts(' + id + '):', err);
                         }
                     });
                     // Filet de sécurité : retire l'overlay de toute cible demandée
                     // que la réponse n'aurait pas renvoyée, pour éviter un spinner
                     // qui tourne indéfiniment.
-                    targetIds.forEach(function(id) { StatElec._hideOverlay(id); });
+                    targetIds.forEach(function(id) { Buzzelec._hideOverlay(id); });
                 })
                 .catch(function(err) {
                     targetIds.forEach(function(id) {
                         var el = document.getElementById(id);
                         if (el) _chartError(el);
                     });
-                    if (window.console) console.error('StatElec.loadCharts:', err);
+                    if (window.console) console.error('Buzzelec.loadCharts:', err);
                 });
         });
     });
