@@ -83,7 +83,11 @@ bucket vide tout seuls.
 1. `terraform apply` côté Scaleway, crons actifs → laisser les crons amorcer le bucket
    (pas de sync). Attendre qu'`eco2mix`, `scrape_rte` et `pmax` aient tourné au moins
    une fois (créneau 07:00 UTC pour les deux derniers).
-2. **Couper les crons AWS** (disable des CloudWatch rules, pas de destroy).
+2. **Couper les crons AWS** — via Terraform, PAS à la main : passer les 3
+   `state = "ENABLED"` à `"DISABLED"` dans `infrastructure/terraform/lambda.tf`
+   et merger sur master (le workflow `infra-deploy.yml` applique). Un disable
+   console serait écrasé (retour ENABLED) au prochain apply CI déclenché par
+   n'importe quel push touchant `infrastructure/` hors `terraform-scaleway/`.
 3. Vérifier 24-48 h : `logs/download_log.csv` côté Scaleway avance, fraîcheur OK.
 4. Bascule webapp (env vars Clever) : `AWS_S3_ENDPOINT_URL`, `AWS_S3_REGION=fr-par`,
    creds Scaleway, `S3_PATH_*` (nouveau nom de bucket). Redéploiement, recette
@@ -110,7 +114,24 @@ bucket vide tout seuls.
   2026-07-07) : téléchargement source → transform → écriture dans `elec-app-scw`.
   Bucket amorcé (18 objets, tous les `02_clean/*.parquet` + `state/` + `logs/`).
 - Étape 4 : **supprimée** (sync inutile) — bucket déjà amorcé à la main de toute façon.
-- Reste : couper crons AWS, **bascule webapp** (env vars Clever), période d'obs, doc,
+- **Revue de code (2026-07-07)** — correctifs appliqués suite au code-review de la branche :
+  - `requirements-functions.txt` : versions **pinnées** (boto3 1.43.41, requests 2.34.2,
+    pandas 3.0.3, pyarrow 24.0.0 — celles validées de bout en bout ; côté AWS le layer
+    pinnait, ici rien ne le faisait). Cross-références ajoutées avec les
+    `lambdas/*/requirements.txt` (deux sources de vérité → ImportError silencieux sinon).
+  - `functions.tf` : chemins `${path.module}/build/…`, prérequis `package_functions.sh`
+    documenté en tête (zips gitignorés, `filesha256` échoue en dur sinon), factorisation
+    `for_each` + blocs `moved` (pas de destroy/recreate des ressources live).
+  - `infra-deploy.yml` : exclusion de `infrastructure/terraform-scaleway/**` des paths.
+  - `lambda.tf` AWS : `state = "ENABLED"` explicite sur les 3 event rules + procédure de
+    coupure par Terraform (étape 5.2 révisée — un disable console serait écrasé par CI).
+  - Webapp : validation positive de l'endpoint DuckDB (la blocklist laissait passer
+    `'` et `/`) ; avertissement région/endpoint (SigV4) dans `.env.example` et
+    `docs/06-deploiement.md`.
+  - `main.tf` : consigne de sauvegarde du tfstate local (Codespace éphémère = seule
+    copie du state des 8 ressources live).
+- Reste : couper crons AWS (via Terraform, cf. étape 5.2 révisée), **bascule webapp**
+  (env vars Clever — ⚠️ `AWS_S3_REGION=fr-par` avec l'endpoint), période d'obs, doc,
   `terraform destroy` AWS.
 
 ## Fichiers concernés
@@ -137,3 +158,12 @@ bucket vide tout seuls.
   des crons AWS, les deux pipelines écrivent chacun dans leur bucket — sans conflit
   (buckets séparés), mais la webapp ne doit basculer qu'après validation Scaleway.
 - **Ne pas supprimer AWS avant** la période d'observation ET un dump local du bucket.
+- **State Terraform Scaleway local** sur un Codespace éphémère : seule copie du state
+  des ressources live → sauvegarder `terraform.tfstate` hors Codespace après chaque
+  apply (cf. commentaire dans `main.tf`), ou basculer le backend tôt.
+- **Pas de retry sur les crons Scaleway** (EventBridge réinvoquait 2× en cas de crash
+  dur type timeout/OOM) : un échec transitoire d'un job quotidien = 24 h de données
+  périmées. Accepté — pipelines self-healing, le run suivant reconstruit tout.
+- **Clé API Scaleway à droits projet** dans l'env des functions (l'IAM AWS était scopée
+  Get/Put sur 4 préfixes, sans delete) : à durcir plus tard avec une policy IAM
+  Scaleway scopée au bucket.

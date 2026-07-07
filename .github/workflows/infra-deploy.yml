@@ -5,6 +5,9 @@ on:
     branches: [master]
     paths:
       - "infrastructure/**"
+      # Le stack Scaleway (ETL) est appliqué manuellement, pas par ce workflow
+      # (AWS uniquement) — inutile de déclencher un apply AWS pour ces fichiers.
+      - "!infrastructure/terraform-scaleway/**"
 
 jobs:
   deploy:

@@ -35,6 +35,7 @@ Posées dans la console Clever ou via `clever env` (référence locale : `webapp
 - Runtime : `APP_FOLDER=webapp`, `CC_PYTHON_VERSION=3.13`, `CC_RUN_COMMAND=bash ../clevercloud/run.sh`, `CC_POST_BUILD_HOOK=bash clevercloud/post_build.sh`
 - `SECRET_KEY`, `DEBUG=False`, `ALLOWED_HOSTS` (le `CSRF_TRUSTED_ORIGINS` en découle, cf. `settings.py`)
 - `AWS_S3_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
+- `AWS_S3_ENDPOINT_URL` — vide/absent = AWS ; pour un stockage S3-compatible (ex. Scaleway `https://s3.fr-par.scw.cloud`). ⚠️ `AWS_S3_REGION` doit alors correspondre à l'endpoint (`fr-par` pour Scaleway), sinon 403 `SignatureDoesNotMatch`
 - `S3_PATH_*` — un chemin `s3://…` par fichier Parquet (puissance, annuel, mensuel, production ×3, échanges, RTE ×5)
 - `DATABASE_URL` — valeur de `POSTGRESQL_ADDON_URI` injectée par l'add-on Postgres
 - `OIDC_ISSUER` / `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET`

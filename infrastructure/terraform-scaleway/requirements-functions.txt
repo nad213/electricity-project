@@ -1,7 +1,17 @@
 # Dépendances vendorées dans les zips des Scaleway Functions.
 # Sur AWS, pandas/pyarrow venaient du layer AWSSDKPandas et boto3 du runtime ;
 # chez Scaleway, tout doit être dans le package.
-boto3
-requests
-pandas
-pyarrow
+#
+# Versions PINNÉES = celles validées de bout en bout le 2026-07-07 (invocation
+# manuelle des 3 functions, runtime musl). Ne monter une version qu'après avoir
+# vérifié qu'un wheel musllinux existe (sinon pip --only-binary échoue) et
+# revalidé le pipeline. package_functions.sh suppose aussi la structure interne
+# de botocore/pyarrow pour son élagage.
+#
+# ⚠️ Ce fichier est LA source de vérité des deps côté Scaleway. Les
+# infrastructure/lambdas/*/requirements.txt ne servent qu'au packaging AWS
+# (zip_lambda.sh) : toute nouvelle dépendance doit être ajoutée AUX DEUX endroits.
+boto3==1.43.41
+requests==2.34.2
+pandas==3.0.3
+pyarrow==24.0.0

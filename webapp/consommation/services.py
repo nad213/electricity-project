@@ -1,3 +1,5 @@
+import re
+
 import duckdb
 import pandas as pd
 from django.conf import settings
@@ -57,12 +59,14 @@ def get_duckdb_connection(*paths):
             conn.execute(f"SET s3_secret_access_key='{secret_key}'")
 
             # Endpoint S3-compatible hors AWS (ex. Scaleway) : hôte sans schéma
-            # pour DuckDB, et style path (le virtual-host est propre à AWS)
+            # pour DuckDB, et style path (le virtual-host est propre à AWS).
+            # Validation positive hôte[:port] — la blocklist de
+            # _validate_s3_credential laisse passer ' et /, dangereux dans un SET.
             endpoint_url = settings.AWS_CONFIG.get('endpoint_url')
             if endpoint_url:
-                host = _validate_s3_credential(
-                    endpoint_url.split('://', 1)[-1].rstrip('/'), 'S3 endpoint'
-                )
+                host = endpoint_url.split('://', 1)[-1].rstrip('/')
+                if not re.fullmatch(r"[A-Za-z0-9.-]+(:\d{1,5})?", host):
+                    raise ValueError(f"Invalid S3 endpoint host: {host!r}")
                 conn.execute(f"SET s3_endpoint='{host}'")
                 conn.execute("SET s3_url_style='path'")
 

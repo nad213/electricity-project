@@ -1,1 +1,3 @@
-# pandas is provided by the AWSSDKPandas-Python39 Lambda layer
+# ⚠️ Packaging AWS (zip_lambda.sh) uniquement. Pour Scaleway, ajouter toute
+# nouvelle dépendance aussi dans terraform-scaleway/requirements-functions.txt.
+# pandas/pyarrow : fournis par le layer AWSSDKPandas-Python312 côté AWS.

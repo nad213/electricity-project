@@ -23,9 +23,15 @@ resource "aws_lambda_function" "odre_eco2mix" {
 
 # Declenchement horaire. La lambda vérifie `data_processed` et ne re-télécharge/re-transforme
 # que si la source a bougé, donc les runs sans nouveauté sont des no-op (2 GET métadonnées + early-return).
+#
+# Bascule Scaleway (plans/migration-etl-scaleway.md, étape 5.2) : couper les crons
+# AWS en passant les 3 `state` à "DISABLED" ICI puis merge sur master (le workflow
+# infra-deploy applique). NE PAS désactiver à la main dans la console : le prochain
+# apply CI remettrait ENABLED (défaut du provider).
 resource "aws_cloudwatch_event_rule" "live_trigger_odre" {
   name                = "trigger-odre-eco2mix-hourly"
   schedule_expression = "rate(1 hour)"
+  state               = "ENABLED"
 }
 
 resource "aws_cloudwatch_event_target" "trigger_odre_live" {
@@ -61,6 +67,7 @@ resource "aws_lambda_function" "scrape_rte_production" {
 resource "aws_cloudwatch_event_rule" "daily_trigger_rte_production" {
   name                = "trigger-scrape-rte-production-daily"
   schedule_expression = "cron(0 7 * * ? *)" # Daily at 07:00 UTC
+  state               = "ENABLED"           # bascule Scaleway : passer à DISABLED (cf. commentaire rule 01)
 }
 
 resource "aws_cloudwatch_event_target" "trigger_scrape_rte_production" {
@@ -96,6 +103,7 @@ resource "aws_lambda_function" "rte_pmax" {
 resource "aws_cloudwatch_event_rule" "daily_trigger_rte_pmax" {
   name                = "trigger-rte-pmax-daily"
   schedule_expression = "cron(5 7 * * ? *)" # Daily at 07:05 UTC
+  state               = "ENABLED"           # bascule Scaleway : passer à DISABLED (cf. commentaire rule 01)
 }
 
 resource "aws_cloudwatch_event_target" "trigger_rte_pmax" {
