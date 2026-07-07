@@ -2,7 +2,7 @@
 
 {% block head_scripts %}{% include "partials/_plotly.html" %}{% endblock %}
 
-{% block title %}Échanges - Buzzelec{% endblock %}
+{% block title %}Échanges - ElecStat{% endblock %}
 
 {% block page_title %}
     <i class="ti ti-arrow-exchange me-2"></i>
@@ -118,13 +118,13 @@
 {# Chargement AJAX des graphiques au DOMContentLoaded ; resize/scrollspy gérés par charts.js #}
 document.addEventListener('DOMContentLoaded', function() {
     // Courbe de charge : dépend des dates et du pays sélectionné (top form)
-    Buzzelec.loadCharts(
+    ElecStat.loadCharts(
         window.location.pathname + window.location.search,
         ['chart-echanges']
     );
     // Graphe annuel : dépend uniquement de pays_annuel (bottom form), fetch indépendant
     var paysAnnuel = '{{ selected_pays_annuel|escapejs }}';
-    Buzzelec.loadCharts(
+    ElecStat.loadCharts(
         window.location.pathname + '?pays_annuel=' + encodeURIComponent(paysAnnuel),
         ['chart-echanges-annuel']
     );
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', function() {
     annuelForm.addEventListener('change', function() {
         var checked = annuelForm.querySelector('input[name="pays_annuel"]:checked');
         if (!checked) return;
-        Buzzelec._showOverlay('chart-echanges-annuel');
+        ElecStat._showOverlay('chart-echanges-annuel');
         var url = window.location.pathname + '?pays_annuel=' + encodeURIComponent(checked.value);
         requestAnimationFrame(function() {
             requestAnimationFrame(function() {
@@ -146,12 +146,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
                         Object.keys(data.charts).forEach(function(id) {
-                            Buzzelec._hideOverlay(id);
+                            ElecStat._hideOverlay(id);
                             var c = data.charts[id];
-                            Plotly.react(id, c.data, c.layout, Buzzelec.PLOT_CONFIG);
+                            Plotly.react(id, c.data, c.layout, ElecStat.PLOT_CONFIG);
                         });
                     })
-                    .catch(function() { Buzzelec._hideOverlay('chart-echanges-annuel'); });
+                    .catch(function() { ElecStat._hideOverlay('chart-echanges-annuel'); });
             });
         });
     });

@@ -1,6 +1,6 @@
 {
-  "name": "Buzzelec",
-  "short_name": "Buzzelec",
+  "name": "ElecStat",
+  "short_name": "ElecStat",
   "description": "Visualisation des données électriques françaises : consommation, production par filière et échanges transfrontaliers.",
   "lang": "fr",
   "start_url": "/",

@@ -1,4 +1,4 @@
-# Buzzelec — Énergie France
+# ElecStat — Énergie France
 
 Plateforme de visualisation des données électriques françaises : consommation, production par filière, échanges transfrontaliers. Application publiée sur <https://statelec.cleverapps.io/>.
 

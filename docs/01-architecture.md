@@ -1,6 +1,6 @@
 # Architecture
 
-**Buzzelec** — plateforme de visualisation des données électriques françaises (consommation, production par filière, échanges transfrontaliers). Application publiée sur <https://statelec.cleverapps.io/>.
+**ElecStat** — plateforme de visualisation des données électriques françaises (consommation, production par filière, échanges transfrontaliers). Application publiée sur <https://statelec.cleverapps.io/>.
 
 ## Vue d'ensemble
 

@@ -52,7 +52,7 @@
             var chartIds = [];
             document.querySelectorAll('.chart-container > [id]:not([data-chart-static])').forEach(function(el) {
                 chartIds.push(el.id);
-                if (window.Buzzelec) Buzzelec._showOverlay(el.id);
+                if (window.ElecStat) ElecStat._showOverlay(el.id);
             });
 
             var params = new URLSearchParams(new FormData(form)).toString();
@@ -76,9 +76,9 @@
                         return response.json();
                     })
                     .then(function(data) {
-                        var plotConfig = (window.Buzzelec && Buzzelec.PLOT_CONFIG) || { responsive: true, displayModeBar: false };
+                        var plotConfig = (window.ElecStat && ElecStat.PLOT_CONFIG) || { responsive: true, displayModeBar: false };
                         Object.keys(data.charts).forEach(function(chartId) {
-                            if (window.Buzzelec) Buzzelec._hideOverlay(chartId);
+                            if (window.ElecStat) ElecStat._hideOverlay(chartId);
                             var el = document.getElementById(chartId);
                             if (el) {
                                 el.classList.remove('chart-error');
@@ -94,7 +94,7 @@
                         });
                     })
                     .catch(function(err) {
-                        if (window.Buzzelec) chartIds.forEach(function(id) { Buzzelec._hideOverlay(id); });
+                        if (window.ElecStat) chartIds.forEach(function(id) { ElecStat._hideOverlay(id); });
                         showError(err.message || 'Erreur lors de la mise à jour des graphiques.');
                     })
                     .finally(function() {

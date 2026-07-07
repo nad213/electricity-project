@@ -2,7 +2,7 @@
 
 {% block head_scripts %}{% include "partials/_plotly.html" %}{% endblock %}
 
-{% block title %}Buzzelec{% endblock %}
+{% block title %}ElecStat{% endblock %}
 
 {% block page_header %}
 <div class="page-header d-print-none">
@@ -190,8 +190,8 @@
 
 {% if has_dashboard_data %}
 <script>
-Buzzelec.renderChart('chart-conso-jour', '{{ graph_conso_jour|escapejs }}');
-Buzzelec.renderChart('chart-production-jour', '{{ graph_production_jour|escapejs }}');
+ElecStat.renderChart('chart-conso-jour', '{{ graph_conso_jour|escapejs }}');
+ElecStat.renderChart('chart-production-jour', '{{ graph_production_jour|escapejs }}');
 </script>
 {% endif %}
 

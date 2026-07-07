@@ -2,7 +2,7 @@
 
 {% block head_scripts %}{% include "partials/_plotly.html" %}{% endblock %}
 
-{% block title %}Production - Buzzelec{% endblock %}
+{% block title %}Production - ElecStat{% endblock %}
 
 {% block page_title %}
     <i class="ti ti-building-factory me-2"></i>
@@ -159,7 +159,7 @@
 <script>
 {# Chargement AJAX des graphiques au DOMContentLoaded ; resize/scrollspy gérés par charts.js #}
 document.addEventListener('DOMContentLoaded', function() {
-    Buzzelec.loadCharts(
+    ElecStat.loadCharts(
         window.location.pathname + window.location.search,
         ['chart-production', 'chart-production-annuel', 'chart-production-mensuel', 'chart-parc-installe']
     );
