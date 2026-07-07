@@ -27,7 +27,8 @@ HYDRO_CATEGORIES = {"HYDRAULICS", "HYDRO_PUMPED_STORAGE", "HYDRO_WATER_RESERVOIR
 
 def lambda_handler(event, context):
     bucket = os.environ["BUCKET_NAME"]
-    s3 = boto3.client("s3")
+    # S3_ENDPOINT_URL optionnel : absent = AWS, sinon stockage S3-compatible (ex. Scaleway)
+    s3 = boto3.client("s3", endpoint_url=os.environ.get("S3_ENDPOINT_URL") or None)
     try:
         print(f"INFO: Fetching {PMAX_URL}")
         resp = requests.get(PMAX_URL, timeout=30)

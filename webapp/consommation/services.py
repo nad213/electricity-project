@@ -56,6 +56,16 @@ def get_duckdb_connection(*paths):
             conn.execute(f"SET s3_access_key_id='{access_key}'")
             conn.execute(f"SET s3_secret_access_key='{secret_key}'")
 
+            # Endpoint S3-compatible hors AWS (ex. Scaleway) : hôte sans schéma
+            # pour DuckDB, et style path (le virtual-host est propre à AWS)
+            endpoint_url = settings.AWS_CONFIG.get('endpoint_url')
+            if endpoint_url:
+                host = _validate_s3_credential(
+                    endpoint_url.split('://', 1)[-1].rstrip('/'), 'S3 endpoint'
+                )
+                conn.execute(f"SET s3_endpoint='{host}'")
+                conn.execute("SET s3_url_style='path'")
+
         yield conn
     finally:
         conn.close()

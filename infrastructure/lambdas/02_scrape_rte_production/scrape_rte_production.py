@@ -111,7 +111,8 @@ def _find_blob(blobs, key_prefix=None, key_contains=None):
 
 def lambda_handler(event, context):
     S3_BUCKET = os.environ["BUCKET_NAME"]
-    s3 = boto3.client("s3")
+    # S3_ENDPOINT_URL optionnel : absent = AWS, sinon stockage S3-compatible (ex. Scaleway)
+    s3 = boto3.client("s3", endpoint_url=os.environ.get("S3_ENDPOINT_URL") or None)
     uploads = []
 
     try:

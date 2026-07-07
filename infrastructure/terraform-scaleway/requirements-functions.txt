@@ -1,0 +1,7 @@
+# Dépendances vendorées dans les zips des Scaleway Functions.
+# Sur AWS, pandas/pyarrow venaient du layer AWSSDKPandas et boto3 du runtime ;
+# chez Scaleway, tout doit être dans le package.
+boto3
+requests
+pandas
+pyarrow

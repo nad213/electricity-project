@@ -437,7 +437,8 @@ def lambda_handler(event, context):
     S3_BUCKET = os.environ['BUCKET_NAME']
     S3_PREFIX_IN = '01_downloaded/odre'
     S3_PREFIX_OUT = '02_clean'
-    s3 = boto3.client('s3')
+    # S3_ENDPOINT_URL optionnel : absent = AWS, sinon stockage S3-compatible (ex. Scaleway)
+    s3 = boto3.client('s3', endpoint_url=os.environ.get('S3_ENDPOINT_URL') or None)
 
     try:
         if not download_files(s3, S3_BUCKET):

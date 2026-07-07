@@ -22,6 +22,8 @@ AWS_CONFIG = {
     'region': os.getenv('AWS_S3_REGION'),
     'access_key': os.getenv('AWS_ACCESS_KEY_ID'),
     'secret_key': os.getenv('AWS_SECRET_ACCESS_KEY'),
+    # Vide = AWS ; sinon endpoint S3-compatible (ex. https://s3.fr-par.scw.cloud)
+    'endpoint_url': os.getenv('AWS_S3_ENDPOINT_URL'),
 }
 
 S3_PATHS = {

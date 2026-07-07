@@ -80,6 +80,7 @@ def _s3_client():
         region_name=settings.AWS_CONFIG["region"],
         aws_access_key_id=settings.AWS_CONFIG["access_key"],
         aws_secret_access_key=settings.AWS_CONFIG["secret_key"],
+        endpoint_url=settings.AWS_CONFIG.get("endpoint_url") or None,
     )
 
 
