@@ -141,9 +141,15 @@ bucket vide tout seuls.
   toutes les pages 200, exports CSV avec données fraîches (juillet 2026) sur conso /
   production / puissance 15 min — le /tmp ayant été vidé par le restart, ces données
   ne peuvent venir que du bucket Scaleway. Aucune erreur dans les logs.
-- Reste : période d'observation (~1 semaine — surveiller fraîcheur + comportement ETag
-  du cache), mise à jour doc (docs/01, 02, 06, infrastructure/CLAUDE.md + ADR),
-  `terraform destroy` AWS (après dump local du bucket `elec-app-804cdc84`).
+- **Doc mise à jour (2026-07-08)** : docs/01, 02 (section Terraform Scaleway + stack AWS
+  legacy), 06, README, ADR 005 créé (003 et 004 re-statués), CLAUDE.md racine +
+  infrastructure (locaux, non versionnés).
+- Reste : période d'observation (jusqu'au ~2026-07-15 — surveiller fraîcheur + comportement
+  ETag du cache), puis démantèlement AWS en une session : dump local du bucket
+  `elec-app-804cdc84` → `terraform destroy` → suppression du workflow `infra-deploy.yml`
+  et du stack `infrastructure/terraform/` (sinon un push le recréerait) → suppression
+  manuelle du bucket de state `electricity-terraform-state`, des secrets GitHub AWS et
+  de l'utilisateur IAM CI.
 
 ## Fichiers concernés
 - `infrastructure/lambdas/*/[nom].py` — client boto3 paramétrable (3 fichiers)

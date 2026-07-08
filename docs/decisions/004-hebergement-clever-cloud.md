@@ -1,6 +1,6 @@
 # ADR 004 — Hébergement de la webapp sur Clever Cloud
 
-**Statut : adopté (juillet 2026)** — remplace Render pour la webapp ; l'ETL reste sur AWS.
+**Statut : adopté (juillet 2026)** — remplace Render pour la webapp ; l'ETL, resté sur AWS dans un premier temps, a été migré ensuite vers Scaleway ([ADR 005](005-migration-etl-scaleway.md)).
 
 ## Contexte
 
@@ -24,4 +24,4 @@ Particularités encodées dans le repo (détail : [06-deploiement.md](06-deploie
 
 - `render.yaml` et `build.sh` supprimés ; le service et la Postgres Render sont décommissionnés après une période d'observation (les clés d'API sont migrées par dump/restore juste avant la bascule).
 - **Changement d'URL cassant** : `electricity-project-1.onrender.com` → `statelec.cleverapps.io`, sans redirect possible une fois Render éteint (consommateurs API et favoris à prévenir). Un domaine propre reste possible plus tard à faible coût.
-- L'ETL reste sur AWS : la question souveraineté n'est traitée que pour la webapp (voir ADR 003 pour l'ETL).
+- L'ETL restait sur AWS au moment de cette décision ; sa migration vers Scaleway a suivi ([ADR 005](005-migration-etl-scaleway.md)), complétant la sortie d'AWS.

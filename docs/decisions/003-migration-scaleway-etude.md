@@ -1,6 +1,6 @@
 # ADR 003 — Migration vers Scaleway (cloud souverain)
 
-**Statut : étudié, non décidé** (analyse du 2026-06-18, aucun code modifié)
+**Statut : remplacé** — l'étude a débouché sur deux décisions : webapp sur Clever Cloud ([ADR 004](004-hebergement-clever-cloud.md)), ETL sur Scaleway Functions ([ADR 005](005-migration-etl-scaleway.md)). (Analyse du 2026-06-18.)
 
 ## Contexte
 

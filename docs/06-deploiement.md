@@ -4,9 +4,10 @@
 
 | Composant | Où | Comment |
 |---|---|---|
-| Pipeline ETL (lambdas, S3, IAM, crons) | AWS `eu-west-3` | Terraform, apply manuel |
+| Pipeline ETL (functions, bucket, crons) | Scaleway `fr-par` | Terraform (`infrastructure/terraform-scaleway/`), apply manuel |
 | Webapp | Clever Cloud (app `statelec`) | push `master` → GitHub Actions → `clever deploy` |
 | Postgres (clés d'API) | Add-on Clever Cloud `statelec-postegredb` | `DATABASE_URL` |
+| Stack AWS legacy (crons coupés) | AWS `eu-west-3` | Terraform, apply auto (`infra-deploy.yml`) — démantèlement prévu |
 
 ## Webapp sur Clever Cloud
 
@@ -34,9 +35,9 @@ Posées dans la console Clever ou via `clever env` (référence locale : `webapp
 
 - Runtime : `APP_FOLDER=webapp`, `CC_PYTHON_VERSION=3.13`, `CC_RUN_COMMAND=bash ../clevercloud/run.sh`, `CC_POST_BUILD_HOOK=bash clevercloud/post_build.sh`
 - `SECRET_KEY`, `DEBUG=False`, `ALLOWED_HOSTS` (le `CSRF_TRUSTED_ORIGINS` en découle, cf. `settings.py`)
-- `AWS_S3_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
-- `AWS_S3_ENDPOINT_URL` — vide/absent = AWS ; pour un stockage S3-compatible (ex. Scaleway `https://s3.fr-par.scw.cloud`). ⚠️ `AWS_S3_REGION` doit alors correspondre à l'endpoint (`fr-par` pour Scaleway), sinon 403 `SignatureDoesNotMatch`
-- `S3_PATH_*` — un chemin `s3://…` par fichier Parquet (puissance, annuel, mensuel, production ×3, échanges, RTE ×5)
+- `AWS_S3_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` — depuis la bascule du 2026-07-08 : creds **Scaleway** et région **`fr-par`** (les variables gardent leur nom `AWS_*`, boto3/DuckDB les lisent nativement)
+- `AWS_S3_ENDPOINT_URL` — vide/absent = AWS ; prod : `https://s3.fr-par.scw.cloud` (Scaleway). ⚠️ `AWS_S3_REGION` doit correspondre à l'endpoint (`fr-par` pour Scaleway), sinon 403 `SignatureDoesNotMatch`
+- `S3_PATH_*` — un chemin `s3://…` par fichier Parquet (puissance, annuel, mensuel, production ×3, échanges, RTE ×5) ; prod : bucket `elec-app-scw`
 - `DATABASE_URL` — valeur de `POSTGRESQL_ADDON_URI` injectée par l'add-on Postgres
 - `OIDC_ISSUER` / `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET`
 - `ZITADEL_SERVICE_TOKEN` — PAT du service user Zitadel `statelec-account-deletion` (rôle Org User Manager), active la fermeture de compte in-app (vide = bouton masqué). ⚠️ Le PAT **expire le 2033-12-07** — le renouveler dans la console Zitadel puis reposer la variable sur Clever (même piège que le token Clever)
@@ -44,23 +45,29 @@ Posées dans la console Clever ou via `clever env` (référence locale : `webapp
 - `PARQUET_CACHE_CHECK_TTL=3600` — à garder un peu au-dessus de la cadence ETL
 - `NINJA_NUM_PROXIES=1`, et éventuels `API_THROTTLE_*`, `API_MAX_RANGE_DAYS`
 
-## Infrastructure AWS (Terraform)
+## Infrastructure ETL Scaleway (Terraform)
 
 ```bash
-cd infrastructure/terraform
-bash zip_lambda.sh     # packager les lambdas
+cd infrastructure/terraform-scaleway
+bash package_functions.sh   # packager les functions (wheels musllinux, deps à la racine des zips)
 terraform plan
 terraform apply
+# puis sauvegarder terraform.tfstate (state LOCAL — consigne en tête de main.tf)
 ```
 
-- State distant : bucket `electricity-terraform-state` (`eu-west-3`).
-- Credentials : AWS CLI ou variables d'environnement.
-- Le déploiement d'une lambda = re-zip + apply (le hash du zip déclenche la mise à jour).
+- **State local** (Codespace éphémère) : backup vers `s3://elec-app-scw/state/` après chaque apply.
+- Credentials : env vars `SCW_*` et `TF_VAR_s3_*` (cf. `.env` local, non versionné).
+- Le déploiement d'une function = re-package + apply (le hash du zip déclenche la mise à jour).
+- Détail (runtime musl, invocation manuelle, logs) : [02-pipeline-etl.md](02-pipeline-etl.md#terraform-infrastructureterraform-scaleway).
+
+## Stack AWS legacy (Terraform)
+
+En attente de démantèlement après la période d'observation post-bascule (cf. `plans/migration-etl-scaleway.md`) : lambdas + bucket `elec-app-804cdc84` + IAM, event rules `DISABLED`, state distant `electricity-terraform-state` (`eu-west-3`). ⚠️ Appliqué **automatiquement** par `.github/workflows/infra-deploy.yml` sur push `master` touchant `infrastructure/**` (hors `terraform-scaleway/`) : tout changement d'état doit passer par le code Terraform, jamais par la console.
 
 ## Points d'exploitation
 
-- **Fraîcheur des données** : la lambda ODRE tourne toutes les heures mais ne fait rien si `data_processed` n'a pas bougé ; la webapp voit les nouveaux fichiers au plus tard `PARQUET_CACHE_CHECK_TTL` secondes après leur écriture (check ETag).
+- **Fraîcheur des données** : la function ODRE tourne toutes les heures mais ne fait rien si `data_processed` n'a pas bougé ; la webapp voit les nouveaux fichiers au plus tard `PARQUET_CACHE_CHECK_TTL` secondes après leur écriture (check ETag — supporté par Scaleway Object Storage).
 - **Forcer un rafraîchissement webapp** : `python manage.py refresh_data` (`--force` pour tout retélécharger) — en pratique inutile en prod, le TTL suffit.
 - **Historique S3** : les fichiers `02_clean/*_detail.parquet` contiennent un historique reconstruit non re-téléchargeable (voir [03-donnees.md](03-donnees.md#historique--rétention)) — ne pas les supprimer.
-- **Logs** : CloudWatch Logs pour les lambdas ; `logs/download_log.csv` sur S3 trace chaque ingestion ODRE ; `clever logs --alias statelec` (ou la console Clever) pour la webapp.
-- **Historique** : la webapp était hébergée sur Render jusqu'en juillet 2026 — voir [decisions/004-hebergement-clever-cloud.md](decisions/004-hebergement-clever-cloud.md) (l'échéance du free tier Postgres Render, [decisions/002-postgres-render-api-keys.md](decisions/002-postgres-render-api-keys.md), est réglée par la migration).
+- **Logs** : Cockpit Scaleway (Grafana) pour les functions ; `logs/download_log.csv` sur le bucket trace chaque ingestion ODRE ; `clever logs --alias statelec` (ou la console Clever) pour la webapp.
+- **Historique** : la webapp était hébergée sur Render jusqu'en juillet 2026 — voir [decisions/004-hebergement-clever-cloud.md](decisions/004-hebergement-clever-cloud.md) (l'échéance du free tier Postgres Render, [decisions/002-postgres-render-api-keys.md](decisions/002-postgres-render-api-keys.md), est réglée par la migration). L'ETL tournait sur AWS Lambda jusqu'au 2026-07-08 — voir [decisions/005-migration-etl-scaleway.md](decisions/005-migration-etl-scaleway.md).

@@ -12,11 +12,11 @@ flowchart LR
         RTE2["RTE pmax<br/>(JSON)"]
     end
 
-    subgraph AWS["AWS eu-west-3"]
-        L1["Lambda 01_odre_eco2mix<br/>rate(1 hour)"]
-        L2["Lambda 02_scrape_rte_production<br/>cron 07:00 UTC"]
-        L3["Lambda 03_rte_pmax<br/>cron 07:05 UTC"]
-        S3[("S3<br/>Parquet")]
+    subgraph SCW["Scaleway fr-par"]
+        L1["Function odre-eco2mix<br/>cron horaire"]
+        L2["Function scrape-rte-production<br/>cron 07:00 UTC"]
+        L3["Function rte-pmax<br/>cron 07:05 UTC"]
+        S3[("Object Storage<br/>Parquet (S3-compatible)")]
     end
 
     subgraph Clever["Clever Cloud"]
@@ -34,7 +34,7 @@ flowchart LR
 
 ## Composants
 
-**Pipeline ETL** (`infrastructure/`) — trois lambdas Python 3.12 déclenchées par CloudWatch Events, qui téléchargent les données sources, les transforment avec pandas et écrivent des fichiers Parquet sur S3. Provisionné par Terraform. Détail : [02-pipeline-etl.md](02-pipeline-etl.md).
+**Pipeline ETL** (`infrastructure/`) — trois Scaleway Functions Python 3.12 déclenchées par cron, qui téléchargent les données sources, les transforment avec pandas et écrivent des fichiers Parquet sur Object Storage (S3-compatible). Provisionné par Terraform. Détail : [02-pipeline-etl.md](02-pipeline-etl.md). *(Sur AWS Lambda jusqu'au 2026-07-08 — voir [decisions/005-migration-etl-scaleway.md](decisions/005-migration-etl-scaleway.md) ; le stack AWS reste en place, crons coupés, jusqu'au démantèlement.)*
 
 **Webapp** (`webapp/`) — application Django 6 qui lit les Parquet via DuckDB (avec un cache local sur disque), rend des graphiques Plotly, expose une API publique JSON (django-ninja) et un chatbot (tool-use sur l'API Mistral). Détail : [04-webapp.md](04-webapp.md).
 
@@ -51,9 +51,9 @@ Les deux composants ne communiquent **que par S3** : aucun appel direct entre le
 
 | Couche | Technologie |
 |---|---|
-| IaC | Terraform (provider AWS, state S3) |
-| ETL | AWS Lambda Python 3.12, pandas, layer AWS SDK Pandas |
-| Stockage données | S3 (Parquet), région `eu-west-3` |
+| IaC | Terraform (provider Scaleway, state local sauvegardé — voir [06-deploiement.md](06-deploiement.md)) |
+| ETL | Scaleway Functions Python 3.12 (runtime musl), pandas/pyarrow vendorés |
+| Stockage données | Scaleway Object Storage (Parquet, S3-compatible), région `fr-par` |
 | Webapp | Django 6, Gunicorn, WhiteNoise |
 | Requêtes données | DuckDB (SQL sur fichiers Parquet) |
 | Graphiques | Plotly (chargement AJAX) |

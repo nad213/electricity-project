@@ -5,7 +5,7 @@ Documentation de référence du projet. Chaque fichier est autonome ; l'ordre su
 | Fichier | Contenu |
 |---|---|
 | [01-architecture.md](01-architecture.md) | Vue d'ensemble : composants, flux de données, technologies |
-| [02-pipeline-etl.md](02-pipeline-etl.md) | Les 3 lambdas AWS, déclencheurs, organisation S3, Terraform |
+| [02-pipeline-etl.md](02-pipeline-etl.md) | Les 3 Scaleway Functions, déclencheurs, organisation du bucket, Terraform |
 | [03-donnees.md](03-donnees.md) | Sources de données, schémas Parquet, pièges métier |
 | [04-webapp.md](04-webapp.md) | Application Django : pages, cache Parquet, sessions, auth, chatbot |
 | [05-api.md](05-api.md) | API publique v1 : endpoints, authentification, limites |

@@ -1,10 +1,12 @@
 # Pipeline ETL
 
-Trois lambdas Python 3.12 (`infrastructure/lambdas/`), déclenchées par CloudWatch Events, écrivent des Parquet dans un bucket S3 unique. Provisionnement : Terraform (`infrastructure/terraform/`).
+Trois fonctions Python 3.12 (`infrastructure/lambdas/` — le nom du dossier date de l'époque AWS), déclenchées par cron sur **Scaleway Functions** (namespace `elec-etl`, région `fr-par`), écrivent des Parquet dans un bucket Object Storage unique. Provisionnement : Terraform (`infrastructure/terraform-scaleway/`).
 
-## Organisation du bucket S3
+> **Historique** : le pipeline tournait sur AWS Lambda (`eu-west-3`) jusqu'au 2026-07-08 — voir [decisions/005-migration-etl-scaleway.md](decisions/005-migration-etl-scaleway.md). Le stack AWS (`infrastructure/terraform/`) reste en place avec ses crons coupés jusqu'au démantèlement final.
 
-Bucket `elec-app-<suffixe aléatoire>` (nom généré par Terraform), région `eu-west-3` :
+## Organisation du bucket
+
+Bucket `elec-app-scw` (Scaleway Object Storage, S3-compatible, endpoint `https://s3.fr-par.scw.cloud`) :
 
 ```
 01_downloaded/          # données brutes telles que téléchargées
@@ -15,11 +17,11 @@ state/                  # état interne (fraîcheur ODRE)
 logs/                   # download_log.csv (métadonnées de chaque ingestion)
 ```
 
-## Lambda `01_odre_eco2mix` — cœur du pipeline
+## Function `odre-eco2mix` (`01_odre_eco2mix`) — cœur du pipeline
 
-Déclencheur : `rate(1 hour)`. Timeout 300 s / 2048 MB.
+Déclencheur : cron `0 * * * *` (horaire). Timeout 300 s / 2048 MB.
 
-1. **Download conditionnel** : pour chaque dataset ODRE (`eco2mix-national-tr`, `eco2mix-national-cons-def`), lit la métadonnée `data_processed` via l'API catalogue (sans télécharger le fichier) et la compare à l'état stocké dans `state/odre_freshness.json`. Si rien n'a bougé → la lambda s'arrête là (no-op, pas de transform). L'état n'est mis à jour qu'**après** un upload réussi.
+1. **Download conditionnel** : pour chaque dataset ODRE (`eco2mix-national-tr`, `eco2mix-national-cons-def`), lit la métadonnée `data_processed` via l'API catalogue (sans télécharger le fichier) et la compare à l'état stocké dans `state/odre_freshness.json`. Si rien n'a bougé → la fonction s'arrête là (no-op, pas de transform). L'état n'est mis à jour qu'**après** un upload réussi.
    ⚠️ Utiliser `data_processed` (bouge à chaque refresh du dataset), pas `modified` (date de modif des métadonnées, figée).
 2. **Download** des exports Parquet ODRE qui ont changé → `01_downloaded/odre/`.
 3. **Transform** en trois familles (conso, production, échanges), chacune produisant 3 fichiers dans `02_clean/` :
@@ -39,7 +41,7 @@ Chaque transform applique le même schéma :
 
 4. **Log** : métadonnées de chaque ingestion (nb lignes, bornes de dates, taille) appendées dans `logs/download_log.csv`.
 
-## Lambda `02_scrape_rte_production`
+## Function `scrape-rte-production` (`02_scrape_rte_production`)
 
 Déclencheur : cron 07:00 UTC. Timeout 120 s / 512 MB.
 
@@ -48,26 +50,36 @@ Scrape les pages RTE `analysesetdonnees.rte-france.com/production/{eolien,solair
 - `rte_eolien_production_mensuelle.parquet`, `rte_solaire_production_mensuelle.parquet` (`date`, `filiere`, `valeur_mwh` — valeurs source en TWh, multipliées par 10⁶)
 - `rte_eolien_facteur_charge_mensuel.parquet`, `rte_solaire_facteur_charge_mensuel.parquet` (`date`, `type`, `facteur_charge_pct` ; pour l'éolien, la distinction terrestre/en mer est reconstruite depuis les clés du blob, les noms étant génériques)
 
-Fragile par nature (structure HTML/JS non contractuelle) : la lambda logue les clés des blobs trouvés pour diagnostiquer un changement de page.
+Fragile par nature (structure HTML/JS non contractuelle) : la fonction logue les clés des blobs trouvés pour diagnostiquer un changement de page.
 
-## Lambda `03_rte_pmax`
+## Function `rte-pmax` (`03_rte_pmax`)
 
 Déclencheur : cron 07:05 UTC. Timeout 60 s / 256 MB.
 
 Récupère le JSON de puissance maximale installée par filière (endpoint CloudFront du site RTE) → `02_clean/rte_pmax.parquet` (`filiere`, `puissance_max_mw`). Les catégories RTE sont traduites en français et une ligne synthétique `Hydraulique (total)` est ajoutée (somme fil de l'eau + STEP + lacs).
 
-## Terraform
+## Terraform (`infrastructure/terraform-scaleway/`)
 
-- **State** : backend S3 (`electricity-terraform-state`, `eu-west-3`).
-- **Ressources** : bucket S3 + « dossiers », 3 fonctions Lambda, 3 règles CloudWatch Events, rôle/policy IAM commun (accès S3 dont `state/*`, logs CloudWatch).
-- **Layer** : AWS SDK Pandas (Python 3.12) pour les trois lambdas.
-- **Packaging** : `bash zip_lambda.sh` (depuis `infrastructure/terraform/`) puis `terraform apply`.
+- **State** : **local** (`terraform.tfstate` dans le dossier) — seule trace des ressources live sur une machine éphémère (Codespace) : **le sauvegarder après chaque apply** vers `s3://elec-app-scw/state/` (consigne détaillée en tête de `main.tf`).
+- **Ressources** : bucket Object Storage, namespace `elec-etl`, 3 functions (`for_each`), 3 crons. Privacy `private`, `max_scale = 1` (pas d'exécutions concurrentes).
+- **Auth** : env vars `SCW_*` + `TF_VAR_s3_access_key` / `TF_VAR_s3_secret_key` (cf. `.env` local, non versionné). Les creds S3 sont injectés dans l'environnement des functions (boto3 les lit via `AWS_*`).
+- **Packaging** : `bash package_functions.sh` **obligatoire avant apply** — vendore les dépendances **à la racine de chaque zip** (le runtime met le dossier de déploiement sur `sys.path`, pas un sous-dossier), versions pinnées dans `requirements-functions.txt`.
+- ⚠️ **Runtime musl (Alpine)** : le Python 3.12 de Scaleway Functions est compilé contre musl, pas glibc. Les wheels à extension C (numpy, pyarrow…) doivent être **`musllinux`** — une wheel `manylinux` produit un `ImportError` au chargement, avec des messages trompeurs (« Function Handler does not exist », « No module named 'pyarrow.lib' »). `package_functions.sh` force `--platform musllinux_*`. Toute nouvelle dépendance à extension C doit exister en wheel musllinux.
+- **Apply manuel uniquement** : le workflow CI `infra-deploy.yml` ne couvre que le stack AWS legacy (`terraform-scaleway/**` est exclu de ses déclencheurs).
 
 ```bash
-cd infrastructure/terraform
-bash zip_lambda.sh
+cd infrastructure/terraform-scaleway
+bash package_functions.sh
 terraform plan
 terraform apply
+# puis sauvegarder terraform.tfstate (cf. main.tf)
 ```
 
-Test local des lambdas : `python run_lambdas_local.py` à la racine.
+- **Invoquer une function à la main** (privacy `private`) : créer un token via `POST https://api.scaleway.com/functions/v1beta1/regions/fr-par/tokens` (header `X-Auth-Token: <secret_key>`, body `{"function_id": …}`), attendre qu'il soit actif, puis `curl -H "X-Auth-Token: <token>" https://<domain_name>`.
+- **Logs** : Cockpit Scaleway (Grafana) ; `logs/download_log.csv` sur le bucket trace chaque ingestion ODRE.
+
+Test local des fonctions : `python run_lambdas_local.py` à la racine.
+
+## Stack AWS legacy (`infrastructure/terraform/`)
+
+En attente de démantèlement (période d'observation post-bascule) : 3 lambdas + bucket `elec-app-804cdc84` + IAM, state backend S3 `electricity-terraform-state`, event rules CloudWatch en `DISABLED`. Appliqué automatiquement par le workflow `infra-deploy.yml` sur push touchant `infrastructure/**` (hors `terraform-scaleway/`) — **tout toggle console serait écrasé**. Le démantèlement (dump du bucket, destroy, suppression du workflow) est décrit dans `plans/migration-etl-scaleway.md`.
