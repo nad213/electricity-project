@@ -135,8 +135,15 @@ bucket vide tout seuls.
   régénérés à 08h00-08h01, `rte_pmax.parquet` à 07h05 (cron quotidien). Étape 5.3 OK.
 - **Crons AWS coupés (2026-07-08)** : les 3 event rules de `lambda.tf` passées à
   `state = "DISABLED"`, merge sur master → apply par le workflow `infra-deploy.yml`.
-- Reste : **bascule webapp** (env vars Clever — ⚠️ `AWS_S3_REGION=fr-par` avec
-  l'endpoint), période d'obs, doc, `terraform destroy` AWS (après dump du bucket).
+- **Bascule webapp faite (2026-07-08, ~09h10 UTC)** : env vars Clever basculées via
+  `clever env set` (creds Scaleway, `AWS_S3_REGION=fr-par`, `AWS_S3_ENDPOINT_URL`,
+  13 × `S3_PATH_*` → `elec-app-scw`), restart OK (deployment `efa3e984`). Recette :
+  toutes les pages 200, exports CSV avec données fraîches (juillet 2026) sur conso /
+  production / puissance 15 min — le /tmp ayant été vidé par le restart, ces données
+  ne peuvent venir que du bucket Scaleway. Aucune erreur dans les logs.
+- Reste : période d'observation (~1 semaine — surveiller fraîcheur + comportement ETag
+  du cache), mise à jour doc (docs/01, 02, 06, infrastructure/CLAUDE.md + ADR),
+  `terraform destroy` AWS (après dump local du bucket `elec-app-804cdc84`).
 
 ## Fichiers concernés
 - `infrastructure/lambdas/*/[nom].py` — client boto3 paramétrable (3 fichiers)
