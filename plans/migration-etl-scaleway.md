@@ -130,9 +130,13 @@ bucket vide tout seuls.
     `docs/06-deploiement.md`.
   - `main.tf` : consigne de sauvegarde du tfstate local (Codespace éphémère = seule
     copie du state des 8 ressources live).
-- Reste : couper crons AWS (via Terraform, cf. étape 5.2 révisée), **bascule webapp**
-  (env vars Clever — ⚠️ `AWS_S3_REGION=fr-par` avec l'endpoint), période d'obs, doc,
-  `terraform destroy` AWS.
+- **Crons Scaleway validés en autonomie (2026-07-08)** : `logs/download_log.csv` montre
+  des runs horaires réguliers depuis la nuit (04h → 08h UTC), les 9 parquets `02_clean/`
+  régénérés à 08h00-08h01, `rte_pmax.parquet` à 07h05 (cron quotidien). Étape 5.3 OK.
+- **Crons AWS coupés (2026-07-08)** : les 3 event rules de `lambda.tf` passées à
+  `state = "DISABLED"`, merge sur master → apply par le workflow `infra-deploy.yml`.
+- Reste : **bascule webapp** (env vars Clever — ⚠️ `AWS_S3_REGION=fr-par` avec
+  l'endpoint), période d'obs, doc, `terraform destroy` AWS (après dump du bucket).
 
 ## Fichiers concernés
 - `infrastructure/lambdas/*/[nom].py` — client boto3 paramétrable (3 fichiers)
