@@ -2,7 +2,7 @@
 
 Trois fonctions Python 3.12 (`infrastructure/lambdas/` — le nom du dossier date de l'époque AWS), déclenchées par cron sur **Scaleway Functions** (namespace `elec-etl`, région `fr-par`), écrivent des Parquet dans un bucket Object Storage unique. Provisionnement : Terraform (`infrastructure/terraform-scaleway/`).
 
-> **Historique** : le pipeline tournait sur AWS Lambda (`eu-west-3`) jusqu'au 2026-07-08 — voir [decisions/005-migration-etl-scaleway.md](decisions/005-migration-etl-scaleway.md). Le stack AWS (`infrastructure/terraform/`) reste en place avec ses crons coupés jusqu'au démantèlement final.
+> **Historique** : le pipeline tournait sur AWS Lambda (`eu-west-3`) jusqu'au 2026-07-08 — voir [decisions/005-migration-etl-scaleway.md](decisions/005-migration-etl-scaleway.md). Le stack AWS a été démantelé le 2026-07-16 (destroy Terraform, buckets supprimés) ; un dump final du bucket données est archivé sur `s3://elec-app-scw/archive/aws-final-dump-2026-07-16.tar.gz`.
 
 ## Organisation du bucket
 
@@ -65,7 +65,7 @@ Récupère le JSON de puissance maximale installée par filière (endpoint Cloud
 - **Auth** : env vars `SCW_*` + `TF_VAR_s3_access_key` / `TF_VAR_s3_secret_key` (cf. `.env` local, non versionné). Les creds S3 sont injectés dans l'environnement des functions (boto3 les lit via `AWS_*`).
 - **Packaging** : `bash package_functions.sh` **obligatoire avant apply** — vendore les dépendances **à la racine de chaque zip** (le runtime met le dossier de déploiement sur `sys.path`, pas un sous-dossier), versions pinnées dans `requirements-functions.txt`.
 - ⚠️ **Runtime musl (Alpine)** : le Python 3.12 de Scaleway Functions est compilé contre musl, pas glibc. Les wheels à extension C (numpy, pyarrow…) doivent être **`musllinux`** — une wheel `manylinux` produit un `ImportError` au chargement, avec des messages trompeurs (« Function Handler does not exist », « No module named 'pyarrow.lib' »). `package_functions.sh` force `--platform musllinux_*`. Toute nouvelle dépendance à extension C doit exister en wheel musllinux.
-- **Apply manuel uniquement** : le workflow CI `infra-deploy.yml` ne couvre que le stack AWS legacy (`terraform-scaleway/**` est exclu de ses déclencheurs).
+- **Apply manuel uniquement** : aucun workflow CI n'applique ce stack.
 
 ```bash
 cd infrastructure/terraform-scaleway
@@ -79,7 +79,3 @@ terraform apply
 - **Logs** : Cockpit Scaleway (Grafana) ; `logs/download_log.csv` sur le bucket trace chaque ingestion ODRE.
 
 Test local des fonctions : `python run_lambdas_local.py` à la racine.
-
-## Stack AWS legacy (`infrastructure/terraform/`)
-
-En attente de démantèlement (période d'observation post-bascule) : 3 lambdas + bucket `elec-app-804cdc84` + IAM, state backend S3 `electricity-terraform-state`, event rules CloudWatch en `DISABLED`. Appliqué automatiquement par le workflow `infra-deploy.yml` sur push touchant `infrastructure/**` (hors `terraform-scaleway/`) — **tout toggle console serait écrasé**. Le démantèlement (dump du bucket, destroy, suppression du workflow) est décrit dans `plans/migration-etl-scaleway.md`.

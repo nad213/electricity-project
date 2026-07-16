@@ -7,7 +7,6 @@
 | Pipeline ETL (functions, bucket, crons) | Scaleway `fr-par` | Terraform (`infrastructure/terraform-scaleway/`), apply manuel |
 | Webapp | Clever Cloud (app `statelec`) | push `master` → GitHub Actions → `clever deploy` |
 | Postgres (clés d'API) | Add-on Clever Cloud `statelec-postegredb` | `DATABASE_URL` |
-| Stack AWS legacy (crons coupés) | AWS `eu-west-3` | Terraform, apply auto (`infra-deploy.yml`) — démantèlement prévu |
 
 ## Webapp sur Clever Cloud
 
@@ -60,14 +59,10 @@ terraform apply
 - Le déploiement d'une function = re-package + apply (le hash du zip déclenche la mise à jour).
 - Détail (runtime musl, invocation manuelle, logs) : [02-pipeline-etl.md](02-pipeline-etl.md#terraform-infrastructureterraform-scaleway).
 
-## Stack AWS legacy (Terraform)
-
-En attente de démantèlement après la période d'observation post-bascule (cf. `plans/migration-etl-scaleway.md`) : lambdas + bucket `elec-app-804cdc84` + IAM, event rules `DISABLED`, state distant `electricity-terraform-state` (`eu-west-3`). ⚠️ Appliqué **automatiquement** par `.github/workflows/infra-deploy.yml` sur push `master` touchant `infrastructure/**` (hors `terraform-scaleway/`) : tout changement d'état doit passer par le code Terraform, jamais par la console.
-
 ## Points d'exploitation
 
 - **Fraîcheur des données** : la function ODRE tourne toutes les heures mais ne fait rien si `data_processed` n'a pas bougé ; la webapp voit les nouveaux fichiers au plus tard `PARQUET_CACHE_CHECK_TTL` secondes après leur écriture (check ETag — supporté par Scaleway Object Storage).
 - **Forcer un rafraîchissement webapp** : `python manage.py refresh_data` (`--force` pour tout retélécharger) — en pratique inutile en prod, le TTL suffit.
 - **Historique S3** : les fichiers `02_clean/*_detail.parquet` contiennent un historique reconstruit non re-téléchargeable (voir [03-donnees.md](03-donnees.md#historique--rétention)) — ne pas les supprimer.
 - **Logs** : Cockpit Scaleway (Grafana) pour les functions ; `logs/download_log.csv` sur le bucket trace chaque ingestion ODRE ; `clever logs --alias statelec` (ou la console Clever) pour la webapp.
-- **Historique** : la webapp était hébergée sur Render jusqu'en juillet 2026 — voir [decisions/004-hebergement-clever-cloud.md](decisions/004-hebergement-clever-cloud.md) (l'échéance du free tier Postgres Render, [decisions/002-postgres-render-api-keys.md](decisions/002-postgres-render-api-keys.md), est réglée par la migration). L'ETL tournait sur AWS Lambda jusqu'au 2026-07-08 — voir [decisions/005-migration-etl-scaleway.md](decisions/005-migration-etl-scaleway.md).
+- **Historique** : la webapp était hébergée sur Render jusqu'en juillet 2026 — voir [decisions/004-hebergement-clever-cloud.md](decisions/004-hebergement-clever-cloud.md) (l'échéance du free tier Postgres Render, [decisions/002-postgres-render-api-keys.md](decisions/002-postgres-render-api-keys.md), est réglée par la migration). L'ETL tournait sur AWS Lambda jusqu'au 2026-07-08 — voir [decisions/005-migration-etl-scaleway.md](decisions/005-migration-etl-scaleway.md) ; le stack AWS a été démantelé le 2026-07-16 (dump final : `s3://elec-app-scw/archive/aws-final-dump-2026-07-16.tar.gz`).
