@@ -5,48 +5,21 @@ import json
 import logging
 import os
 
-from django.core.cache import cache
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
 from .auth import get_user_from_session
-from .chat import ChatService
+from .chat import ChatBusyError, ChatService
 
 logger = logging.getLogger(__name__)
 
-# Garde-fous anti-abus (coût). Chaque message peut déclencher jusqu'à 10 appels
-# Mistral facturés : sans limite, une boucle de requêtes ou un historique
-# énorme passe directement sur la facture. Mêmes compromis que le throttling de
-# l'API (cf. api.py) : compteur dans le cache Django (LocMemCache par défaut =
-# par process, donc limite effective × nombre de workers Gunicorn) — suffisant
-# comme borne anti-abus, à brancher sur Redis pour un comptage exact.
-# Seuils ajustables sans redéploiement via variables d'environnement (comme les
-# THROTTLE_* de l'API).
-CHAT_RATE_LIMIT = int(os.getenv("CHAT_RATE_LIMIT", "15"))        # messages...
-CHAT_RATE_WINDOW = int(os.getenv("CHAT_RATE_WINDOW", "600"))     # ...par fenêtre (s) → 15 / 10 min
+# Pas de rate-limit applicatif (quotas utilisateur/global retirés le
+# 2026-07-16, choix assumé) : la dépense Mistral n'est bornée que par l'usage
+# réel — surveillance via la console Mistral et les logs `chat usage`.
 # ~25k tokens : large pour 30 tours de conversation, borne le coût par requête.
 MAX_BODY_BYTES = int(os.getenv("CHAT_MAX_BODY_BYTES", "100000"))
-
-
-def _chat_rate_limited(user_sub: str) -> bool:
-    """True si l'utilisateur a dépassé son quota de messages sur la fenêtre.
-
-    Compteur best-effort dans le cache (incr atomique). `get_or_set` pose la clé
-    avec son TTL au premier appel ; on n'incrémente qu'ensuite pour ne pas
-    réarmer la fenêtre à chaque message.
-    """
-    key = f"chat_rl:{user_sub}"
-    count = cache.get_or_set(key, 0, CHAT_RATE_WINDOW)
-    if count >= CHAT_RATE_LIMIT:
-        return True
-    try:
-        cache.incr(key)
-    except ValueError:
-        # La clé a expiré entre le get_or_set et l'incr : on repart à 1.
-        cache.set(key, 1, CHAT_RATE_WINDOW)
-    return False
 
 
 @require_GET
@@ -71,13 +44,6 @@ def chat_message(request):
             status=413,
         )
 
-    # Quota par utilisateur (anti-boucle). `sub` OIDC = identité stable.
-    if _chat_rate_limited(user["sub"]):
-        return JsonResponse(
-            {"error": "Trop de messages, réessaie dans quelques minutes."},
-            status=429,
-        )
-
     try:
         body = json.loads(request.body)
     except json.JSONDecodeError:
@@ -94,6 +60,13 @@ def chat_message(request):
 
     try:
         result = service.run(messages)
+    except ChatBusyError:
+        # 429 Mistral persistant malgré les retries : transitoire, pas interne.
+        logger.warning("Chat busy (429 Mistral persistant) user=%s", user.get("email"))
+        return JsonResponse(
+            {"error": "Le service est très sollicité en ce moment — réessaie dans quelques instants."},
+            status=429,
+        )
     except Exception as e:  # noqa: BLE001
         logger.exception("Chat error")
         return JsonResponse({"error": f"Erreur interne: {type(e).__name__}"}, status=500)

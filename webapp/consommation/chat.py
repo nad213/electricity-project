@@ -10,6 +10,7 @@ roles: user / assistant / tool).
 from __future__ import annotations
 
 import json
+import time
 from datetime import date, datetime, timedelta
 
 import holidays as holidays_lib
@@ -19,6 +20,10 @@ try:
     from mistralai import Mistral
 except ImportError:  # mistralai >= 2.x a déplacé Mistral sous le sous-paquet client
     from mistralai.client import Mistral
+try:
+    from mistralai.client.errors import MistralError
+except ImportError:  # mistralai 1.x : les erreurs HTTP dérivent de models.SDKError
+    from mistralai.models import SDKError as MistralError
 from django.conf import settings
 from django.utils import timezone
 
@@ -672,6 +677,18 @@ def _run_tool(name: str, args: dict) -> str:
 # ---------- main loop ---------- #
 
 
+class ChatBusyError(Exception):
+    """L'API Mistral répond 429 même après retries — capacité workspace saturée."""
+
+
+# La limite de débit Mistral (req/s + tokens/min) est par WORKSPACE, quel que
+# soit le crédit : la boucle tool-use enchaîne les appels dos à dos et toutes
+# les conversations partagent la même clé. Un 429 est donc un événement normal
+# à absorber par retry, pas une anomalie.
+_RETRY_ATTEMPTS = 3          # appels au total par requête API (1 + 2 retries)
+_RETRY_MAX_SLEEP = 8.0       # borne le Retry-After serveur (worker bloqué pendant l'attente)
+
+
 def _content_to_text(content) -> str:
     """Mistral renvoie content soit en str, soit en liste de chunks selon le SDK."""
     if content is None:
@@ -721,6 +738,35 @@ class ChatService:
         self.model = settings.CHAT_MODEL
         self.max_turns = settings.CHAT_MAX_TURNS
 
+    def _complete(self, history: list[dict]):
+        """Un appel `chat.complete`, avec retries sur 429 uniquement.
+
+        Backoff exponentiel (1 s, 2 s), `Retry-After` honoré s'il est plus
+        long (borné à _RETRY_MAX_SLEEP). 429 persistant → ChatBusyError, que
+        la vue traduit en HTTP 429 avec un message actionnable. Toute autre
+        erreur remonte telle quelle (un retry ne la réparerait pas).
+        """
+        for attempt in range(_RETRY_ATTEMPTS):
+            try:
+                return self.client.chat.complete(
+                    model=self.model,
+                    max_tokens=2048,
+                    messages=[{"role": "system", "content": _build_system_prompt()}] + history,
+                    tools=MISTRAL_TOOLS,
+                    tool_choice="auto",
+                )
+            except MistralError as e:
+                if getattr(e, "status_code", None) != 429:
+                    raise
+                if attempt == _RETRY_ATTEMPTS - 1:
+                    raise ChatBusyError("API Mistral saturée (429 persistant)") from e
+                headers = getattr(e, "headers", None) or {}
+                try:
+                    retry_after = float(headers.get("retry-after", ""))
+                except (TypeError, ValueError):
+                    retry_after = 0.0
+                time.sleep(min(max(retry_after, float(2 ** attempt)), _RETRY_MAX_SLEEP))
+
     def run(self, messages: list[dict]) -> dict:
         """Run the tool-use loop until the model produces a final text answer.
 
@@ -737,13 +783,7 @@ class ChatService:
         usage_totals = {"input": 0, "output": 0}
 
         for _ in range(10):  # hard cap on tool-use iterations
-            resp = self.client.chat.complete(
-                model=self.model,
-                max_tokens=2048,
-                messages=[{"role": "system", "content": _build_system_prompt()}] + history,
-                tools=MISTRAL_TOOLS,
-                tool_choice="auto",
-            )
+            resp = self._complete(history)
             usage = resp.usage
             usage_totals["input"] += getattr(usage, "prompt_tokens", 0) or 0
             usage_totals["output"] += getattr(usage, "completion_tokens", 0) or 0

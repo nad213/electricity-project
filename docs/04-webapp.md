@@ -64,6 +64,10 @@ Points d'attention encodés dans le prompt système :
 - La **date du jour** (Europe/Paris) est injectée à chaque appel — sans elle le modèle résout « hier » sur ses connaissances internes.
 - Périmètre restreint à l'électricité française ; unités toujours précisées ; chiffres uniquement via les tools ; pics/records via `get_peak` (les courbes raw downsamplent) ; granularité `raw` bornée à 31 jours.
 
+**Limite de débit Mistral (429)** : la limite (req/s + tokens/min) est par **workspace**, quel que soit le crédit — la boucle tool-use enchaîne les appels dos à dos et toutes les conversations partagent la même clé. Un 429 est donc un événement normal, absorbé par **retry avec backoff** (`ChatService._complete`) : 3 tentatives, backoff 1 s puis 2 s, `Retry-After` honoré (borné à 8 s). Un 429 persistant lève `ChatBusyError`, que la vue traduit en HTTP 429 avec un message actionnable (jamais de 500 « Erreur interne »).
+
+Il n'y a **aucun rate-limit applicatif** sur le chat — ni par utilisateur ni global (quotas retirés le 2026-07-16, choix assumé après le passage du workspace Mistral au plan Pro). Seule borne côté appli : la taille du body (`CHAT_MAX_BODY_BYTES`). La dépense Mistral n'est donc bornée que par l'usage réel — surveiller la consommation côté console Mistral (et les logs `chat usage` côté appli). Si la contention 429 devient fréquente, vérifier la page **Limits** de la console Mistral et demander une augmentation au support.
+
 ## Lancer en local
 
 Un virtualenv existe dans `webapp/venv` ; port standard 8000 :

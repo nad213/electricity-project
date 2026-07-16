@@ -8,8 +8,10 @@ base (chemin principal de `ApiKeyAuth`), via une `TestCase` transactionnelle.
 """
 import json
 from datetime import date, timedelta
+from types import SimpleNamespace
 from unittest import mock
 
+import httpx
 import pandas as pd
 import requests
 from django.conf import settings as django_settings
@@ -158,16 +160,13 @@ class EnergieEndpointsTests(TestCase):
 
 
 class ChatMessageGuardTests(TestCase):
-    """Garde-fous anti-abus de /chat/message/ : auth (401), taille (413),
-    quota par utilisateur (429). On mocke ChatService pour ne pas appeler
-    l'API Mistral."""
+    """Garde-fous de /chat/message/ : auth (401), taille (413), saturation
+    Mistral (429). On mocke ChatService pour ne pas appeler l'API Mistral."""
 
     URL = "/chat/message/"
 
     def setUp(self):
-        cache.clear()  # compteur de rate-limit vierge
         self.client = Client()
-        self.addCleanup(cache.clear)
         self.addCleanup(mock.patch.stopall)
 
     def _login(self, sub="oidc|alice"):
@@ -200,33 +199,78 @@ class ChatMessageGuardTests(TestCase):
         resp = self._post({"messages": [{"role": "user", "content": big}]})
         self.assertEqual(resp.status_code, 413)
 
-    def test_quota_depasse_renvoie_429(self):
+    def test_chat_busy_renvoie_429_et_message_clair(self):
+        # 429 Mistral persistant malgré les retries → 429 actionnable, pas un
+        # 500 « Erreur interne: SDKError ».
         self._login()
-        ok = {"reply": "ok", "messages": [], "usage": {}}
         with mock.patch.object(chat_views, "ChatService") as MockSvc:
-            MockSvc.return_value.run.return_value = ok
-            payload = {"messages": [{"role": "user", "content": "salut"}]}
-            # Les CHAT_RATE_LIMIT premières passent...
-            for i in range(chat_views.CHAT_RATE_LIMIT):
-                resp = self._post(payload)
-                self.assertEqual(resp.status_code, 200, f"message {i + 1} inattendu")
-            # ...la suivante est rejetée.
-            resp = self._post(payload)
-            self.assertEqual(resp.status_code, 429)
+            MockSvc.return_value.run.side_effect = chat.ChatBusyError()
+            resp = self._post({"messages": [{"role": "user", "content": "salut"}]})
+        self.assertEqual(resp.status_code, 429)
+        self.assertIn("sollicité", resp.json()["error"])
 
-    def test_quota_par_utilisateur_independant(self):
-        ok = {"reply": "ok", "messages": [], "usage": {}}
-        payload = {"messages": [{"role": "user", "content": "salut"}]}
-        with mock.patch.object(chat_views, "ChatService") as MockSvc:
-            MockSvc.return_value.run.return_value = ok
-            # alice épuise son quota
-            self._login("oidc|alice")
-            for _ in range(chat_views.CHAT_RATE_LIMIT):
-                self._post(payload)
-            self.assertEqual(self._post(payload).status_code, 429)
-            # bob, lui, passe encore (quota indépendant) — on repointe le mock.
-            self._login("oidc|bob")
-            self.assertEqual(self._post(payload).status_code, 200)
+
+class ChatRetryTests(TestCase):
+    """Retries de `ChatService._complete` sur 429 Mistral.
+
+    La limite de débit est par workspace (partagée entre conversations) : un
+    429 transitoire doit être absorbé par backoff, un 429 persistant doit
+    devenir ChatBusyError, et toute autre erreur doit remonter sans retry.
+    Client Mistral mocké — aucun appel réseau.
+    """
+
+    def _service(self):
+        with override_settings(MISTRAL_API_KEY="test-key"):
+            with mock.patch.object(chat, "Mistral"):
+                return chat.ChatService()
+
+    @staticmethod
+    def _err(status, headers=None):
+        return chat.MistralError(
+            "API error occurred", httpx.Response(status, headers=headers or {})
+        )
+
+    @staticmethod
+    def _ok(text="ok"):
+        return SimpleNamespace(
+            usage=SimpleNamespace(prompt_tokens=1, completion_tokens=1),
+            choices=[SimpleNamespace(message=SimpleNamespace(content=text, tool_calls=None))],
+        )
+
+    def test_429_transitoire_absorbe_par_backoff(self):
+        svc = self._service()
+        svc.client.chat.complete.side_effect = [self._err(429), self._err(429), self._ok()]
+        with mock.patch.object(chat.time, "sleep") as sleep:
+            result = svc.run([{"role": "user", "content": "salut"}])
+        self.assertEqual(result["reply"], "ok")
+        # Backoff exponentiel : 1 s puis 2 s.
+        self.assertEqual([c.args[0] for c in sleep.call_args_list], [1.0, 2.0])
+
+    def test_retry_after_du_serveur_honore(self):
+        svc = self._service()
+        svc.client.chat.complete.side_effect = [
+            self._err(429, {"Retry-After": "5"}), self._ok(),
+        ]
+        with mock.patch.object(chat.time, "sleep") as sleep:
+            svc.run([{"role": "user", "content": "salut"}])
+        self.assertEqual([c.args[0] for c in sleep.call_args_list], [5.0])
+
+    def test_429_persistant_leve_chat_busy(self):
+        svc = self._service()
+        svc.client.chat.complete.side_effect = [self._err(429)] * chat._RETRY_ATTEMPTS
+        with mock.patch.object(chat.time, "sleep"):
+            with self.assertRaises(chat.ChatBusyError):
+                svc.run([{"role": "user", "content": "salut"}])
+        self.assertEqual(svc.client.chat.complete.call_count, chat._RETRY_ATTEMPTS)
+
+    def test_erreur_non_429_remonte_sans_retry(self):
+        svc = self._service()
+        svc.client.chat.complete.side_effect = [self._err(500)]
+        with mock.patch.object(chat.time, "sleep") as sleep:
+            with self.assertRaises(chat.MistralError):
+                svc.run([{"role": "user", "content": "salut"}])
+        self.assertEqual(svc.client.chat.complete.call_count, 1)
+        sleep.assert_not_called()
 
 
 class ChatPayloadTests(TestCase):
