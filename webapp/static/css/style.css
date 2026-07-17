@@ -259,9 +259,12 @@ body {
     font-size: 0.875rem;
 }
 
-/* Widgets natifs (icône + popup calendrier) en variante sombre */
+/* Champs date : widgets natifs (icône + popup) sombres, texte un peu plus
+   grand et largeur confortable (les colonnes col-md-auto suivent) */
 .form-control[type="date"] {
     color-scheme: dark;
+    font-size: 1rem;
+    width: 14rem;
 }
 
 .form-label {
