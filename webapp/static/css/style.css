@@ -251,6 +251,19 @@ body {
     color: var(--text);
 }
 
+/* Préfixe des champs (ex. « Du / Au » des filtres de dates) */
+.input-group-text {
+    background-color: var(--surface-hover);
+    border-color: var(--border);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+/* Widgets natifs (icône + popup calendrier) en variante sombre */
+.form-control[type="date"] {
+    color-scheme: dark;
+}
+
 .form-label {
     color: var(--text-secondary);
     font-size: 0.8125rem;
