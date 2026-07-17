@@ -48,44 +48,39 @@ Variables optionnelles :
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-3">
-        {% else %}
-        <div class="col-md-4">
         {% endif %}
-            <label class="form-label fs-6 mb-1" for="start_date">Du</label>
-            <input
-                type="date"
-                class="form-control form-control-sm"
-                name="start_date"
-                id="start_date"
-                value="{{ start_date|date:'Y-m-d' }}"
-                min="{{ min_date|date:'Y-m-d' }}"
-                max="{{ max_date|date:'Y-m-d' }}"
-                aria-describedby="date-error"
-            >
+        {# Labels en préfixe (input-group), colonnes en largeur naturelle #}
+        <div class="col-12 col-md-auto">
+            <div class="input-group input-group-sm">
+                <label class="input-group-text" for="start_date">Du</label>
+                <input
+                    type="date"
+                    class="form-control"
+                    name="start_date"
+                    id="start_date"
+                    value="{{ start_date|date:'Y-m-d' }}"
+                    min="{{ min_date|date:'Y-m-d' }}"
+                    max="{{ max_date|date:'Y-m-d' }}"
+                    aria-describedby="date-error"
+                >
+            </div>
         </div>
-        {% if extra_filter_name and not extra_filter_multiple and not extra_filter_radio %}
-        <div class="col-md-3">
-        {% else %}
-        <div class="col-md-4">
-        {% endif %}
-            <label class="form-label fs-6 mb-1" for="end_date">Au</label>
-            <input
-                type="date"
-                class="form-control form-control-sm"
-                name="end_date"
-                id="end_date"
-                value="{{ end_date|date:'Y-m-d' }}"
-                min="{{ min_date|date:'Y-m-d' }}"
-                max="{{ max_date|date:'Y-m-d' }}"
-                aria-describedby="date-error"
-            >
+        <div class="col-12 col-md-auto">
+            <div class="input-group input-group-sm">
+                <label class="input-group-text" for="end_date">Au</label>
+                <input
+                    type="date"
+                    class="form-control"
+                    name="end_date"
+                    id="end_date"
+                    value="{{ end_date|date:'Y-m-d' }}"
+                    min="{{ min_date|date:'Y-m-d' }}"
+                    max="{{ max_date|date:'Y-m-d' }}"
+                    aria-describedby="date-error"
+                >
+            </div>
         </div>
-        {% if extra_filter_name and not extra_filter_multiple and not extra_filter_radio %}
-        <div class="col-md-3">
-        {% else %}
-        <div class="col-md-4">
-        {% endif %}
+        <div class="col-12 col-md-auto">
             <div class="d-flex flex-wrap gap-2 align-items-center">
                 <button type="submit" class="btn btn-primary btn-sm">
                     <i class="ti ti-refresh me-1"></i>
