@@ -46,7 +46,12 @@ S3_PATHS = {
 # prod (cleared on each deploy), which is intentional — clean slate on boot.
 PARQUET_CACHE_DIR = os.getenv('PARQUET_CACHE_DIR', '/tmp/parquet_cache')
 # How often (seconds) to re-check S3 ETags for freshness.  Default: 10 minutes.
+# User-path safety net only: the background refresh thread (apps.py) normally
+# keeps the cache warm, so requests never pay this check themselves.
 PARQUET_CACHE_CHECK_TTL = int(os.getenv('PARQUET_CACHE_CHECK_TTL', '600'))
+# Interval (seconds) of the background refresh thread.  0 disables the loop
+# (one-shot warm-up at startup only, refresh falls back to the TTL above).
+PARQUET_CACHE_REFRESH_INTERVAL = int(os.getenv('PARQUET_CACHE_REFRESH_INTERVAL', '600'))
 
 # OIDC Configuration (provider-agnostic via OpenID Connect discovery).
 # OIDC_ISSUER is the base URL of the IdP, e.g. https://<instance>.zitadel.cloud

@@ -108,7 +108,7 @@ def _download(key: str) -> None:
     logger.info("Cached parquet key=%s at %s", key, local)
 
 
-def ensure_local_parquet(key: str) -> str:
+def ensure_local_parquet(key: str, force_check: bool = False) -> str:
     """
     Ensure the local Parquet for *key* is present and not stale.
 
@@ -116,6 +116,9 @@ def ensure_local_parquet(key: str) -> str:
     - Otherwise: call head_object on S3.  If ETag unchanged: refresh timestamp, return local.
     - If ETag changed or file missing: (re-)download, return local path.
     - On any error: return local path if available, else S3 URL as fallback.
+
+    force_check bypasses the TTL fast path (the ETag is always checked); the file is
+    still only re-downloaded if the ETag changed.
     """
     s3_path = settings.S3_PATHS.get(key)
     if not s3_path:
@@ -127,7 +130,7 @@ def ensure_local_parquet(key: str) -> str:
     now = time.time()
 
     # Fast path: file present and checked recently
-    if local.exists() and meta.get("checked_at", 0) + ttl > now:
+    if not force_check and local.exists() and meta.get("checked_at", 0) + ttl > now:
         return str(local)
 
     # Slow path: need to check or download — hold a per-key lock
@@ -135,7 +138,7 @@ def ensure_local_parquet(key: str) -> str:
     with lock:
         # Re-read inside the lock: another thread may have just finished
         meta = _read_meta(key)
-        if local.exists() and meta.get("checked_at", 0) + ttl > now:
+        if not force_check and local.exists() and meta.get("checked_at", 0) + ttl > now:
             return str(local)
 
         try:
@@ -167,8 +170,13 @@ def get_local_path(key: str) -> str:
     return ensure_local_parquet(key)
 
 
-def refresh_all(force: bool = False) -> None:
-    """Download/refresh all parquet files declared in settings.S3_PATHS."""
+def refresh_all(force: bool = False, force_check: bool = False) -> None:
+    """
+    Download/refresh all parquet files declared in settings.S3_PATHS.
+
+    force wipes local copies first (full re-download); force_check only bypasses
+    the TTL so every ETag is verified.
+    """
     for key in settings.S3_PATHS:
         try:
             if force:
@@ -178,6 +186,6 @@ def refresh_all(force: bool = False) -> None:
                     meta_file.unlink()
                 if local.exists():
                     local.unlink()
-            ensure_local_parquet(key)
+            ensure_local_parquet(key, force_check=force_check)
         except Exception:
             logger.exception("refresh_all failed for key=%s", key)

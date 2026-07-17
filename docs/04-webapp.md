@@ -42,9 +42,9 @@ Cycle de `ensure_local_parquet(key)` :
 2. Sinon, sous un lock par clé (double-checked locking, workers Gunicorn) : `head_object` S3 → ETag identique ⇒ rafraîchit le timestamp ; ETag différent ou fichier absent ⇒ retéléchargement atomique (`.tmp` + `rename`).
 3. **Dégradation** : sur erreur réseau, sert la copie locale périmée ; sans copie locale, retourne l'URL `s3://…` et `get_duckdb_connection()` bascule sur `httpfs`.
 
-Au démarrage (hors `migrate`/`collectstatic`/`test`), `apps.py` lance un thread daemon de warmup qui pré-télécharge tous les fichiers de `settings.S3_PATHS`. `/tmp` étant éphémère sur Clever Cloud, chaque déploiement repart d'un cache propre.
+Au démarrage (hors `migrate`/`collectstatic`/`test`), `apps.py` lance un thread daemon qui pré-télécharge tous les fichiers de `settings.S3_PATHS` (warmup), puis **re-vérifie les ETags en boucle** toutes les `PARQUET_CACHE_REFRESH_INTERVAL` secondes (défaut 600 ; `0` = warmup seul). Ce refresh de fond passe outre le TTL (`force_check`) : c'est lui qui pilote la fraîcheur effective, et les requêtes utilisateur restent sur le fast path en permanence — personne ne paie le `head_object` ni le retéléchargement dans le chemin d'une requête. Le TTL ne sert plus que de filet de sécurité si le thread meurt. Chaque worker Gunicorn fait tourner sa propre boucle (les `head_object` dupliqués sont négligeables ; un double téléchargement est sans danger, l'écriture est atomique). `/tmp` étant éphémère sur Clever Cloud, chaque déploiement repart d'un cache propre.
 
-Défauts de TTL : 600 s dans `settings.py`, **3600 s en prod** (variable d'env Clever, à garder légèrement au-dessus de la cadence ETL).
+Défauts : TTL et interval à 600 s dans `settings.py` ; en prod le TTL est monté à **3600 s** (variable d'env Clever) puisqu'il n'est qu'un filet de sécurité.
 
 ## Sessions et authentification
 

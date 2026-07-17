@@ -41,7 +41,7 @@ Posées dans la console Clever ou via `clever env` (référence locale : `webapp
 - `OIDC_ISSUER` / `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET`
 - `ZITADEL_SERVICE_TOKEN` — PAT du service user Zitadel `statelec-account-deletion` (rôle Org User Manager), active la fermeture de compte in-app (vide = bouton masqué). ⚠️ Le PAT **expire le 2033-12-07** — le renouveler dans la console Zitadel puis reposer la variable sur Clever (même piège que le token Clever)
 - `MISTRAL_API_KEY`, `CHAT_MODEL` (prod : `mistral-medium-latest`)
-- `PARQUET_CACHE_CHECK_TTL=3600` — à garder un peu au-dessus de la cadence ETL
+- `PARQUET_CACHE_CHECK_TTL=3600` — filet de sécurité du chemin requête (le refresh de fond fait la fraîcheur) ; `PARQUET_CACHE_REFRESH_INTERVAL` (défaut 600) — cadence du thread de refresh
 - `NINJA_NUM_PROXIES=1`, et éventuels `API_THROTTLE_*`, `API_MAX_RANGE_DAYS`
 
 ## Infrastructure ETL Scaleway (Terraform)
@@ -61,7 +61,7 @@ terraform apply
 
 ## Points d'exploitation
 
-- **Fraîcheur des données** : la function ODRE tourne toutes les heures mais ne fait rien si `data_processed` n'a pas bougé ; la webapp voit les nouveaux fichiers au plus tard `PARQUET_CACHE_CHECK_TTL` secondes après leur écriture (check ETag — supporté par Scaleway Object Storage).
+- **Fraîcheur des données** : la function ODRE tourne toutes les heures mais ne fait rien si `data_processed` n'a pas bougé ; la webapp voit les nouveaux fichiers au plus tard `PARQUET_CACHE_REFRESH_INTERVAL` secondes après leur écriture (thread de refresh en fond, check ETag — supporté par Scaleway Object Storage), avec `PARQUET_CACHE_CHECK_TTL` en filet de sécurité.
 - **Forcer un rafraîchissement webapp** : `python manage.py refresh_data` (`--force` pour tout retélécharger) — en pratique inutile en prod, le TTL suffit.
 - **Historique S3** : les fichiers `02_clean/*_detail.parquet` contiennent un historique reconstruit non re-téléchargeable (voir [03-donnees.md](03-donnees.md#historique--rétention)) — ne pas les supprimer.
 - **Logs** : Cockpit Scaleway (Grafana) pour les functions ; `logs/download_log.csv` sur le bucket trace chaque ingestion ODRE ; `clever logs --alias statelec` (ou la console Clever) pour la webapp.
