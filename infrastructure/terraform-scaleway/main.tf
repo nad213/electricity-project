@@ -1,11 +1,14 @@
-# Migration ETL AWS → Scaleway — voir plans/migration-etl-scaleway.md
-# Coexiste avec infrastructure/terraform/ (AWS) jusqu'au démantèlement final.
+# Stack ETL Scaleway — déployé par le workflow CI infra-deploy.yml (push master
+# sur infrastructure/**) ; apply manuel possible depuis ce dossier après
+# `bash package_functions.sh`.
 #
-# Auth : SCW_ACCESS_KEY, SCW_SECRET_KEY, SCW_DEFAULT_PROJECT_ID,
-#        SCW_DEFAULT_ORGANIZATION_ID (env vars, pas de creds dans le code).
-#
-# ⚠️ NE PAS déployer via le workflow CI infra-deploy.yml (AWS uniquement) :
-# apply manuel depuis ce dossier, après `bash package_functions.sh`.
+# Auth provider : SCW_ACCESS_KEY, SCW_SECRET_KEY, SCW_DEFAULT_PROJECT_ID,
+#                 SCW_DEFAULT_ORGANIZATION_ID (env vars, pas de creds dans le code).
+# Auth backend  : AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY (le backend s3 ne lit
+#                 pas les TF_VAR_*) — exporter les valeurs de TF_VAR_s3_* avant
+#                 init/plan/apply :
+#                 export AWS_ACCESS_KEY_ID="$TF_VAR_s3_access_key"
+#                 export AWS_SECRET_ACCESS_KEY="$TF_VAR_s3_secret_key"
 
 terraform {
   required_providers {
@@ -13,12 +16,25 @@ terraform {
       source = "scaleway/scaleway"
     }
   }
-  # Backend local pour démarrer ; bascule possible plus tard vers un backend s3
-  # pointé sur Object Storage (endpoint https://s3.fr-par.scw.cloud).
-  # ⚠️ terraform.tfstate est la SEULE trace des ressources live et vit sur une
-  # machine éphémère (Codespace) : le sauvegarder hors du Codespace après chaque
-  # apply (ex. `aws s3 cp terraform.tfstate s3://elec-app-scw/state/tfstate-backup
-  # --endpoint-url https://s3.fr-par.scw.cloud`) tant que le backend est local.
+
+  # State distant sur Object Storage Scaleway (bucket dédié versionné, créé hors
+  # Terraform pour éviter le chicken-and-egg ; pas de lock — ne pas lancer
+  # d'apply local pendant qu'un run CI tourne).
+  backend "s3" {
+    bucket = "elec-tfstate-scw"
+    key    = "terraform-scaleway/terraform.tfstate"
+    region = "fr-par"
+    endpoints = {
+      s3 = "https://s3.fr-par.scw.cloud"
+    }
+    # Backend AWS utilisé hors AWS : ne pas valider comptes/régions AWS,
+    # et Scaleway ne supporte pas les checksums S3 récents.
+    skip_credentials_validation = true
+    skip_region_validation      = true
+    skip_requesting_account_id  = true
+    skip_metadata_api_check     = true
+    skip_s3_checksum            = true
+  }
 }
 
 variable "region" {

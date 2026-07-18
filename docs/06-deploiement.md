@@ -4,7 +4,7 @@
 
 | Composant | Où | Comment |
 |---|---|---|
-| Pipeline ETL (functions, bucket, crons) | Scaleway `fr-par` | Terraform (`infrastructure/terraform-scaleway/`), apply manuel |
+| Pipeline ETL (functions, bucket, crons) | Scaleway `fr-par` | push `master` (`infrastructure/**`) → GitHub Actions → `terraform apply` |
 | Webapp | Clever Cloud (app `statelec`) | push `master` → GitHub Actions → `clever deploy` |
 | Postgres (clés d'API) | Add-on Clever Cloud `statelec-postegredb` | `DATABASE_URL` |
 
@@ -46,17 +46,20 @@ Posées dans la console Clever ou via `clever env` (référence locale : `webapp
 
 ## Infrastructure ETL Scaleway (Terraform)
 
+- **Auto-deploy** : le workflow `.github/workflows/infra-deploy.yml` packagera et appliquera le stack sur chaque push `master` touchant `infrastructure/**` (+ déclenchement manuel `workflow_dispatch`). Secrets GitHub requis : `SCW_ACCESS_KEY`, `SCW_SECRET_KEY`, `SCW_DEFAULT_PROJECT_ID`, `SCW_DEFAULT_ORGANIZATION_ID`, `TF_VAR_S3_ACCESS_KEY`, `TF_VAR_S3_SECRET_KEY` (valeurs = `.env` racine).
+- **State distant** : `s3://elec-tfstate-scw/terraform-scaleway/terraform.tfstate` (bucket dédié versionné). ⚠️ Pas de lock : ne pas lancer d'apply local pendant qu'un run CI tourne.
+- Apply manuel toujours possible :
+
 ```bash
 cd infrastructure/terraform-scaleway
+export AWS_ACCESS_KEY_ID="$TF_VAR_s3_access_key" AWS_SECRET_ACCESS_KEY="$TF_VAR_s3_secret_key"   # creds du backend
 bash package_functions.sh   # packager les functions (wheels musllinux, deps à la racine des zips)
 terraform plan
 terraform apply
-# puis sauvegarder terraform.tfstate (state LOCAL — consigne en tête de main.tf)
 ```
 
-- **State local** (Codespace éphémère) : backup vers `s3://elec-app-scw/state/` après chaque apply.
 - Credentials : env vars `SCW_*` et `TF_VAR_s3_*` (cf. `.env` local, non versionné).
-- Le déploiement d'une function = re-package + apply (le hash du zip déclenche la mise à jour).
+- Le déploiement d'une function = re-package + apply (le hash du zip déclenche la mise à jour ; zips non reproductibles → un run CI redéploie toujours les 3 functions).
 - Détail (runtime musl, invocation manuelle, logs) : [02-pipeline-etl.md](02-pipeline-etl.md#terraform-infrastructureterraform-scaleway).
 
 ## Points d'exploitation

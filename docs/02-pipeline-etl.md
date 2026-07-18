@@ -62,19 +62,19 @@ Récupère le JSON de puissance maximale installée par filière (endpoint Cloud
 
 ## Terraform (`infrastructure/terraform-scaleway/`)
 
-- **State** : **local** (`terraform.tfstate` dans le dossier) — seule trace des ressources live sur une machine éphémère (Codespace) : **le sauvegarder après chaque apply** vers `s3://elec-app-scw/state/` (consigne détaillée en tête de `main.tf`).
+- **State** : **distant** sur Object Storage Scaleway — `s3://elec-tfstate-scw/terraform-scaleway/terraform.tfstate` (bucket dédié versionné, créé hors Terraform ; migration depuis le state local le 2026-07-18). ⚠️ Pas de lock d'état : ne pas lancer d'apply local pendant qu'un run CI tourne.
 - **Ressources** : bucket Object Storage, namespace `elec-etl`, 3 functions (`for_each`), 3 crons. Privacy `private`, `max_scale = 1` (pas d'exécutions concurrentes).
-- **Auth** : env vars `SCW_*` + `TF_VAR_s3_access_key` / `TF_VAR_s3_secret_key` (cf. `.env` local, non versionné). Les creds S3 sont injectés dans l'environnement des functions (boto3 les lit via `AWS_*`).
+- **Auth** : env vars `SCW_*` + `TF_VAR_s3_access_key` / `TF_VAR_s3_secret_key` (cf. `.env` local, non versionné). Les creds S3 sont injectés dans l'environnement des functions (boto3 les lit via `AWS_*`). Le **backend** s3 exige en plus `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (mêmes valeurs que `TF_VAR_s3_*`, à exporter avant init/plan/apply — consigne en tête de `main.tf`).
 - **Packaging** : `bash package_functions.sh` **obligatoire avant apply** — vendore les dépendances **à la racine de chaque zip** (le runtime met le dossier de déploiement sur `sys.path`, pas un sous-dossier), versions pinnées dans `requirements-functions.txt`.
 - ⚠️ **Runtime musl (Alpine)** : le Python 3.12 de Scaleway Functions est compilé contre musl, pas glibc. Les wheels à extension C (numpy, pyarrow…) doivent être **`musllinux`** — une wheel `manylinux` produit un `ImportError` au chargement, avec des messages trompeurs (« Function Handler does not exist », « No module named 'pyarrow.lib' »). `package_functions.sh` force `--platform musllinux_*`. Toute nouvelle dépendance à extension C doit exister en wheel musllinux.
-- **Apply manuel uniquement** : aucun workflow CI n'applique ce stack.
+- **Déploiement** : automatique via le workflow `.github/workflows/infra-deploy.yml` — push `master` touchant `infrastructure/**` → packaging + `terraform apply` (secrets GitHub listés dans `docs/06-deploiement.md`). NB : zips non reproductibles (mtimes) → chaque run redéploie les 3 functions même à code identique, sans gravité. Apply manuel toujours possible :
 
 ```bash
 cd infrastructure/terraform-scaleway
+export AWS_ACCESS_KEY_ID="$TF_VAR_s3_access_key" AWS_SECRET_ACCESS_KEY="$TF_VAR_s3_secret_key"
 bash package_functions.sh
 terraform plan
 terraform apply
-# puis sauvegarder terraform.tfstate (cf. main.tf)
 ```
 
 - **Invoquer une function à la main** (privacy `private`) : créer un token via `POST https://api.scaleway.com/functions/v1beta1/regions/fr-par/tokens` (header `X-Auth-Token: <secret_key>`, body `{"function_id": …}`), attendre qu'il soit actif, puis `curl -H "X-Auth-Token: <token>" https://<domain_name>`.
