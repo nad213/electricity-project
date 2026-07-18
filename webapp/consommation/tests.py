@@ -784,3 +784,82 @@ class AccountDeletionTests(TestCase):
         self.assertIsNotNone(self.key.revoked_at)
         # Session locale vidée : l'utilisateur n'est plus connecté.
         self.assertNotIn("user", self.client.session)
+
+
+class AccueilCacheTests(TestCase):
+    """Cache du contexte de l'accueil : le calcul (~1 s de DuckDB + Plotly,
+    identique pour tous les visiteurs) ne doit tourner qu'une fois par clé
+    (date + ETags des Parquet sources) ; un changement d'ETag invalide, et un
+    contexte vide (données indisponibles) n'est jamais caché."""
+
+    def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)
+
+    @staticmethod
+    def _fake_dashboard_data():
+        from datetime import datetime
+        from .constants import FILIERES
+        ts = pd.DataFrame({
+            "date_heure": pd.date_range("2026-07-17", periods=3, freq="30min"),
+            "consommation": [50000.0, 51000.0, 52000.0],
+        })
+        prod = pd.DataFrame({"date_heure": ts["date_heure"]})
+        for f in FILIERES:
+            prod[f] = 1000.0
+        return {
+            "dashboard_date": datetime(2026, 7, 17, 23, 30),
+            "peak_year_value": 80000,
+            "peak_year_datetime": datetime(2026, 1, 15, 19, 0),
+            "peak_all_value": 102000,
+            "peak_all_datetime": datetime(2012, 2, 8, 19, 0),
+            "conso_ts": ts,
+            "production_ts": prod,
+            "production_mix_year": {f: 1000.0 for f in FILIERES},
+        }
+
+    def _get_accueil(self, etag="etag1"):
+        """GET / avec la couche services et les ETags Parquet mockés.
+        Les blocs annexes (échanges, parc) lèvent : ils sont isolés dans la
+        vue et ne doivent pas empêcher la mise en cache."""
+        with mock.patch.object(views, "get_dashboard_data",
+                               return_value=self._fake_dashboard_data()) as dash, \
+             mock.patch.object(views, "get_echanges_net_by_border",
+                               side_effect=Exception("s3 down")), \
+             mock.patch.object(views, "get_parc_installe_data",
+                               side_effect=Exception("s3 down")), \
+             mock.patch.object(views, "get_echanges_annual_import_export",
+                               side_effect=Exception("s3 down")), \
+             mock.patch.object(views.data_cache, "get_etag", return_value=etag):
+            resp = Client().get("/")
+        return resp, dash
+
+    def test_deuxieme_visite_servie_depuis_le_cache(self):
+        resp1, dash1 = self._get_accueil()
+        self.assertEqual(resp1.status_code, 200)
+        self.assertEqual(dash1.call_count, 1)
+
+        resp2, dash2 = self._get_accueil()
+        self.assertEqual(resp2.status_code, 200)
+        self.assertEqual(dash2.call_count, 0)
+        # Le contexte caché est bien celui du dashboard complet.
+        self.assertTrue(resp2.context["has_dashboard_data"])
+
+    def test_changement_etag_invalide_le_cache(self):
+        _, dash1 = self._get_accueil(etag="etag1")
+        self.assertEqual(dash1.call_count, 1)
+        # Nouvel ETL : l'ETag change, le contexte doit être recalculé.
+        _, dash2 = self._get_accueil(etag="etag2")
+        self.assertEqual(dash2.call_count, 1)
+
+    def test_contexte_vide_non_cache(self):
+        with mock.patch.object(views, "get_dashboard_data", return_value=None) as dash, \
+             mock.patch.object(views.data_cache, "get_etag", return_value="e"):
+            resp = Client().get("/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(dash.call_count, 1)
+
+        # La panne n'est pas figée : la requête suivante retente le calcul.
+        resp2, dash2 = self._get_accueil()
+        self.assertEqual(dash2.call_count, 1)
+        self.assertTrue(resp2.context["has_dashboard_data"])

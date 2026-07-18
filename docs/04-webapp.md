@@ -46,6 +46,17 @@ Au démarrage (hors `migrate`/`collectstatic`/`test`), `apps.py` lance un thread
 
 Défauts : TTL et interval à 600 s dans `settings.py` ; en prod le TTL est monté à **3600 s** (variable d'env Clever) puisqu'il n'est qu'un filet de sécurité.
 
+## Cache du dashboard accueil (`views.py`)
+
+L'accueil est l'endpoint le plus coûteux de la webapp (~1 s CPU : `get_dashboard_data`, import/export annuel des échanges, nid d'abeille, parc ENR — mesures dans `notes/capacite_charge_clever_2026-07-18.md`) et il est identique pour tous les visiteurs. La vue `accueil` met donc son **contexte calculé** en cache Django (`default`, LocMem) :
+
+- **Clé** = date locale + ETags des 9 Parquet sources (via `data_cache.get_etag()`, lecture des `.meta.json` sans appel S3). Un nouvel ETL change l'ETag ⇒ nouvelle clé ⇒ recalcul au visiteur suivant ; la date dans la clé évite de servir la « photo du jour » de la veille après minuit.
+- **TTL 1 h** (`ACCUEIL_CACHE_TTL`) en filet de sécurité.
+- Le rendu du template reste par requête (la navbar dépend de la session) ; un contexte vide (S3 indisponible) n'est jamais caché.
+- LocMem étant par process, chaque worker a son cache — exact tant qu'on est mono-worker, et au pire un recalcul par worker.
+
+Effet mesuré en local : ~2,3 s le premier hit, ~8 ms ensuite.
+
 ## Sessions et authentification
 
 - **Sessions en cookies signés** (`SESSION_ENGINE = signed_cookies`) — aucun stockage serveur. Expiration glissante d'**1 h** (`SESSION_COOKIE_AGE = 3600` + `SESSION_SAVE_EVERY_REQUEST`), qui expire aussi les filtres mémorisés. L'historique local du chat expire pareillement après 1 h d'inactivité (côté client).

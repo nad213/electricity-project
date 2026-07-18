@@ -170,6 +170,16 @@ def get_local_path(key: str) -> str:
     return ensure_local_parquet(key)
 
 
+def get_etag(key: str) -> str:
+    """
+    Return the last known S3 ETag for *key* ('' if unknown).
+
+    Local read of the .meta.json only — never calls S3. Meant for building
+    cache keys that auto-invalidate when the underlying Parquet changes.
+    """
+    return _read_meta(key).get("etag", "")
+
+
 def refresh_all(force: bool = False, force_check: bool = False) -> None:
     """
     Download/refresh all parquet files declared in settings.S3_PATHS.

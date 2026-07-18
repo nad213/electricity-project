@@ -1,6 +1,9 @@
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
+from django.core.cache import cache
+from django.utils import timezone
 from datetime import date, datetime, timedelta
+import hashlib
 import json
 import math
 import plotly.express as px
@@ -8,6 +11,8 @@ import plotly.graph_objects as go
 import pandas as pd
 import csv
 from functools import wraps
+
+from . import data_cache
 
 from .services import (
     get_date_range, get_puissance_data, get_annual_data, get_monthly_data,
@@ -784,11 +789,38 @@ def create_stacked_area_chart(df, x_col, y_cols, colors, labels):
     return fig.to_json()
 
 
+# Parquet sources du dashboard accueil : un changement d'ETag sur l'un d'eux
+# (nouvel ETL) change la clé de cache et déclenche le recalcul.
+_ACCUEIL_PARQUET_KEYS = (
+    'puissance', 'production', 'production_annuel', 'echanges', 'rte_pmax',
+    'rte_eolien_production', 'rte_eolien_facteur_charge',
+    'rte_solaire_production', 'rte_solaire_facteur_charge',
+)
+ACCUEIL_CACHE_TTL = 3600
+
+
+def _accueil_cache_key():
+    # La date locale dans la clé évite de servir la « photo du jour » de la
+    # veille après minuit (les requêtes du dashboard utilisent CURRENT_DATE).
+    raw = timezone.localdate().isoformat() + '|' + '|'.join(
+        data_cache.get_etag(k) for k in _ACCUEIL_PARQUET_KEYS
+    )
+    return 'accueil_ctx:' + hashlib.md5(raw.encode()).hexdigest()
+
+
 def accueil(request):
     """
     Home page - welcome page with latest day dashboard data.
     Falls back gracefully if S3 data is unavailable.
+
+    The computed context (~1 s of DuckDB + Plotly, identical for every
+    visitor) is cached; only the template rendering stays per-request.
     """
+    cache_key = _accueil_cache_key()
+    context = cache.get(cache_key)
+    if context is not None:
+        return render(request, 'consommation/accueil.html', context)
+
     context = {}
     try:
         data = get_dashboard_data()
@@ -897,6 +929,11 @@ def accueil(request):
             }
     except Exception:
         pass
+
+    # Un contexte vide (données indisponibles) n'est pas caché : on retentera
+    # le calcul à la requête suivante plutôt que de figer une page en panne.
+    if context:
+        cache.set(cache_key, context, ACCUEIL_CACHE_TTL)
 
     return render(request, 'consommation/accueil.html', context)
 
