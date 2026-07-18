@@ -30,7 +30,9 @@ Déclencheur : cron `0 * * * *` (horaire). Timeout 300 s / 2048 MB.
 |---|---|---|---|
 | Consommation | `consommation_france_puissance.parquet` | `consommation_mensuelle.parquet` | `consommation_annuelle.parquet` |
 | Production | `production_france_detail.parquet` | `production_mensuelle.parquet` | `production_annuelle.parquet` |
-| Échanges | `echanges_france_detail.parquet` | `echanges_mensuels.parquet` | `echanges_annuels.parquet` |
+| Échanges | `echanges_france_detail.parquet` | `echanges_mensuels.parquet` | `echanges_annuels.parquet` + `echanges_annuels_import_export.parquet` |
+
+Les agrégats mensuels/annuels des échanges somment des valeurs **signées** (positif = import) : import et export s'y annulent. `echanges_annuels_import_export.parquet` les sépare (colonnes `{total|ech_comm_*}_{import|export}_mwh`, énergie = puissance × durée réelle du pas plafonnée à 1 h, « total » sommé au pas de temps avant séparation — deux frontières opposées se compensent). Il alimente le graphe annuel de la page Échanges et le solde de l'accueil sans recalcul sur le détail (fallback webapp sur le calcul détaillé si le fichier manque).
 
 Chaque transform applique le même schéma :
 

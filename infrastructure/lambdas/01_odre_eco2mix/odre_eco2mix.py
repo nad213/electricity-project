@@ -333,8 +333,45 @@ def transform_production(s3, bucket, prefix_out, df_tr_full, df_cons_def_full):
     print(f"[production] production_annuelle saved with {len(df_yearly)} rows.")
 
 
+def compute_echanges_import_export(df_detail, commercial_cols):
+    """
+    Volumes annuels d'import et d'export (MWh) par frontière commerciale +
+    total France, depuis le détail signé (convention : positif = import).
+
+    Le « total » est la somme des frontières AU PAS DE TEMPS puis séparée
+    import/export — pas la somme des imports/exports par pays, car deux
+    frontières de signes opposés au même instant se compensent.
+
+    L'énergie d'un pas = puissance × durée jusqu'au point suivant (plafonnée à
+    1 h pour absorber les trous), dernier point compté 1 h — mêmes conventions
+    que le calcul DuckDB historique de la webapp, pour des résultats
+    identiques quelle que soit la cadence d'échantillonnage (15/30 min).
+
+    Retourne : year + {total|ech_comm_*}_{import|export}_mwh, une ligne par an.
+    """
+    out = None
+    series = {c: df_detail[c] for c in commercial_cols}
+    series["total"] = df_detail[commercial_cols].sum(axis=1, min_count=1)
+
+    for name, values in series.items():
+        sub = pd.DataFrame({"date_heure": df_detail["date_heure"], "val": values}).dropna()
+        sub = sub.sort_values("date_heure").reset_index(drop=True)
+        dt_h = (sub["date_heure"].shift(-1) - sub["date_heure"]).dt.total_seconds() / 3600.0
+        dt_h = dt_h.clip(upper=1.0).fillna(1.0)
+        year = sub["date_heure"].dt.year
+        energy = sub["val"] * dt_h
+        agg = pd.DataFrame({
+            "year": year,
+            f"{name}_import_mwh": energy.clip(lower=0.0),
+            f"{name}_export_mwh": -energy.clip(upper=0.0),
+        }).groupby("year").sum().reset_index()
+        out = agg if out is None else out.merge(agg, on="year", how="outer")
+
+    return out.sort_values("year").reset_index(drop=True)
+
+
 def transform_echanges(s3, bucket, prefix_out, df_tr_full, df_cons_def_full):
-    """Transforme les donnees d'echanges commerciaux et ecrit 3 fichiers parquet."""
+    """Transforme les donnees d'echanges commerciaux et ecrit 4 fichiers parquet."""
     EXCHANGE_COLUMNS = [
         "date_heure",
         "ech_physiques",
@@ -427,6 +464,20 @@ def transform_echanges(s3, bucket, prefix_out, df_tr_full, df_cons_def_full):
     buf.seek(0)
     s3.upload_fileobj(Fileobj=buf, Bucket=bucket, Key=f"{prefix_out}/echanges_annuels.parquet")
     print(f"[echanges] echanges_annuels saved with {len(df_yearly)} rows.")
+
+    # Agrégat annuel import/export par frontière. Les agrégats ci-dessus somment
+    # des valeurs signées (positif = import) : import et export s'y annulent.
+    # Ici on sépare les deux sens, énergie = puissance × durée réelle du pas
+    # (écart au point suivant, plafonné à 1 h) — valable quelle que soit la
+    # cadence, comme le calcul historique de la webapp qu'il remplace.
+    commercial_cols = [c for c in exchange_cols_to_check if c.startswith("ech_comm_")]
+    df_imp_exp = compute_echanges_import_export(df_result, commercial_cols)
+    df_imp_exp = merge_with_existing(s3, bucket, f"{prefix_out}/echanges_annuels_import_export.parquet", df_imp_exp, "year")
+    buf = io.BytesIO()
+    df_imp_exp.to_parquet(buf, index=False)
+    buf.seek(0)
+    s3.upload_fileobj(Fileobj=buf, Bucket=bucket, Key=f"{prefix_out}/echanges_annuels_import_export.parquet")
+    print(f"[echanges] echanges_annuels_import_export saved with {len(df_imp_exp)} rows.")
 
 
 # ---------------------------------------------------------------------------

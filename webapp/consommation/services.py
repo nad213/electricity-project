@@ -1,3 +1,4 @@
+import logging
 import re
 
 import duckdb
@@ -8,6 +9,8 @@ from contextlib import contextmanager
 
 from .constants import FILIERES, PAYS_ECHANGES
 from . import data_cache
+
+logger = logging.getLogger(__name__)
 
 
 def _validate_s3_credential(value, name):
@@ -555,6 +558,42 @@ def get_echanges_annual_import_export(start_date, end_date, pays='total'):
         ).fetchdf()
 
     return result
+
+
+def get_echanges_annual_import_export_agg(pays='total'):
+    """
+    Import/export annuels sur tout l'historique, depuis l'agrégat pré-calculé
+    par l'ETL (echanges_annuels_import_export.parquet, ~15 lignes) au lieu de
+    recalculer sur le détail (~290 k lignes, ~400 ms).
+
+    Même schéma de retour que get_echanges_annual_import_export (annee,
+    import_mwh, export_mwh). Fallback sur le calcul détaillé si l'agrégat est
+    indisponible (transition avant son premier run ETL, fichier corrompu…).
+    Pour une plage de dates arbitraire (chatbot), utiliser la version détail.
+    """
+    commercial = list(get_echanges_pays_commerciaux().keys())
+    if pays != 'total' and pays not in commercial:
+        raise ValueError(f"Pays invalide. Choisissez parmi: total, {', '.join(commercial)}")
+
+    try:
+        path = data_cache.get_local_path('echanges_annuel_imp_exp')
+        with get_duckdb_connection(path) as conn:
+            # `pays` est validé contre la liste fermée ci-dessus, pas d'injection.
+            result = conn.execute(f"""
+                SELECT CAST(year AS VARCHAR) AS annee,
+                       {pays}_import_mwh AS import_mwh,
+                       {pays}_export_mwh AS export_mwh
+                FROM read_parquet(?)
+                ORDER BY year
+            """, [path]).fetchdf()
+        if not result.empty:
+            return result
+    except Exception:
+        logger.warning("Agrégat echanges_annuels_import_export indisponible, "
+                       "fallback sur le calcul détaillé", exc_info=True)
+
+    start_date, end_date = get_echanges_date_range()
+    return get_echanges_annual_import_export(start_date, end_date, pays)
 
 
 def get_echanges_net_by_border(start_date, end_date):

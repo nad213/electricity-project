@@ -25,6 +25,7 @@ from ninja.testing import TestClient
 from . import api_auth
 from . import chat
 from . import chat_views
+from . import services
 from . import views
 from .api import api
 from .models import ApiKey
@@ -918,3 +919,52 @@ class ChartsCacheTests(TestCase):
         self.assertEqual(p1.call_count, 1)
         _, p2 = self._get(etag="etag2")
         self.assertEqual(p2.call_count, 1)
+
+
+class EchangesImportExportAggTests(TestCase):
+    """`get_echanges_annual_import_export_agg` : lit l'agrégat ETL quand il est
+    disponible, retombe sur le calcul détaillé sinon, refuse un pays inconnu."""
+
+    @staticmethod
+    def _agg_parquet(tmpdir):
+        path = f"{tmpdir}/echanges_annuels_import_export.parquet"
+        pd.DataFrame({
+            "year": [2023, 2024],
+            "total_import_mwh": [100.0, 200.0],
+            "total_export_mwh": [50.0, 75.0],
+            "ech_comm_espagne_import_mwh": [1.0, 2.0],
+            "ech_comm_espagne_export_mwh": [3.0, 4.0],
+        }).to_parquet(path, index=False)
+        return path
+
+    def test_lit_le_preagrege(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = self._agg_parquet(tmpdir)
+            with mock.patch.object(services.data_cache, "get_local_path",
+                                   return_value=path):
+                total = services.get_echanges_annual_import_export_agg("total")
+                espagne = services.get_echanges_annual_import_export_agg("ech_comm_espagne")
+
+        self.assertEqual(list(total["annee"]), ["2023", "2024"])
+        self.assertEqual(list(total["import_mwh"]), [100.0, 200.0])
+        self.assertEqual(list(total["export_mwh"]), [50.0, 75.0])
+        self.assertEqual(list(espagne["import_mwh"]), [1.0, 2.0])
+
+    def test_fallback_si_agregat_absent(self):
+        from datetime import date as _date
+        sentinel = pd.DataFrame({"annee": ["2024"], "import_mwh": [1.0], "export_mwh": [2.0]})
+        with mock.patch.object(services.data_cache, "get_local_path",
+                               return_value="/nonexistent/agg.parquet"), \
+             mock.patch.object(services, "get_echanges_date_range",
+                               return_value=(_date(2012, 1, 1), _date(2026, 7, 17))), \
+             mock.patch.object(services, "get_echanges_annual_import_export",
+                               return_value=sentinel) as fallback:
+            res = services.get_echanges_annual_import_export_agg("total")
+
+        fallback.assert_called_once_with(_date(2012, 1, 1), _date(2026, 7, 17), "total")
+        self.assertTrue(res.equals(sentinel))
+
+    def test_pays_invalide(self):
+        with self.assertRaises(ValueError):
+            services.get_echanges_annual_import_export_agg("ech_comm_atlantide")

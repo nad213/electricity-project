@@ -41,6 +41,15 @@ S3_PATHS = {
     'rte_pmax': os.getenv('S3_PATH_RTE_PMAX'),
 }
 
+# Agrégat annuel import/export produit par l'ETL à côté du fichier détail ;
+# chemin dérivé du détail si la variable d'env n'est pas définie (aucune
+# nouvelle env var à ajouter au déploiement).
+_echanges_detail = S3_PATHS.get('echanges')
+S3_PATHS['echanges_annuel_imp_exp'] = os.getenv('S3_PATH_ECHANGES_ANNUELS_IMPORT_EXPORT') or (
+    _echanges_detail.rsplit('/', 1)[0] + '/echanges_annuels_import_export.parquet'
+    if _echanges_detail else None
+)
+
 # Local Parquet cache (see consommation/data_cache.py)
 # Directory where Parquet files are downloaded from S3.  /tmp is ephemeral in
 # prod (cleared on each deploy), which is intentional — clean slate on boot.

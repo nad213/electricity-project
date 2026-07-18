@@ -21,7 +21,8 @@ from .services import (
     get_production_annual_data, get_production_monthly_data,
     get_echanges_date_range, get_echanges_pays, get_echanges_pays_commerciaux,
     get_echanges_data, get_echanges_data_multi,
-    get_echanges_annual_import_export, get_echanges_annual_detail,
+    get_echanges_annual_import_export, get_echanges_annual_import_export_agg,
+    get_echanges_annual_detail,
     get_echanges_net_by_border,
     get_dashboard_data, get_parc_installe_data,
 )
@@ -918,11 +919,8 @@ def accueil(request):
             # not break the rest of the dashboard.
             echanges_ctx = {}
             try:
-                from datetime import date as _date
                 year = data['peak_year_datetime'].year
-                df_ech = get_echanges_annual_import_export(
-                    _date(year, 1, 1), data['dashboard_date'], pays='total'
-                )
+                df_ech = get_echanges_annual_import_export_agg(pays='total')
                 row = df_ech[df_ech['annee'] == str(year)]
                 if not row.empty:
                     solde_mwh = float(row['import_mwh'].iloc[0]) - float(row['export_mwh'].iloc[0])
@@ -1178,7 +1176,7 @@ def echanges(request):
         # the bottom selector sends `pays_annuel`, the top form does not.
         if 'pays_annuel' in request.GET:
             def build_annuel():
-                df_echanges_annuel = get_echanges_annual_import_export(min_date, max_date, pays_annuel)
+                df_echanges_annuel = get_echanges_annual_import_export_agg(pays_annuel)
                 graph_echanges_annuel = create_import_export_chart(
                     df_echanges_annuel,
                     x_col='annee',
