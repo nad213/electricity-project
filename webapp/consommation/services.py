@@ -45,6 +45,10 @@ def get_duckdb_connection(*paths):
 
     conn = duckdb.connect()
     try:
+        # Garde-fou multi-workers (XS 1 Go) : borne la RAM par requête, DuckDB
+        # spille sur disque au-delà. threads=2 : 1 vCPU, inutile d'en créer plus.
+        conn.execute("SET memory_limit='256MB'")
+        conn.execute("SET threads=2")
         if needs_s3:
             # Validate credentials before using them
             region = _validate_s3_credential(settings.AWS_CONFIG['region'], 'AWS region')

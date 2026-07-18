@@ -10,4 +10,11 @@
 set -o errexit
 
 cd "$(dirname "$0")/../webapp"
-exec gunicorn config.wsgi:application --bind 0.0.0.0:9000
+# 2 workers × 4 threads (gthread) : une requête lente (chat Mistral, export CSV)
+# ne bloque plus tout le site. 1 vCPU sur XS : plus de workers n'ajouterait pas
+# de débit. RAM bornée côté DuckDB (memory_limit dans services.py).
+# max-requests recycle les workers (fuites mémoire pandas), jitter pour ne pas
+# recycler les 2 en même temps.
+exec gunicorn config.wsgi:application --bind 0.0.0.0:9000 \
+  --workers 2 --threads 4 --timeout 60 \
+  --max-requests 800 --max-requests-jitter 80

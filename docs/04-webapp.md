@@ -46,7 +46,13 @@ Au démarrage (hors `migrate`/`collectstatic`/`test`), `apps.py` lance un thread
 
 Défauts : TTL et interval à 600 s dans `settings.py` ; en prod le TTL est monté à **3600 s** (variable d'env Clever) puisqu'il n'est qu'un filet de sécurité.
 
-## Cache du dashboard accueil (`views.py`)
+## Caches applicatifs (`views.py`)
+
+### Réponses AJAX des graphiques
+
+Les réponses `JsonResponse({'charts': …})` des pages Consommation/Production/Échanges sont identiques pour tous les visiteurs à filtres égaux. `_cached_charts_response()` les met en cache Django (`default`, LocMem) : clé = vue + **paramètres résolus** (dates/filtres après session — deux visiteurs avec les mêmes filtres partagent l'entrée) + ETags des Parquet sources (`data_cache.get_etag()`). Un nouvel ETL change l'ETag ⇒ recalcul au premier appel suivant ; TTL 1 h (`CHARTS_CACHE_TTL`) en filet. Ces requêtes n'utilisent pas `CURRENT_DATE`, la clé n'inclut donc pas la date du jour. LocMem étant par process, chaque worker Gunicorn a son cache (au pire un recalcul par worker). Effet : un appel AJAX déjà demandé passe de 50–600 ms à quelques ms.
+
+### Dashboard accueil
 
 L'accueil est l'endpoint le plus coûteux de la webapp (~1 s CPU : `get_dashboard_data`, import/export annuel des échanges, nid d'abeille, parc ENR — mesures dans `notes/capacite_charge_clever_2026-07-18.md`) et il est identique pour tous les visiteurs. La vue `accueil` met donc son **contexte calculé** en cache Django (`default`, LocMem) :
 

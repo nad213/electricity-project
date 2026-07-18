@@ -863,3 +863,58 @@ class AccueilCacheTests(TestCase):
         resp2, dash2 = self._get_accueil()
         self.assertEqual(dash2.call_count, 1)
         self.assertTrue(resp2.context["has_dashboard_data"])
+
+
+class ChartsCacheTests(TestCase):
+    """Cache des réponses AJAX charts : à paramètres résolus et ETags égaux la
+    réponse est servie du cache (un seul calcul) ; dates différentes ou nouvel
+    ETag ⇒ recalcul. On passe par `_dynamic_only` pour ne mocker que la courbe."""
+
+    URL = "/consommation/?start_date=2026-07-01&end_date=2026-07-08&_dynamic_only=1"
+    XHR = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"}
+
+    def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)
+
+    @staticmethod
+    def _fake_puissance():
+        return pd.DataFrame({
+            "date_heure": pd.date_range("2026-07-01", periods=4, freq="30min"),
+            "consommation": [50000.0, 51000.0, 52000.0, 53000.0],
+        })
+
+    def _get(self, url=None, etag="etag1"):
+        from datetime import date as _date
+        with mock.patch.object(views, "get_date_range",
+                               return_value=(_date(2020, 1, 1), _date(2026, 7, 17))), \
+             mock.patch.object(views, "get_puissance_data",
+                               return_value=self._fake_puissance()) as puissance, \
+             mock.patch.object(views.data_cache, "get_etag", return_value=etag):
+            resp = Client().get(url or self.URL, **self.XHR)
+        return resp, puissance
+
+    def test_memes_parametres_un_seul_calcul(self):
+        resp1, p1 = self._get()
+        self.assertEqual(resp1.status_code, 200)
+        self.assertEqual(p1.call_count, 1)
+
+        resp2, p2 = self._get()
+        self.assertEqual(resp2.status_code, 200)
+        self.assertEqual(p2.call_count, 0)
+        # La réponse cachée est strictement identique à la réponse calculée.
+        self.assertEqual(resp1.json(), resp2.json())
+        self.assertIn("chart-puissance", resp1.json()["charts"])
+
+    def test_dates_differentes_recalcul(self):
+        _, p1 = self._get()
+        self.assertEqual(p1.call_count, 1)
+        other = "/consommation/?start_date=2026-06-01&end_date=2026-06-08&_dynamic_only=1"
+        _, p2 = self._get(url=other)
+        self.assertEqual(p2.call_count, 1)
+
+    def test_changement_etag_recalcul(self):
+        _, p1 = self._get(etag="etag1")
+        self.assertEqual(p1.call_count, 1)
+        _, p2 = self._get(etag="etag2")
+        self.assertEqual(p2.call_count, 1)

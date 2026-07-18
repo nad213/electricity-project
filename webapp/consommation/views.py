@@ -808,6 +808,30 @@ def _accueil_cache_key():
     return 'accueil_ctx:' + hashlib.md5(raw.encode()).hexdigest()
 
 
+CHARTS_CACHE_TTL = 3600
+
+
+def _cached_charts_response(view_name, parquet_keys, params, builder):
+    """
+    JsonResponse({'charts': ...}) servie depuis le cache quand elle existe.
+
+    Les réponses AJAX des graphiques sont identiques pour tous les visiteurs à
+    paramètres égaux ; la clé porte sur les paramètres *résolus* (dates/filtres
+    après session) + les ETags des Parquet sources, donc un nouvel ETL
+    invalide automatiquement. TTL en filet de sécurité.
+    """
+    raw = view_name + '|' + '|'.join(
+        f"{k}={v}" for k, v in sorted(params.items())
+    ) + '|' + '|'.join(data_cache.get_etag(k) for k in parquet_keys)
+    key = 'charts:' + hashlib.md5(raw.encode()).hexdigest()
+
+    charts = cache.get(key)
+    if charts is None:
+        charts = builder()
+        cache.set(key, charts, CHARTS_CACHE_TTL)
+    return JsonResponse({'charts': charts})
+
+
 def accueil(request):
     """
     Home page - welcome page with latest day dashboard data.
@@ -958,37 +982,43 @@ def index(request):
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         dynamic_only = '_dynamic_only' in request.GET
 
-        df_puissance = get_puissance_data(start_date, end_date)
-        graph_puissance = create_line_chart(
-            df_puissance,
-            x_col='date_heure',
-            y_col='consommation',
-            color=Colors.ACCENT,
-            y_label='Consommation'
+        def build():
+            df_puissance = get_puissance_data(start_date, end_date)
+            graph_puissance = create_line_chart(
+                df_puissance,
+                x_col='date_heure',
+                y_col='consommation',
+                color=Colors.ACCENT,
+                y_label='Consommation'
+            )
+            charts = {'chart-puissance': json.loads(graph_puissance)}
+
+            if not dynamic_only:
+                df_annuel = get_annual_data()
+                df_mensuel = get_monthly_data()
+                graph_annuel = create_bar_chart(
+                    df_annuel,
+                    x_col='year',
+                    y_col='yearly_consumption',
+                    color=Colors.ACCENT
+                )
+                graph_mensuel = create_bar_chart(
+                    df_mensuel,
+                    x_col='year_month',
+                    y_col='monthly_consumption',
+                    color=Colors.SECONDARY,
+                    tickangle=45,
+                    x_date_format='%B %Y'
+                )
+                charts['chart-annuel'] = json.loads(graph_annuel)
+                charts['chart-mensuel'] = json.loads(graph_mensuel)
+            return charts
+
+        return _cached_charts_response(
+            'conso', ('puissance', 'annuel', 'mensuel'),
+            {'start': start_date, 'end': end_date, 'dyn': dynamic_only},
+            build,
         )
-        charts = {'chart-puissance': json.loads(graph_puissance)}
-
-        if not dynamic_only:
-            df_annuel = get_annual_data()
-            df_mensuel = get_monthly_data()
-            graph_annuel = create_bar_chart(
-                df_annuel,
-                x_col='year',
-                y_col='yearly_consumption',
-                color=Colors.ACCENT
-            )
-            graph_mensuel = create_bar_chart(
-                df_mensuel,
-                x_col='year_month',
-                y_col='monthly_consumption',
-                color=Colors.SECONDARY,
-                tickangle=45,
-                x_date_format='%B %Y'
-            )
-            charts['chart-annuel'] = json.loads(graph_annuel)
-            charts['chart-mensuel'] = json.loads(graph_mensuel)
-
-        return JsonResponse({'charts': charts})
 
     # Initial page load: return skeleton (no chart data, charts load via AJAX)
     context = {
@@ -1027,55 +1057,65 @@ def production(request):
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         dynamic_only = '_dynamic_only' in request.GET
 
-        df_production = get_production_data_multi(start_date, end_date, filieres_selected)
-        graph_production = create_multi_line_chart(
-            df_production,
-            x_col='date_heure',
-            filieres=filieres_selected,
-            colors=FILIERE_COLORS,
-            labels=filieres
+        def build():
+            df_production = get_production_data_multi(start_date, end_date, filieres_selected)
+            graph_production = create_multi_line_chart(
+                df_production,
+                x_col='date_heure',
+                filieres=filieres_selected,
+                colors=FILIERE_COLORS,
+                labels=filieres
+            )
+            charts = {'chart-production': json.loads(graph_production)}
+
+            if not dynamic_only:
+                df_annual = get_production_annual_data()
+                df_monthly = get_production_monthly_data().copy()
+                df_parc = get_parc_installe_data()
+                graph_parc_installe = create_parc_installe_chart(df_parc)
+
+                colors, labels = get_production_colors_and_labels()
+
+                graph_production_annuel = create_stacked_bar_chart(
+                    df_annual,
+                    x_col='year',
+                    y_cols=get_filiere_columns('annual'),
+                    colors=colors,
+                    labels=labels,
+                    unit='TWh',
+                    divisor=1_000_000,
+                    decimals=1,
+                )
+
+                df_monthly['annee_mois'] = pd.to_datetime(
+                    df_monthly['year'].astype(str) + '-' + df_monthly['month'].astype(str).str.zfill(2) + '-01'
+                )
+                graph_production_mensuel = create_stacked_bar_chart(
+                    df_monthly,
+                    x_col='annee_mois',
+                    y_cols=get_filiere_columns('monthly'),
+                    colors=colors,
+                    labels=labels,
+                    unit='TWh',
+                    divisor=1_000_000,
+                    decimals=1,
+                    x_date_format='%B %Y',
+                )
+
+                charts['chart-production-annuel'] = json.loads(graph_production_annuel)
+                charts['chart-production-mensuel'] = json.loads(graph_production_mensuel)
+                charts['chart-parc-installe'] = json.loads(graph_parc_installe)
+            return charts
+
+        return _cached_charts_response(
+            'production',
+            ('production', 'production_annuel', 'production_mensuel',
+             'rte_eolien_production', 'rte_eolien_facteur_charge',
+             'rte_solaire_production', 'rte_solaire_facteur_charge'),
+            {'start': start_date, 'end': end_date,
+             'filieres': ','.join(filieres_selected), 'dyn': dynamic_only},
+            build,
         )
-        charts = {'chart-production': json.loads(graph_production)}
-
-        if not dynamic_only:
-            df_annual = get_production_annual_data()
-            df_monthly = get_production_monthly_data().copy()
-            df_parc = get_parc_installe_data()
-            graph_parc_installe = create_parc_installe_chart(df_parc)
-
-            colors, labels = get_production_colors_and_labels()
-
-            graph_production_annuel = create_stacked_bar_chart(
-                df_annual,
-                x_col='year',
-                y_cols=get_filiere_columns('annual'),
-                colors=colors,
-                labels=labels,
-                unit='TWh',
-                divisor=1_000_000,
-                decimals=1,
-            )
-
-            df_monthly['annee_mois'] = pd.to_datetime(
-                df_monthly['year'].astype(str) + '-' + df_monthly['month'].astype(str).str.zfill(2) + '-01'
-            )
-            graph_production_mensuel = create_stacked_bar_chart(
-                df_monthly,
-                x_col='annee_mois',
-                y_cols=get_filiere_columns('monthly'),
-                colors=colors,
-                labels=labels,
-                unit='TWh',
-                divisor=1_000_000,
-                decimals=1,
-                x_date_format='%B %Y',
-            )
-
-            charts['chart-production-annuel'] = json.loads(graph_production_annuel)
-            charts['chart-production-mensuel'] = json.loads(graph_production_mensuel)
-            charts['chart-parc-installe'] = json.loads(graph_parc_installe)
-
-        return JsonResponse({'charts': charts})
 
     # Initial page load: return skeleton (no chart data, charts load via AJAX)
     context = {
@@ -1137,35 +1177,45 @@ def echanges(request):
         # Each form refreshes only its own chart, so the two stay independent:
         # the bottom selector sends `pays_annuel`, the top form does not.
         if 'pays_annuel' in request.GET:
-            df_echanges_annuel = get_echanges_annual_import_export(min_date, max_date, pays_annuel)
-            graph_echanges_annuel = create_import_export_chart(
-                df_echanges_annuel,
-                x_col='annee',
-                import_col='import_mwh',
-                export_col='export_mwh',
-                x_date_format=None,
-            )
-            return JsonResponse({'charts': {
-                'chart-echanges-annuel': json.loads(graph_echanges_annuel),
-            }})
+            def build_annuel():
+                df_echanges_annuel = get_echanges_annual_import_export(min_date, max_date, pays_annuel)
+                graph_echanges_annuel = create_import_export_chart(
+                    df_echanges_annuel,
+                    x_col='annee',
+                    import_col='import_mwh',
+                    export_col='export_mwh',
+                    x_date_format=None,
+                )
+                return {'chart-echanges-annuel': json.loads(graph_echanges_annuel)}
 
-        df_echanges = get_echanges_data_multi(start_date, end_date, pays_selected)
-        # Le fichier source est signé positif = import ; on inverse le signe pour
-        # l'affichage afin que la courbe suive la même orientation que le graphe
-        # annuel (export vers le haut, import vers le bas). L'export CSV applique
-        # la même inversion, écran et fichier restent cohérents.
-        df_echanges[pays_selected] = -df_echanges[pays_selected]
-        graph_echanges = create_multi_line_chart(
-            df_echanges,
-            x_col='date_heure',
-            filieres=pays_selected,
-            colors=PAYS_ECHANGES_COLORS,
-            labels=pays_disponibles,
-            y_axis_arrows=True,
+            return _cached_charts_response(
+                'echanges_annuel', ('echanges',),
+                {'pays': pays_annuel, 'min': min_date, 'max': max_date},
+                build_annuel,
+            )
+
+        def build():
+            df_echanges = get_echanges_data_multi(start_date, end_date, pays_selected)
+            # Le fichier source est signé positif = import ; on inverse le signe pour
+            # l'affichage afin que la courbe suive la même orientation que le graphe
+            # annuel (export vers le haut, import vers le bas). L'export CSV applique
+            # la même inversion, écran et fichier restent cohérents.
+            df_echanges[pays_selected] = -df_echanges[pays_selected]
+            graph_echanges = create_multi_line_chart(
+                df_echanges,
+                x_col='date_heure',
+                filieres=pays_selected,
+                colors=PAYS_ECHANGES_COLORS,
+                labels=pays_disponibles,
+                y_axis_arrows=True,
+            )
+            return {'chart-echanges': json.loads(graph_echanges)}
+
+        return _cached_charts_response(
+            'echanges', ('echanges',),
+            {'start': start_date, 'end': end_date, 'pays': ','.join(pays_selected)},
+            build,
         )
-        return JsonResponse({'charts': {
-            'chart-echanges': json.loads(graph_echanges),
-        }})
 
     # Initial page load: return skeleton (no chart data, charts load via AJAX)
     context = {
