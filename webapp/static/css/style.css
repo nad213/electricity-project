@@ -198,6 +198,22 @@ body {
     color: var(--accent);
 }
 
+/* Pastilles filtre (input .btn-check + label) : le hover Tabler
+   (.btn-check + .btn:hover) applique le même bleu plein que l'état coché,
+   ce qui masque la désélection tant que la souris reste sur la pastille. */
+.btn-check + .btn-outline-primary {
+    --tblr-btn-hover-color: var(--accent);
+    --tblr-btn-hover-bg: var(--accent-soft);
+    --tblr-btn-hover-border-color: var(--accent);
+}
+
+/* …mais une pastille cochée survolée doit garder son style « actif ». */
+.btn-check:checked + .btn-outline-primary:hover {
+    color: var(--tblr-btn-active-color);
+    background-color: var(--tblr-btn-active-bg);
+    border-color: var(--tblr-btn-active-border-color);
+}
+
 .btn-outline-secondary {
     color: var(--text-secondary);
     border-color: var(--border-light);
