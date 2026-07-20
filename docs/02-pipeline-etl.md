@@ -1,8 +1,6 @@
 # Pipeline ETL
 
-Trois fonctions Python 3.12 (`infrastructure/lambdas/` — le nom du dossier date de l'époque AWS), déclenchées par cron sur **Scaleway Functions** (namespace `elec-etl`, région `fr-par`), écrivent des Parquet dans un bucket Object Storage unique. Provisionnement : Terraform (`infrastructure/terraform-scaleway/`).
-
-> **Historique** : le pipeline tournait sur AWS Lambda (`eu-west-3`) jusqu'au 2026-07-08 — voir [decisions/005-migration-etl-scaleway.md](decisions/005-migration-etl-scaleway.md). Le stack AWS a été démantelé le 2026-07-16 (destroy Terraform, buckets supprimés) ; un dump final du bucket données est archivé sur `s3://elec-app-scw/archive/aws-final-dump-2026-07-16.tar.gz`.
+Trois fonctions Python 3.12 (`infrastructure/lambdas/`), déclenchées par cron sur **Scaleway Functions** (namespace `elec-etl`, région `fr-par`), écrivent des Parquet dans un bucket Object Storage unique. Provisionnement : Terraform (`infrastructure/terraform-scaleway/`).
 
 ## Organisation du bucket
 
@@ -62,7 +60,7 @@ Récupère le JSON de puissance maximale installée par filière (endpoint Cloud
 
 ## Terraform (`infrastructure/terraform-scaleway/`)
 
-- **State** : **distant** sur Object Storage Scaleway — `s3://elec-tfstate-scw/terraform-scaleway/terraform.tfstate` (bucket dédié versionné, créé hors Terraform ; migration depuis le state local le 2026-07-18). ⚠️ Pas de lock d'état : ne pas lancer d'apply local pendant qu'un run CI tourne.
+- **State** : **distant** sur Object Storage Scaleway — `s3://elec-tfstate-scw/terraform-scaleway/terraform.tfstate` (bucket dédié versionné, créé hors Terraform). ⚠️ Pas de lock d'état : ne pas lancer d'apply local pendant qu'un run CI tourne.
 - **Ressources** : bucket Object Storage, namespace `elec-etl`, 3 functions (`for_each`), 3 crons. Privacy `private`, `max_scale = 1` (pas d'exécutions concurrentes).
 - **Auth** : env vars `SCW_*` + `TF_VAR_s3_access_key` / `TF_VAR_s3_secret_key` (cf. `.env` local, non versionné). Les creds S3 sont injectés dans l'environnement des functions (boto3 les lit via `AWS_*`). Le **backend** s3 exige en plus `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (mêmes valeurs que `TF_VAR_s3_*`, à exporter avant init/plan/apply — consigne en tête de `main.tf`).
 - **Packaging** : `bash package_functions.sh` **obligatoire avant apply** — vendore les dépendances **à la racine de chaque zip** (le runtime met le dossier de déploiement sur `sys.path`, pas un sous-dossier), versions pinnées dans `requirements-functions.txt`.
@@ -80,4 +78,4 @@ terraform apply
 - **Invoquer une function à la main** (privacy `private`) : créer un token via `POST https://api.scaleway.com/functions/v1beta1/regions/fr-par/tokens` (header `X-Auth-Token: <secret_key>`, body `{"function_id": …}`), attendre qu'il soit actif, puis `curl -H "X-Auth-Token: <token>" https://<domain_name>`.
 - **Logs** : Cockpit Scaleway (Grafana) ; `logs/download_log.csv` sur le bucket trace chaque ingestion ODRE.
 
-Test local des fonctions : `python run_lambdas_local.py` à la racine.
+Test local des fonctions : script `run_lambdas_local.py` à la racine — outil de dev **non versionné** (gitignoré, spécifique au poste de l'auteur). Sans lui, tester une function = l'invoquer à la main (ci-dessus) ou appeler son `lambda_handler` depuis un shell Python avec les variables d'env du `.env`.

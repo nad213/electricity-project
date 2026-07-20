@@ -26,7 +26,7 @@ Les courbes infra-journalières génèrent ~35 000 points/an/série : la plage e
 En-tête `Authorization: Bearer <clé>` obligatoire (sinon 401). Deux sources de vérité, dans cet ordre :
 
 1. **Base de données** — table `ApiKey` : seuls le **hash SHA-256** et un préfixe d'affichage sont stockés, jamais la clé en clair (montrée une seule fois à la génération, format `elf_live_<token>`). Révocation = soft-delete (`revoked_at`), effet immédiat, trace conservée. `last_used_at` mis à jour à l'usage.
-2. **Variable d'env `API_KEYS`** (`libellé:sha256hex,…`) — chemin de compatibilité pour les clés distribuées avant la migration en base.
+2. **Variable d'env `API_KEYS`** (`libellé:sha256hex,…`) — clés sans compte utilisateur associé (quota par hash de clé).
 
 Cycle de vie self-service : page `/api/` (connecté via l'IdP) → génération et révocation de ses propres clés (rattachées au `sub` OIDC). En local sans IdP : créer une `ApiKey` via `manage.py shell`.
 

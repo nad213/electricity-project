@@ -34,7 +34,7 @@ flowchart LR
 
 ## Composants
 
-**Pipeline ETL** (`infrastructure/`) — trois Scaleway Functions Python 3.12 déclenchées par cron, qui téléchargent les données sources, les transforment avec pandas et écrivent des fichiers Parquet sur Object Storage (S3-compatible). Provisionné par Terraform. Détail : [02-pipeline-etl.md](02-pipeline-etl.md). *(Sur AWS Lambda jusqu'au 2026-07-08 — voir [decisions/005-migration-etl-scaleway.md](decisions/005-migration-etl-scaleway.md) ; stack AWS démantelé le 2026-07-16.)*
+**Pipeline ETL** (`infrastructure/`) — trois Scaleway Functions Python 3.12 déclenchées par cron, qui téléchargent les données sources, les transforment avec pandas et écrivent des fichiers Parquet sur Object Storage (S3-compatible). Provisionné par Terraform. Détail : [02-pipeline-etl.md](02-pipeline-etl.md).
 
 **Webapp** (`webapp/`) — application Django 6 qui lit les Parquet via DuckDB (avec un cache local sur disque), rend des graphiques Plotly, expose une API publique JSON (django-ninja) et un chatbot (tool-use sur l'API Mistral). Détail : [04-webapp.md](04-webapp.md).
 

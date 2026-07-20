@@ -1,5 +1,4 @@
-# 3 Serverless Functions = les 3 lambdas AWS, même code, même signature
-# lambda_handler(event, context).
+# 3 Serverless Functions — point d'entrée commun : <nom>.lambda_handler(event, context).
 #
 # ⚠️ PRÉREQUIS avant tout plan/apply : `bash package_functions.sh` — les zips
 # build/*.zip sont gitignorés, filesha256() échoue en dur s'ils sont absents.
@@ -7,8 +6,8 @@
 # zip_hash et redéploie les 3 functions, même à code identique. Sans gravité
 # (max_scale=1), mais ne repackager que quand c'est nécessaire.
 #
-# Mémoire : provisionné AWS conservé pour eco2mix (pic mesuré 1010 Mo le
-# 2026-07-07, croît avec l'historique) ; 512/256 pour les deux autres.
+# Mémoire : 2048 Mo pour eco2mix (pic mesuré 1010 Mo, croît avec l'historique) ;
+# 512/256 pour les deux autres.
 
 locals {
   common_env = {
@@ -43,7 +42,7 @@ locals {
 
 resource "scaleway_function_namespace" "etl" {
   name        = "elec-etl"
-  description = "Pipeline ETL ElecStat (ex-lambdas AWS)"
+  description = "Pipeline ETL ElecStat"
 }
 
 resource "scaleway_function" "etl" {
@@ -75,9 +74,8 @@ resource "scaleway_function_cron" "etl" {
   args        = jsonencode({})
 }
 
-# Renommage des adresses issues de l'apply initial du 2026-07-07 (ressources
-# nommées individuellement avant la factorisation for_each) — évite un
-# destroy/recreate des functions live.
+# Les ressources ont été créées nommées individuellement, avant la factorisation
+# for_each — ces blocs moved évitent un destroy/recreate des functions live.
 moved {
   from = scaleway_function.odre_eco2mix
   to   = scaleway_function.etl["odre_eco2mix"]

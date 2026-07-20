@@ -26,11 +26,11 @@ Application Django 6 (`webapp/`), une seule app : `consommation`. Elle lit les P
 
 ### Thème sombre (`static/css/style.css`)
 
-L'UI s'appuie sur Tabler (CDN, thème clair par défaut) passé en sombre par remap des variables `--tblr-*` dans `:root` + surcharges par composant. **Le remap est partiel** : un composant Tabler utilisé pour la première fois peut tomber sur des variables non remappées et sortir blanc avec du texte clair illisible (cas des modales, corrigé en 7759e86). Au premier usage d'un composant, vérifier son rendu et ajouter la section correspondante dans `style.css`. Certains utilitaires Tabler (`.link-*`) sont posés en `!important` — la surcharge doit l'être aussi.
+L'UI s'appuie sur Tabler (CDN, thème clair par défaut) passé en sombre par remap des variables `--tblr-*` dans `:root` + surcharges par composant. **Le remap est partiel** : un composant Tabler utilisé pour la première fois peut tomber sur des variables non remappées et sortir blanc avec du texte clair illisible (cas des modales). Au premier usage d'un composant, vérifier son rendu et ajouter la section correspondante dans `style.css`. Certains utilitaires Tabler (`.link-*`) sont posés en `!important` — la surcharge doit l'être aussi.
 
 ### Chargement AJAX des graphiques
 
-Consommation, Production et Échanges retournent d'abord un squelette (formulaire + `<div aria-busy>`), puis `KiloWatch.loadCharts()` (`static/js/charts.js`) refait la même requête en XHR au `DOMContentLoaded`. Les vues détectent `X-Requested-With: XMLHttpRequest` et renvoient alors un `JsonResponse({'charts': {id: {data, layout}}})` au lieu du HTML. L'accueil reste en SSR.
+Consommation, Production et Échanges retournent d'abord un squelette (formulaire + `<div aria-busy>`), puis `ElecStat.loadCharts()` (`static/js/charts.js`) refait la même requête en XHR au `DOMContentLoaded`. Les vues détectent `X-Requested-With: XMLHttpRequest` et renvoient alors un `JsonResponse({'charts': {id: {data, layout}}})` au lieu du HTML. L'accueil reste en SSR.
 
 ## Cache Parquet local (`data_cache.py`)
 
@@ -54,7 +54,7 @@ Les réponses `JsonResponse({'charts': …})` des pages Consommation/Production/
 
 ### Dashboard accueil
 
-L'accueil est l'endpoint le plus coûteux de la webapp (~1 s CPU : `get_dashboard_data`, import/export annuel des échanges, nid d'abeille, parc ENR — mesures dans `notes/capacite_charge_clever_2026-07-18.md`) et il est identique pour tous les visiteurs. La vue `accueil` met donc son **contexte calculé** en cache Django (`default`, LocMem) :
+L'accueil est l'endpoint le plus coûteux de la webapp (~1 s CPU : `get_dashboard_data`, import/export annuel des échanges, nid d'abeille, parc ENR — mesures dans `notes/capacite_charge_clever_2026-07-18.md`, note locale **non versionnée**) et il est identique pour tous les visiteurs. La vue `accueil` met donc son **contexte calculé** en cache Django (`default`, LocMem) :
 
 - **Clé** = date locale + ETags des 9 Parquet sources (via `data_cache.get_etag()`, lecture des `.meta.json` sans appel S3). Un nouvel ETL change l'ETag ⇒ nouvelle clé ⇒ recalcul au visiteur suivant ; la date dans la clé évite de servir la « photo du jour » de la veille après minuit.
 - **TTL 1 h** (`ACCUEIL_CACHE_TTL`) en filet de sécurité.
@@ -83,7 +83,7 @@ Points d'attention encodés dans le prompt système :
 
 **Limite de débit Mistral (429)** : la limite (req/s + tokens/min) est par **workspace**, quel que soit le crédit — la boucle tool-use enchaîne les appels dos à dos et toutes les conversations partagent la même clé. Un 429 est donc un événement normal, absorbé par **retry avec backoff** (`ChatService._complete`) : 3 tentatives, backoff 1 s puis 2 s, `Retry-After` honoré (borné à 8 s). Un 429 persistant lève `ChatBusyError`, que la vue traduit en HTTP 429 avec un message actionnable (jamais de 500 « Erreur interne »).
 
-Il n'y a **aucun rate-limit applicatif** sur le chat — ni par utilisateur ni global (quotas retirés le 2026-07-16, choix assumé après le passage du workspace Mistral au plan Pro). Seule borne côté appli : la taille du body (`CHAT_MAX_BODY_BYTES`). La dépense Mistral n'est donc bornée que par l'usage réel — surveiller la consommation côté console Mistral (et les logs `chat usage` côté appli). Si la contention 429 devient fréquente, vérifier la page **Limits** de la console Mistral et demander une augmentation au support.
+Il n'y a **aucun rate-limit applicatif** sur le chat — ni par utilisateur ni global. Seule borne côté appli : la taille du body (`CHAT_MAX_BODY_BYTES`). La dépense Mistral n'est donc bornée que par l'usage réel — surveiller la consommation côté console Mistral (et les logs `chat usage` côté appli). Si la contention 429 devient fréquente, vérifier la page **Limits** de la console Mistral et demander une augmentation au support.
 
 ## Lancer en local
 

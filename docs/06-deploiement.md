@@ -12,7 +12,7 @@
 
 App `statelec` (`app_40af04af-fece-4f06-83c7-6083a2283aef`, runtime **Python**, instance XS 1 Go), domaine <https://statelec.cleverapps.io/>. Le fichier `.clever.json` à la racine lie le repo à l'app pour la CLI `clever-tools`.
 
-> ℹ️ L'application s'appelle **ElecStat** (renommage 2026-07-07) mais les identifiants techniques gardent `statelec` : app et alias Clever, domaine `statelec.cleverapps.io`, add-on Postgres `statelec-postegredb`, service account Zitadel `statelec-account-deletion`. Renommer le domaine/l'app serait une opération console Clever séparée (+ mise à jour des redirect URIs Zitadel).
+> ℹ️ L'application s'appelle **ElecStat** mais les identifiants techniques gardent `statelec` : app et alias Clever, domaine `statelec.cleverapps.io`, add-on Postgres `statelec-postegredb`, service account Zitadel `statelec-account-deletion`. Renommer le domaine/l'app serait une opération console Clever séparée (+ mise à jour des redirect URIs Zitadel).
 
 ### Mécanique de déploiement
 
@@ -34,7 +34,7 @@ Posées dans la console Clever ou via `clever env` (référence locale : `webapp
 
 - Runtime : `APP_FOLDER=webapp`, `CC_PYTHON_VERSION=3.13`, `CC_RUN_COMMAND=bash ../clevercloud/run.sh`, `CC_POST_BUILD_HOOK=bash clevercloud/post_build.sh`
 - `SECRET_KEY`, `DEBUG=False`, `ALLOWED_HOSTS` (le `CSRF_TRUSTED_ORIGINS` en découle, cf. `settings.py`)
-- `AWS_S3_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` — depuis la bascule du 2026-07-08 : creds **Scaleway** et région **`fr-par`** (les variables gardent leur nom `AWS_*`, boto3/DuckDB les lisent nativement)
+- `AWS_S3_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` — creds **Scaleway**, région **`fr-par`** (les variables gardent leur nom `AWS_*` : boto3/DuckDB les lisent nativement)
 - `AWS_S3_ENDPOINT_URL` — vide/absent = AWS ; prod : `https://s3.fr-par.scw.cloud` (Scaleway). ⚠️ `AWS_S3_REGION` doit correspondre à l'endpoint (`fr-par` pour Scaleway), sinon 403 `SignatureDoesNotMatch`
 - `S3_PATH_*` — un chemin `s3://…` par fichier Parquet (puissance, annuel, mensuel, production ×3, échanges, RTE ×5) ; prod : bucket `elec-app-scw`
 - `DATABASE_URL` — valeur de `POSTGRESQL_ADDON_URI` injectée par l'add-on Postgres
@@ -68,4 +68,3 @@ terraform apply
 - **Forcer un rafraîchissement webapp** : `python manage.py refresh_data` (`--force` pour tout retélécharger) — en pratique inutile en prod, le TTL suffit.
 - **Historique S3** : les fichiers `02_clean/*_detail.parquet` contiennent un historique reconstruit non re-téléchargeable (voir [03-donnees.md](03-donnees.md#historique--rétention)) — ne pas les supprimer.
 - **Logs** : Cockpit Scaleway (Grafana) pour les functions ; `logs/download_log.csv` sur le bucket trace chaque ingestion ODRE ; `clever logs --alias statelec` (ou la console Clever) pour la webapp.
-- **Historique** : la webapp était hébergée sur Render jusqu'en juillet 2026 — voir [decisions/004-hebergement-clever-cloud.md](decisions/004-hebergement-clever-cloud.md) (l'échéance du free tier Postgres Render, [decisions/002-postgres-render-api-keys.md](decisions/002-postgres-render-api-keys.md), est réglée par la migration). L'ETL tournait sur AWS Lambda jusqu'au 2026-07-08 — voir [decisions/005-migration-etl-scaleway.md](decisions/005-migration-etl-scaleway.md) ; le stack AWS a été démantelé le 2026-07-16 (dump final : `s3://elec-app-scw/archive/aws-final-dump-2026-07-16.tar.gz`).

@@ -53,8 +53,8 @@
   // ligne simples (le bubble n'est plus en white-space: pre-wrap).
   marked.setOptions({ gfm: true, breaks: true });
 
-  const STORAGE_KEY = "kilowatch_chat_history";
-  const STORAGE_TS_KEY = "kilowatch_chat_ts";
+  const STORAGE_KEY = "elecstat_chat_history";
+  const STORAGE_TS_KEY = "elecstat_chat_ts";
   // Durée de vie du fil, alignée sur la session Django (SESSION_COOKIE_AGE=3600).
   // Mode glissant : chaque message repousse l'expiration → reset après 1 h SANS
   // activité, comme la déconnexion / reset des filtres.

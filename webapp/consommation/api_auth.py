@@ -4,9 +4,8 @@ Les clés sont désormais générées par les utilisateurs depuis l'interface et
 stockées en base (`consommation.models.ApiKey`) : seul le **hash SHA-256** est
 conservé, jamais la clé en clair. Cf. `models.py`.
 
-Compatibilité : on garde aussi le support de la variable d'environnement
-`API_KEYS` (format `libellé:sha256hex,...`), pour ne pas casser d'éventuelles
-clés déjà distribuées avant la migration vers la base.
+Source alternative : la variable d'environnement `API_KEYS`
+(format `libellé:sha256hex,...`) — clés sans compte utilisateur associé.
 
 Politique d'accès (identique en dev et en prod) :
 - Au moins une clé valide présentée (DB ou env) → OK, sinon 401.
@@ -29,7 +28,7 @@ def hash_key(raw_key: str) -> str:
 def load_env_keys() -> dict[str, str]:
     """Parse `API_KEYS` en {hash_sha256: libellé}. Entrées invalides ignorées.
 
-    Chemin de compatibilité : la source principale est désormais la base.
+    Source alternative ; la source principale est la base.
     """
     raw = os.getenv("API_KEYS", "").strip()
     keys: dict[str, str] = {}
@@ -78,7 +77,7 @@ class ApiKeyAuth(HttpBearer):
             # toutes ses clés (cf. docstring). Repli sur la clé si pas de sub.
             return f"user:{key.user_sub}" if key.user_sub else f"key:{key.pk}"
 
-        # Compat : clés héritées (env) — pas d'utilisateur, quota par hash.
+        # Clés d'env — pas d'utilisateur associé, quota par hash.
         if h in _ENV_KEYS:
             return f"env:{h}"
         return None

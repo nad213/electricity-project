@@ -55,7 +55,6 @@ Thumbs.db
 
 # Data files
 *.csv
-!infrastructure/terraform/99_params/filelist.csv
 *.parquet
 data/
 

@@ -15,4 +15,4 @@ Documentation de référence du projet. Chaque fichier est autonome ; l'ordre su
 ## Conventions
 
 - La doc décrit **l'existant sur `master`** ; toute évolution de code qui la contredit doit la mettre à jour dans le même commit.
-- Les analyses exploratoires et audits ponctuels vivent dans `notes/` ; les plans de tâches dans `plans/`. Quand une exploration débouche sur une décision, elle est résumée dans `docs/decisions/`.
+- Les analyses exploratoires et audits ponctuels vivent dans `notes/` (**non versionné**, gitignoré — local à chaque poste) ; les plans de tâches dans `plans/`. Quand une exploration débouche sur une décision, elle est résumée dans `docs/decisions/`.

@@ -1,8 +1,8 @@
 name: Deploy Webapp
 
-# Réplique l'autoDeploy Render : chaque push sur master déploie la webapp sur
-# Clever Cloud. `clever deploy` pousse l'historique git vers le remote de l'app
-# (d'où fetch-depth: 0) ; l'app cible est résolue via .clever.json (alias statelec).
+# Chaque push sur master déploie la webapp sur Clever Cloud. `clever deploy`
+# pousse l'historique git vers le remote de l'app (d'où fetch-depth: 0) ; l'app
+# cible est résolue via .clever.json (alias statelec).
 # Secrets requis : CLEVER_TOKEN / CLEVER_SECRET (clever login puis
 # ~/.config/clever-cloud/clever-tools.json).
 
