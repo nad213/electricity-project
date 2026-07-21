@@ -9,7 +9,6 @@ Ce fichier documente ce qui ne se voit pas dans le code : les subtilités des do
 | ODRE `eco2mix-national-tr` | Conso, production, échanges — **temps réel**, pas 15 min, provisoire | Export Parquet opendatasoft |
 | ODRE `eco2mix-national-cons-def` | Idem — **consolidé/définitif**, pas 30 min | Export Parquet opendatasoft |
 | RTE analysesetdonnees | Production mensuelle et facteur de charge éolien/solaire | Scraping (JSON embarqué dans le HTML) |
-| RTE pmax | Puissance max installée par filière (instantané) | JSON |
 
 ## Temps réel vs consolidé
 
@@ -36,12 +35,12 @@ La division doit se faire **par source, avant** d'additionner les deux : appliqu
 
 Le pas de 15 min n'existe que sur les 1–2 dernières années ; avant, les données sont plus grossières. Conséquence : les requêtes « raw » sur de longues plages ne renvoient pas une densité homogène, et les caps de plage (`MAX_RANGE_DAYS` de l'API, limite 31 jours du chatbot en `raw`) sont calibrés pour la zone dense.
 
-## Parc installé : deux sources non comparables
+## Parc installé : une seule source
 
-- `rte_pmax.parquet` (« actuel ») : photo instantanée de la puissance max par filière.
-- Scraping RTE (« historique ») : évolution du parc éolien terrestre / en mer / solaire uniquement.
-
-Les deux ne mesurent pas exactement la même chose — écart connu sur le solaire (~31,9 GW côté pmax vs ~17 GW côté historique, point encore ouvert). Ne jamais comparer un chiffre « actuel » avec un chiffre « historique » sans mentionner la source ; le prompt du chatbot impose la même règle.
+Le parc installé (éolien terrestre / en mer / solaire uniquement) est déduit du scraping RTE
+(production mensuelle / facteur de charge). La source RTE pmax (photo instantanée de la
+puissance max par filière) a été abandonnée : ses chiffres n'étaient plus fiables (écart
+constaté sur le solaire ~31,9 GW vs ~17 GW côté historique, jamais résolu).
 
 ## Schémas des fichiers `02_clean/` (contrat ETL → webapp)
 
@@ -56,7 +55,6 @@ Les deux ne mesurent pas exactement la même chose — écart connu sur le solai
 | `echanges_france_detail` | `date_heure`, `source`, `ech_physiques`, `ech_comm_*` (MW) |
 | `echanges_mensuels` | `year_month`, `<col>_mwh` |
 | `echanges_annuels` | `year`, `<col>_yearly_mwh` |
-| `rte_pmax` | `filiere`, `puissance_max_mw` |
 
 Les fichiers détaillés conservent l'historique complet (le merge ETL préserve les lignes purgées par ODRE) ; lignes filtrées si toutes les colonnes de valeurs sont nulles.
 

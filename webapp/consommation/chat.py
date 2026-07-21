@@ -43,7 +43,7 @@ Règles :
 - Pour les filières de production : nucleaire, hydraulique, eolien, solaire, gaz, charbon, fioul, bioenergies.
 - Pour les pays d'échange : ech_physiques (solde total), ech_comm_angleterre, ech_comm_espagne, ech_comm_italie, ech_comm_suisse, ech_comm_allemagne_belgique. Un solde négatif = exportation, positif = importation.
 - Pour les VOLUMES d'échange importés/exportés (en énergie, sur un mois ou une année), utilise `get_echanges_energie` (MWh), pas `get_echanges` (qui ne donne que la puissance MW).
-- Pour la puissance installée (parc) : `get_parc`. mode='actuel' = pmax de toutes les filières à l'instant présent ; mode='historique' = évolution du parc (éolien terrestre, éolien en mer, solaire uniquement), granularity='annual' par défaut (une valeur par année, année en cours marquée partial=true) ou 'monthly' pour le détail. Une ligne partial=true est la valeur du dernier mois connu, pas un total annuel : présente-la comme telle. Ne compare pas un chiffre 'actuel' avec un chiffre 'historique' sans préciser qu'ils viennent de sources différentes.
+- Pour la puissance installée (parc) : `get_parc` — évolution du parc éolien terrestre, éolien en mer et solaire uniquement. granularity='annual' par défaut (une valeur par année, année en cours marquée partial=true) ou 'monthly' pour le détail. Une ligne partial=true est la valeur du dernier mois connu, pas un total annuel : présente-la comme telle.
 - Quand tu présentes des séries de chiffres, utilise des tableaux markdown lisibles.
 - Pour les questions de type « pic / record / maximum / minimum » sur une période, appelle TOUJOURS `get_peak` (pas `get_consommation`/`get_production` en raw — qui downsample et perdent le datetime exact).
 - La granularité `raw` est limitée à 31 jours. Au-delà, utilise `daily` ou `get_peak`.
@@ -127,34 +127,29 @@ TOOLS = [
     {
         "name": "get_parc",
         "description": (
-            "Puissance installée (parc) en MW. "
-            "mode='actuel' = dernière puissance max installée par filière, TOUTES filières "
-            "(nucleaire, hydraulique, eolien, solaire, gaz, charbon, fioul, bioenergies), source RTE pmax. "
-            "mode='historique' = série du parc, disponible UNIQUEMENT pour 'Eolien terrestre', "
-            "'Eolien en mer' et 'Solaire' (estimée à partir de production / facteur de charge). "
-            "granularity='annual' (défaut) = une valeur par année (le parc du dernier mois connu de l'année ; "
-            "l'année en cours est marquée partial=true). granularity='monthly' = série mensuelle détaillée. "
-            "NB : 'actuel' et 'historique' proviennent de méthodes différentes et peuvent diverger "
-            "(p. ex. le solaire) — ne pas mélanger les deux dans une même comparaison sans le préciser."
+            "Puissance installée (parc) en MW — série historique, disponible UNIQUEMENT pour "
+            "'Eolien terrestre', 'Eolien en mer' et 'Solaire' (estimée à partir de production / "
+            "facteur de charge). granularity='annual' (défaut) = une valeur par année (le parc du "
+            "dernier mois connu de l'année ; l'année en cours est marquée partial=true). "
+            "granularity='monthly' = série mensuelle détaillée."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "mode": {"type": "string", "enum": ["actuel", "historique"]},
                 "granularity": {
                     "type": "string",
                     "enum": ["annual", "monthly"],
-                    "description": "mode='historique' uniquement. Défaut 'annual'.",
+                    "description": "Défaut 'annual'.",
                 },
                 "filiere": {
                     "type": "string",
                     "enum": ["Eolien terrestre", "Eolien en mer", "Solaire"],
-                    "description": "Filtre optionnel, seulement pour mode='historique'.",
+                    "description": "Filtre optionnel.",
                 },
-                "start": {"type": "string", "description": "Mois de début YYYY-MM (mode historique, optionnel)."},
-                "end": {"type": "string", "description": "Mois de fin YYYY-MM (mode historique, optionnel)."},
+                "start": {"type": "string", "description": "Mois de début YYYY-MM (optionnel)."},
+                "end": {"type": "string", "description": "Mois de fin YYYY-MM (optionnel)."},
             },
-            "required": ["mode"],
+            "required": [],
         },
     },
     {
@@ -457,54 +452,43 @@ def _tool_get_dashboard() -> dict:
 
 
 def _tool_get_parc(args: dict) -> dict:
-    mode = args.get("mode", "actuel")
-    if mode == "actuel":
-        pmax = services.get_parc_pmax()
-        return {
-            "unit": "MW",
-            "mode": "actuel",
-            "note": "Puissance max installée par filière (instantané RTE, toutes filières).",
-            "parc": {k: round(v, 1) for k, v in pmax.items()},
-        }
-    if mode == "historique":
-        df = services.get_parc_installe_data()
-        if df.empty:
-            return {"rows_total": 0, "data": [], "unit": "MW"}
-        filiere = args.get("filiere")
-        if filiere:
-            df = df[df["filiere"] == filiere]
-        # 'date' est au format 'YYYY-MM' → comparaison lexicographique sûre.
-        start, end = args.get("start"), args.get("end")
-        if start:
-            df = df[df["date"] >= start[:7]]
-        if end:
-            df = df[df["date"] <= end[:7]]
-        if df.empty:
-            return {"rows_total": 0, "data": [], "unit": "MW"}
+    df = services.get_parc_installe_data()
+    if df.empty:
+        return {"rows_total": 0, "data": [], "unit": "MW"}
+    filiere = args.get("filiere")
+    if filiere:
+        df = df[df["filiere"] == filiere]
+    # 'date' est au format 'YYYY-MM' → comparaison lexicographique sûre.
+    start, end = args.get("start"), args.get("end")
+    if start:
+        df = df[df["date"] >= start[:7]]
+    if end:
+        df = df[df["date"] <= end[:7]]
+    if df.empty:
+        return {"rows_total": 0, "data": [], "unit": "MW"}
 
-        month_min, month_max = df["date"].min(), df["date"].max()
-        granularity = args.get("granularity", "annual")
-        if granularity == "monthly":
-            out = df[["date", "filiere", "parc_mw"]].rename(columns={"parc_mw": "value"})
-            grain_note = "Parc mensuel. "
-        else:
-            out = _parc_to_annual(df)
-            grain_note = (
-                "Parc annuel = valeur du dernier mois connu de chaque année "
-                "(partial=true ⇒ année en cours, valeur du dernier mois disponible, pas un total annuel). "
-            )
-
-        payload = _df_to_payload(out, "value", "MW", force_full=True)
-        payload["note"] = (
-            "Parc estimé (production / facteur de charge), uniquement éolien terrestre, "
-            "éolien en mer et solaire. "
-            + grain_note
-            + f"Données mensuelles sous-jacentes de {month_min} à {month_max} — "
-            "le dernier point fait foi : n'affirme jamais que les données s'arrêtent à une "
-            "année antérieure, et signale le dernier mois disponible."
+    month_min, month_max = df["date"].min(), df["date"].max()
+    granularity = args.get("granularity", "annual")
+    if granularity == "monthly":
+        out = df[["date", "filiere", "parc_mw"]].rename(columns={"parc_mw": "value"})
+        grain_note = "Parc mensuel. "
+    else:
+        out = _parc_to_annual(df)
+        grain_note = (
+            "Parc annuel = valeur du dernier mois connu de chaque année "
+            "(partial=true ⇒ année en cours, valeur du dernier mois disponible, pas un total annuel). "
         )
-        return payload
-    return {"error": f"mode '{mode}' inconnu (attendu: actuel ou historique)"}
+
+    payload = _df_to_payload(out, "value", "MW", force_full=True)
+    payload["note"] = (
+        "Parc estimé (production / facteur de charge), uniquement éolien terrestre, "
+        "éolien en mer et solaire. "
+        + grain_note
+        + f"Données mensuelles sous-jacentes de {month_min} à {month_max} — "
+        "le dernier point fait foi : n'affirme jamais que les données s'arrêtent à une "
+        "année antérieure, et signale le dernier mois disponible."
+    )
+    return payload
 
 
 def _tool_get_echanges_energie(args: dict) -> dict:

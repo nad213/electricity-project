@@ -793,7 +793,7 @@ def create_stacked_area_chart(df, x_col, y_cols, colors, labels):
 # Parquet sources du dashboard accueil : un changement d'ETag sur l'un d'eux
 # (nouvel ETL) change la clé de cache et déclenche le recalcul.
 _ACCUEIL_PARQUET_KEYS = (
-    'puissance', 'production', 'production_annuel', 'echanges', 'rte_pmax',
+    'puissance', 'production', 'production_annuel', 'echanges',
     'rte_eolien_production', 'rte_eolien_facteur_charge',
     'rte_solaire_production', 'rte_solaire_facteur_charge',
 )

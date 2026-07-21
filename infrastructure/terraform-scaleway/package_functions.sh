@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Package les 3 functions pour Scaleway : deps vendorées À LA RACINE du zip, à côté
+# Package les 2 functions pour Scaleway : deps vendorées À LA RACINE du zip, à côté
 # du handler (le runtime Scaleway ajoute le dossier de déploiement au sys.path ;
 # il n'ajoute PAS un sous-dossier package/, d'où les deps à plat).
 #
@@ -56,7 +56,6 @@ package_one() {
 
 package_one 01_odre_eco2mix          odre_eco2mix.py          odre_eco2mix.zip
 package_one 02_scrape_rte_production scrape_rte_production.py scrape_rte_production.zip
-package_one 03_rte_pmax              rte_pmax.py              rte_pmax.zip
 
 rm -rf "$DEPS_DIR"
 echo "OK — terraform plan/apply peut être lancé."

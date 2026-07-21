@@ -1,3 +1,0 @@
-# ⚠️ Packaging AWS (zip_lambda.sh) uniquement. Pour Scaleway, ajouter toute
-# nouvelle dépendance aussi dans terraform-scaleway/requirements-functions.txt.
-requests

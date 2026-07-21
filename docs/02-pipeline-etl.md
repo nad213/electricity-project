@@ -1,6 +1,6 @@
 # Pipeline ETL
 
-Trois fonctions Python 3.12 (`infrastructure/lambdas/`), déclenchées par cron sur **Scaleway Functions** (namespace `elec-etl`, région `fr-par`), écrivent des Parquet dans un bucket Object Storage unique. Provisionnement : Terraform (`infrastructure/terraform-scaleway/`).
+Deux fonctions Python 3.12 (`infrastructure/lambdas/`), déclenchées par cron sur **Scaleway Functions** (namespace `elec-etl`, région `fr-par`), écrivent des Parquet dans un bucket Object Storage unique. Provisionnement : Terraform (`infrastructure/terraform-scaleway/`).
 
 ## Organisation du bucket
 
@@ -52,20 +52,14 @@ Scrape les pages RTE `analysesetdonnees.rte-france.com/production/{eolien,solair
 
 Fragile par nature (structure HTML/JS non contractuelle) : la fonction logue les clés des blobs trouvés pour diagnostiquer un changement de page.
 
-## Function `rte-pmax` (`03_rte_pmax`)
-
-Déclencheur : cron 07:05 UTC. Timeout 60 s / 256 MB.
-
-Récupère le JSON de puissance maximale installée par filière (endpoint CloudFront du site RTE) → `02_clean/rte_pmax.parquet` (`filiere`, `puissance_max_mw`). Les catégories RTE sont traduites en français et une ligne synthétique `Hydraulique (total)` est ajoutée (somme fil de l'eau + STEP + lacs).
-
 ## Terraform (`infrastructure/terraform-scaleway/`)
 
 - **State** : **distant** sur Object Storage Scaleway — `s3://elec-tfstate-scw/terraform-scaleway/terraform.tfstate` (bucket dédié versionné, créé hors Terraform). ⚠️ Pas de lock d'état : ne pas lancer d'apply local pendant qu'un run CI tourne.
-- **Ressources** : bucket Object Storage, namespace `elec-etl`, 3 functions (`for_each`), 3 crons. Privacy `private`, `max_scale = 1` (pas d'exécutions concurrentes).
+- **Ressources** : bucket Object Storage, namespace `elec-etl`, 2 functions (`for_each`), 2 crons. Privacy `private`, `max_scale = 1` (pas d'exécutions concurrentes).
 - **Auth** : env vars `SCW_*` + `TF_VAR_s3_access_key` / `TF_VAR_s3_secret_key` (cf. `.env` local, non versionné). Les creds S3 sont injectés dans l'environnement des functions (boto3 les lit via `AWS_*`). Le **backend** s3 exige en plus `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (mêmes valeurs que `TF_VAR_s3_*`, à exporter avant init/plan/apply — consigne en tête de `main.tf`).
 - **Packaging** : `bash package_functions.sh` **obligatoire avant apply** — vendore les dépendances **à la racine de chaque zip** (le runtime met le dossier de déploiement sur `sys.path`, pas un sous-dossier), versions pinnées dans `requirements-functions.txt`.
 - ⚠️ **Runtime musl (Alpine)** : le Python 3.12 de Scaleway Functions est compilé contre musl, pas glibc. Les wheels à extension C (numpy, pyarrow…) doivent être **`musllinux`** — une wheel `manylinux` produit un `ImportError` au chargement, avec des messages trompeurs (« Function Handler does not exist », « No module named 'pyarrow.lib' »). `package_functions.sh` force `--platform musllinux_*`. Toute nouvelle dépendance à extension C doit exister en wheel musllinux.
-- **Déploiement** : automatique via le workflow `.github/workflows/infra-deploy.yml` — push `master` touchant `infrastructure/**` → packaging + `terraform apply` (secrets GitHub listés dans `docs/06-deploiement.md`). NB : zips non reproductibles (mtimes) → chaque run redéploie les 3 functions même à code identique, sans gravité. Apply manuel toujours possible :
+- **Déploiement** : automatique via le workflow `.github/workflows/infra-deploy.yml` — push `master` touchant `infrastructure/**` → packaging + `terraform apply` (secrets GitHub listés dans `docs/06-deploiement.md`). NB : zips non reproductibles (mtimes) → chaque run redéploie les 2 functions même à code identique, sans gravité. Apply manuel toujours possible :
 
 ```bash
 cd infrastructure/terraform-scaleway

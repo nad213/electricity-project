@@ -343,15 +343,8 @@ class ChatPayloadTests(TestCase):
 
 
 class ChatParcToolTests(TestCase):
-    """Tool `get_parc` : snapshot pmax (toutes filières) vs historique mensuel
+    """Tool `get_parc` : historique mensuel du parc installé
     (éolien/solaire uniquement, filtrable par filière et période)."""
-
-    def test_actuel_renvoie_pmax_toutes_filieres(self):
-        pmax = {"nucleaire": 61370.0, "solaire": 17419.0}
-        with mock.patch("consommation.services.get_parc_pmax", return_value=pmax):
-            payload = chat._tool_get_parc({"mode": "actuel"})
-        self.assertEqual(payload["mode"], "actuel")
-        self.assertEqual(payload["parc"], pmax)
 
     def _histo_df(self):
         rows = []
@@ -364,7 +357,7 @@ class ChatParcToolTests(TestCase):
         with mock.patch("consommation.services.get_parc_installe_data",
                         return_value=self._histo_df()):
             payload = chat._tool_get_parc(
-                {"mode": "historique", "filiere": "Solaire", "granularity": "monthly",
+                {"filiere": "Solaire", "granularity": "monthly",
                  "start": "2025-03", "end": "2025-05"})
         self.assertNotIn("sample", payload)  # agrégat mensuel : jamais samplé
         self.assertEqual([r["date"] for r in payload["data"]],
@@ -376,7 +369,7 @@ class ChatParcToolTests(TestCase):
         with mock.patch("consommation.services.get_parc_installe_data",
                         return_value=self._histo_df()):
             payload = chat._tool_get_parc(
-                {"mode": "historique", "filiere": "Solaire", "granularity": "monthly",
+                {"filiere": "Solaire", "granularity": "monthly",
                  "start": "2025-11-15"})
         self.assertEqual([r["date"] for r in payload["data"]], ["2025-11", "2025-12"])
 
@@ -388,7 +381,7 @@ class ChatParcToolTests(TestCase):
                   "parc_mw": 23_000.0 + m} for m in range(1, 5)]
         with mock.patch("consommation.services.get_parc_installe_data",
                         return_value=pd.DataFrame(rows)):
-            payload = chat._tool_get_parc({"mode": "historique"})
+            payload = chat._tool_get_parc({})
         self.assertNotIn("sample", payload)
         by_year = {r["year"]: r for r in payload["data"]}
         # Valeur annuelle = dernier mois connu de l'année.
@@ -399,9 +392,6 @@ class ChatParcToolTests(TestCase):
         self.assertEqual(by_year["2026"]["value"], 23_004.0)
         self.assertEqual(by_year["2026"]["last_month"], "2026-04")
         self.assertTrue(by_year["2026"]["partial"])
-
-    def test_mode_inconnu_renvoie_erreur(self):
-        self.assertIn("error", chat._tool_get_parc({"mode": "n_importe_quoi"}))
 
 
 class ChatPruneHistoryTests(TestCase):

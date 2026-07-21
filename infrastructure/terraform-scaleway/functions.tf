@@ -1,13 +1,13 @@
-# 3 Serverless Functions — point d'entrée commun : <nom>.lambda_handler(event, context).
+# 2 Serverless Functions — point d'entrée commun : <nom>.lambda_handler(event, context).
 #
 # ⚠️ PRÉREQUIS avant tout plan/apply : `bash package_functions.sh` — les zips
 # build/*.zip sont gitignorés, filesha256() échoue en dur s'ils sont absents.
 # NB : les zips ne sont pas reproductibles (mtimes) → chaque repackage change
-# zip_hash et redéploie les 3 functions, même à code identique. Sans gravité
+# zip_hash et redéploie les 2 functions, même à code identique. Sans gravité
 # (max_scale=1), mais ne repackager que quand c'est nécessaire.
 #
 # Mémoire : 2048 Mo pour eco2mix (pic mesuré 1010 Mo, croît avec l'historique) ;
-# 512/256 pour les deux autres.
+# 512 pour scrape_rte_production.
 
 locals {
   common_env = {
@@ -31,11 +31,6 @@ locals {
       memory_limit = 512
       timeout      = 120
       schedule     = "0 7 * * *"
-    }
-    rte_pmax = { # snapshot puissance installée, quotidien 07:05 UTC
-      memory_limit = 256
-      timeout      = 60
-      schedule     = "5 7 * * *"
     }
   }
 }
@@ -87,11 +82,6 @@ moved {
 }
 
 moved {
-  from = scaleway_function.rte_pmax
-  to   = scaleway_function.etl["rte_pmax"]
-}
-
-moved {
   from = scaleway_function_cron.odre_hourly
   to   = scaleway_function_cron.etl["odre_eco2mix"]
 }
@@ -99,9 +89,4 @@ moved {
 moved {
   from = scaleway_function_cron.scrape_rte_daily
   to   = scaleway_function_cron.etl["scrape_rte_production"]
-}
-
-moved {
-  from = scaleway_function_cron.pmax_daily
-  to   = scaleway_function_cron.etl["rte_pmax"]
 }

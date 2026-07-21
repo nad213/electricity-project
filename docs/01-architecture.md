@@ -9,13 +9,11 @@ flowchart LR
     subgraph Sources
         ODRE["ODRE / opendatasoft<br/>eco2mix TR + consolidé"]
         RTE1["RTE analysesetdonnees<br/>(scraping éolien/solaire)"]
-        RTE2["RTE pmax<br/>(JSON)"]
     end
 
     subgraph SCW["Scaleway fr-par"]
         L1["Function odre-eco2mix<br/>cron horaire"]
         L2["Function scrape-rte-production<br/>cron 07:00 UTC"]
-        L3["Function rte-pmax<br/>cron 07:05 UTC"]
         S3[("Object Storage<br/>Parquet (S3-compatible)")]
     end
 
@@ -26,7 +24,6 @@ flowchart LR
 
     ODRE --> L1 --> S3
     RTE1 --> L2 --> S3
-    RTE2 --> L3 --> S3
     S3 --> DJ
     DJ --- PG
     DJ --> U["Navigateur<br/>(Plotly) / API v1 / Chatbot"]
@@ -34,7 +31,7 @@ flowchart LR
 
 ## Composants
 
-**Pipeline ETL** (`infrastructure/`) — trois Scaleway Functions Python 3.12 déclenchées par cron, qui téléchargent les données sources, les transforment avec pandas et écrivent des fichiers Parquet sur Object Storage (S3-compatible). Provisionné par Terraform. Détail : [02-pipeline-etl.md](02-pipeline-etl.md).
+**Pipeline ETL** (`infrastructure/`) — deux Scaleway Functions Python 3.12 déclenchées par cron, qui téléchargent les données sources, les transforment avec pandas et écrivent des fichiers Parquet sur Object Storage (S3-compatible). Provisionné par Terraform. Détail : [02-pipeline-etl.md](02-pipeline-etl.md).
 
 **Webapp** (`webapp/`) — application Django 6 qui lit les Parquet via DuckDB (avec un cache local sur disque), rend des graphiques Plotly, expose une API publique JSON (django-ninja) et un chatbot (tool-use sur l'API Mistral). Détail : [04-webapp.md](04-webapp.md).
 
