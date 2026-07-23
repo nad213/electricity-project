@@ -210,6 +210,24 @@ class ChatMessageGuardTests(TestCase):
         self.assertEqual(resp.status_code, 429)
         self.assertIn("sollicité", resp.json()["error"])
 
+    def test_rate_limit_utilisateur_renvoie_429(self):
+        # Quota horaire atteint → 429 sans appeler l'API Mistral.
+        self._login()
+        cache.clear()  # compteurs LocMem partagés entre tests de la classe
+        self.addCleanup(cache.clear)
+        with mock.patch.object(chat_views, "ChatService") as MockSvc, \
+             mock.patch.object(chat_views, "CHAT_RATE_HOURLY", 2):
+            MockSvc.return_value.run.return_value = {
+                "reply": "ok", "messages": [], "usage": {"input": 1, "output": 1},
+            }
+            for _ in range(2):
+                resp = self._post({"messages": [{"role": "user", "content": "salut"}]})
+                self.assertEqual(resp.status_code, 200)
+            resp = self._post({"messages": [{"role": "user", "content": "encore"}]})
+        self.assertEqual(resp.status_code, 429)
+        self.assertIn("Limite", resp.json()["error"])
+        self.assertEqual(MockSvc.return_value.run.call_count, 2)
+
 
 class ChatRetryTests(TestCase):
     """Retries de `ChatService._complete` sur 429 Mistral.
