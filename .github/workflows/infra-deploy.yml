@@ -1,0 +1,65 @@
+name: Deploy Infrastructure
+
+# Déploie le stack ETL Scaleway : push master touchant infrastructure/** →
+# packaging des functions + terraform apply (state distant sur
+# s3://elec-tfstate-scw, cf. main.tf).
+#
+# ⚠️ Pas de lock d'état (Object Storage sans DynamoDB) : le concurrency group
+# sérialise les runs CI, mais ne pas lancer d'apply local pendant qu'un run tourne.
+#
+# NB : les zips ne sont pas reproductibles (mtimes) → chaque run redéploie les
+# 3 functions même à code identique. Sans gravité (max_scale=1).
+#
+# Secrets requis : SCW_ACCESS_KEY, SCW_SECRET_KEY, SCW_DEFAULT_PROJECT_ID,
+# SCW_DEFAULT_ORGANIZATION_ID, TF_VAR_S3_ACCESS_KEY, TF_VAR_S3_SECRET_KEY
+# (valeurs = .env racine).
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "infrastructure/**"
+  workflow_dispatch:
+
+concurrency:
+  group: infra-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      # Provider scaleway
+      SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+      SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+      SCW_DEFAULT_PROJECT_ID: ${{ secrets.SCW_DEFAULT_PROJECT_ID }}
+      SCW_DEFAULT_ORGANIZATION_ID: ${{ secrets.SCW_DEFAULT_ORGANIZATION_ID }}
+      # Creds S3 injectés dans les functions (variables Terraform)
+      TF_VAR_s3_access_key: ${{ secrets.TF_VAR_S3_ACCESS_KEY }}
+      TF_VAR_s3_secret_key: ${{ secrets.TF_VAR_S3_SECRET_KEY }}
+      # Backend s3 (state distant) — ne lit pas les TF_VAR_*, d'où la redite
+      AWS_ACCESS_KEY_ID: ${{ secrets.TF_VAR_S3_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_VAR_S3_SECRET_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Package functions
+        working-directory: infrastructure/terraform-scaleway
+        run: bash package_functions.sh
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: infrastructure/terraform-scaleway
+        run: terraform init -input=false
+
+      - name: Terraform Apply
+        working-directory: infrastructure/terraform-scaleway
+        run: terraform apply -auto-approve -input=false

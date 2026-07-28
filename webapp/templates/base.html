@@ -1,0 +1,205 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ElecStat — visualisation des données électriques françaises : consommation, production par filière et échanges transfrontaliers (données RTE éCO2mix / ODRE).">
+    <meta name="theme-color" content="#0A1A2F">
+    <title>{% block title %}ElecStat{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    {# apple-touch-icon : iOS Safari attend un PNG 180x180. Déposer webapp/static/apple-touch-icon.png pour activer. #}
+    <link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}">
+
+    {% comment %}Open Graph / Twitter Card — prévisualisation sur les réseaux sociaux.
+       og:image désactivé par défaut : déposer un PNG 1200x630 dans static/og.png
+       et décommenter la ligne ci-dessous pour activer les previews riches.{% endcomment %}
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="ElecStat">
+    <meta property="og:title" content="{% block og_title %}ElecStat — données électriques françaises{% endblock %}">
+    <meta property="og:description" content="Consommation, production par filière et échanges transfrontaliers du réseau électrique français (RTE éCO2mix / ODRE).">
+    <meta property="og:locale" content="fr_FR">
+    {# <meta property="og:image" content="{% static 'og.png' %}"> #}
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{% block twitter_title %}ElecStat — données électriques françaises{% endblock %}">
+    <meta name="twitter:description" content="Consommation, production par filière et échanges transfrontaliers du réseau électrique français.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    {% comment %}Fonts en <link> (parallélisé, non bloquant) plutôt qu'en @import dans
+       style.css. Inter = corps ; Space Grotesk = KPI à chasse tabulaire.{% endcomment %}
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+          rel="stylesheet">
+
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css"
+          rel="stylesheet"
+          integrity="sha384-GgnF119bh9fxkKuWHRQYSgEe1rSp5jB0EJ2W8eMf8mjowfwhZP2H1u8n8xJUW3FQ"
+          crossorigin="anonymous"/>
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.44.0/dist/tabler-icons.min.css"
+          rel="stylesheet"
+          integrity="sha384-ccZHbezhtZWmNy0cg8odL0D/jFU5k5HIls9y78Qd6lWor7rpvFIZtK0fTFG4z456"
+          crossorigin="anonymous"/>
+
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+    {# Scripts spécifiques à la page (ex. Plotly, chargé seulement par les pages à graphiques) #}
+    {% block head_scripts %}{% endblock %}
+</head>
+<body>
+    <div class="page">
+        <header class="navbar navbar-expand-md navbar-pastel sticky-top d-print-none py-1">
+            <div class="container-xl">
+                <span class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3 mb-0">
+                    <a href="{% url 'consommation:accueil' %}" class="text-decoration-none d-flex align-items-center">
+                        <i class="ti ti-bolt me-2 navbar-brand-icon"></i>
+                        <span>ElecStat</span>
+                    </a>
+                </span>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-menu" aria-controls="navbar-menu" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbar-menu">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item {% if request.resolver_match.url_name == 'accueil' %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'consommation:accueil' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="ti ti-home"></i>
+                                </span>
+                                <span class="nav-link-title">Accueil</span>
+                            </a>
+                        </li>
+                        <li class="nav-item {% if request.resolver_match.url_name == 'index' %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'consommation:index' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="ti ti-chart-line"></i>
+                                </span>
+                                <span class="nav-link-title">Consommation</span>
+                            </a>
+                        </li>
+                        <li class="nav-item {% if request.resolver_match.url_name == 'production' %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'consommation:production' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="ti ti-building-factory"></i>
+                                </span>
+                                <span class="nav-link-title">Production</span>
+                            </a>
+                        </li>
+                        <li class="nav-item {% if request.resolver_match.url_name == 'echanges' %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'consommation:echanges' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="ti ti-arrows-exchange"></i>
+                                </span>
+                                <span class="nav-link-title">Échanges</span>
+                            </a>
+                        </li>
+                        <li class="nav-item {% if request.resolver_match.url_name == 'chat' %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'consommation:chat' %}"{% if not is_authenticated %} title="Connectez-vous ou inscrivez-vous pour accéder à cette fonctionnalité"{% endif %}>
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="ti ti-messages"></i>
+                                </span>
+                                <span class="nav-link-title">Chat{% if not is_authenticated %} <i class="ti ti-lock"></i>{% endif %}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item {% if request.resolver_match.url_name == 'api' %}active{% endif %}">
+                            <a class="nav-link" href="{% url 'consommation:api' %}"{% if not is_authenticated %} title="Connectez-vous ou inscrivez-vous pour accéder à cette fonctionnalité"{% endif %}>
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="ti ti-api"></i>
+                                </span>
+                                <span class="nav-link-title">API{% if not is_authenticated %} <i class="ti ti-lock"></i>{% endif %}</span>
+                            </a>
+                        </li>
+                    </ul>
+
+                    <ul class="navbar-nav">
+                        {% if is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" role="button" aria-expanded="false">
+                                {% if user_info.picture %}
+                                <span class="avatar avatar-sm me-2" style="background-image: url({{ user_info.picture }})"></span>
+                                {% else %}
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="ti ti-user-circle"></i>
+                                </span>
+                                {% endif %}
+                                <span class="nav-link-title">{{ user_info.name }}</span>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-end">
+                                <span class="dropdown-header">{{ user_info.email }}</span>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="{% url 'consommation:logout' %}">
+                                    <i class="ti ti-logout me-2"></i>Se déconnecter
+                                </a>
+                                {% if account_deletion_enabled %}
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item text-danger" href="{% url 'consommation:delete_account' %}">
+                                    <i class="ti ti-user-x me-2"></i>Supprimer mon compte
+                                </a>
+                                {% endif %}
+                            </div>
+                        </li>
+                        {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'consommation:login' %}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="ti ti-login"></i>
+                                </span>
+                                <span class="nav-link-title">Se connecter</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </header>
+
+        <div class="page-wrapper">
+            {% if messages %}
+            <div class="container-xl mt-3">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% block page_header %}
+            <div class="page-header d-print-none">
+                <div class="container-xl">
+                    <div class="row g-2 align-items-center py-3">
+                        <div class="col">
+                            <h1 class="page-title">
+                                {% block page_title %}{% endblock %}
+                            </h1>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endblock %}
+
+            <div class="page-body">
+                <div class="container-xl">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+
+            <footer class="d-print-none mt-auto">
+                <div class="container-xl py-3 text-center text-muted text-sm">
+                    <a href="https://github.com/nad213/electricity-project" target="_blank" rel="noopener" class="text-muted">
+                        <i class="ti ti-brand-github me-1"></i>Code source
+                    </a>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"
+            integrity="sha384-skr6f2xmgHOAc9USAHvYxA0lNy9tzSr5JIkdr9ytaCy2C/ofOu+OWd+d/hsnEJFN"
+            crossorigin="anonymous"></script>
+    <script src="{% static 'js/date-filter.js' %}"></script>
+</body>
+</html>

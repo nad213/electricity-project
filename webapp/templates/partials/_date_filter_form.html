@@ -1,0 +1,102 @@
+{% comment %}
+Formulaire de filtre par dates réutilisable.
+
+Variables requises :
+  - min_date : date minimum disponible
+  - max_date : date maximum disponible
+  - start_date : date de début sélectionnée
+  - end_date : date de fin sélectionnée
+
+Variables optionnelles :
+  - col_size : taille des colonnes Bootstrap (défaut: 4 sans filtre, 3 avec filtre)
+  - extra_filter_label : label du filtre additionnel (ex: "Filière", "Pays")
+  - extra_filter_name : nom du champ (ex: "filiere", "pays")
+  - extra_filter_options : dict {key: label} des options
+  - extra_filter_selected : valeur sélectionnée (ou liste de valeurs si multiple)
+  - extra_filter_multiple : si vrai, rend des boutons à bascule (multi-sélection)
+  - extra_filter_radio : si vrai, rend des boutons en sélection unique (radio)
+{% endcomment %}
+
+<form method="get" class="mb-4" id="date-filter-form" aria-describedby="date-error">
+    {% if extra_filter_multiple or extra_filter_radio %}
+    {# Filtre en boutons sur une ligne dédiée : bascule (multi) ou radio (mono) #}
+    <fieldset class="mb-3">
+        <legend class="form-label fs-6 mb-1">{{ extra_filter_label }}</legend>
+        <div class="d-flex flex-wrap gap-2" role="group" aria-label="{{ extra_filter_label }}">
+            {% for key, label in extra_filter_options.items %}
+            <input type="{% if extra_filter_radio %}radio{% else %}checkbox{% endif %}" class="btn-check" name="{{ extra_filter_name }}"
+                   value="{{ key }}" id="filter-{{ extra_filter_name }}-{{ key }}" autocomplete="off"
+                   {% if extra_filter_radio %}{% if key == extra_filter_selected %}checked{% endif %}{% else %}{% if key in extra_filter_selected %}checked{% endif %}{% endif %}>
+            <label class="btn btn-sm btn-outline-primary" for="filter-{{ extra_filter_name }}-{{ key }}">
+                {{ label }}
+            </label>
+            {% endfor %}
+        </div>
+    </fieldset>
+    {% endif %}
+
+    <div class="row g-2 align-items-end">
+        {% if extra_filter_name and not extra_filter_multiple and not extra_filter_radio %}
+        {# Filtre mono-sélection inline (menu déroulant) #}
+        <div class="col-md-3">
+            <label class="form-label fs-6 mb-1" for="id-{{ extra_filter_name }}">{{ extra_filter_label }}</label>
+            <select class="form-select form-select-sm" name="{{ extra_filter_name }}" id="id-{{ extra_filter_name }}">
+                {% for key, label in extra_filter_options.items %}
+                <option value="{{ key }}" {% if key == extra_filter_selected %}selected{% endif %}>
+                    {{ label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        {# Labels en préfixe (input-group), colonnes en largeur naturelle #}
+        <div class="col-12 col-md-auto">
+            <div class="input-group input-group-sm">
+                <label class="input-group-text" for="start_date">Du</label>
+                <input
+                    type="date"
+                    class="form-control"
+                    name="start_date"
+                    id="start_date"
+                    value="{{ start_date|date:'Y-m-d' }}"
+                    min="{{ min_date|date:'Y-m-d' }}"
+                    max="{{ max_date|date:'Y-m-d' }}"
+                    aria-describedby="date-error"
+                >
+            </div>
+        </div>
+        <div class="col-12 col-md-auto">
+            <div class="input-group input-group-sm">
+                <label class="input-group-text" for="end_date">Au</label>
+                <input
+                    type="date"
+                    class="form-control"
+                    name="end_date"
+                    id="end_date"
+                    value="{{ end_date|date:'Y-m-d' }}"
+                    min="{{ min_date|date:'Y-m-d' }}"
+                    max="{{ max_date|date:'Y-m-d' }}"
+                    aria-describedby="date-error"
+                >
+            </div>
+        </div>
+        <div class="col-12 col-md-auto">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="ti ti-refresh me-1"></i>
+                    Actualiser
+                </button>
+                {# Périodes prédéfinies, calées sur la dernière donnée disponible (max_date) #}
+                <div class="btn-group" role="group" aria-label="Périodes prédéfinies">
+                    <button type="button" class="btn btn-sm btn-outline-primary date-preset" data-days="7">7 j</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary date-preset" data-days="30">30 j</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary date-preset" data-days="365">1 an</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="date-error" class="alert alert-danger mt-2" role="alert" style="display: none;">
+        <i class="ti ti-alert-circle me-1"></i>
+        La date de début doit être antérieure à la date de fin.
+    </div>
+</form>

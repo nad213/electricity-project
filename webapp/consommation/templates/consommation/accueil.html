@@ -1,0 +1,264 @@
+{% extends 'base.html' %}
+
+{% block head_scripts %}{% include "partials/_plotly.html" %}{% endblock %}
+
+{% block title %}ElecStat{% endblock %}
+
+{% block page_header %}
+<div class="page-header d-print-none">
+    <div class="container-xl">
+        <div class="hero-story py-2 text-center mx-auto" style="max-width: 620px;">
+            <h1 class="page-title mb-3">Le système électrique français aujourd'hui</h1>
+            <p class="text-muted mb-1">
+                Consommation, production et échanges d'électricité en France, mis à jour toutes les heures.
+            </p>
+            {% if has_dashboard_data %}
+            <p class="text-muted text-xs mb-3">
+                <i class="ti ti-calendar me-1"></i>Dernières données — {{ dashboard_date|date:"d/m/Y à H\hi" }}
+            </p>
+            {% endif %}
+            <div class="d-flex flex-wrap gap-2 justify-content-center">
+                <a href="https://listed.to/authors/40204/posts/74771" target="_blank" rel="noopener" class="btn btn-primary">
+                    <i class="ti ti-article me-1"></i>À propos du projet
+                </a>
+            </div>
+            {% if has_dashboard_data %}
+            <a class="scroll-hint d-inline-flex align-items-center justify-content-center mt-3" href="#chapitre-consommation" aria-label="Faire défiler pour découvrir les chapitres">
+                <i class="ti ti-chevron-down"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+{% if has_dashboard_data %}
+
+<section class="story-chapter" id="chapitre-consommation" aria-label="Consommation">
+    <div class="row">
+        <div class="col-lg-8 order-lg-2">
+            <div class="story-visual">
+                <div class="card">
+                    <div class="card-body p-2">
+                        <div id="chart-conso-jour" class="story-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 order-lg-1">
+            <div class="story-steps">
+                <div class="story-step">
+                    <div class="story-card">
+                        <p class="story-kicker">Consommation</p>
+                        <h2 class="story-heading">La journée électrique</h2>
+                        <p class="story-text">
+                            Du creux de la nuit à la pointe du soir, la demande d'électricité suit le
+                            rythme du pays. Voici la courbe de consommation du jour — le
+                            {{ dashboard_date|date:"l j F Y" }}.
+                        </p>
+                    </div>
+                </div>
+                <div class="story-step">
+                    <div class="story-card">
+                        <p class="stat-label mb-2">Pointe de consommation {{ current_year }}</p>
+                        <p class="stat-value mb-2">{{ peak_year_value }} <span class="stat-unit">MW</span></p>
+                        <p class="story-text">
+                            Atteinte le {{ peak_year_date }} à {{ peak_year_time }} — le niveau de
+                            demande le plus élevé depuis le 1ᵉʳ janvier.
+                        </p>
+                    </div>
+                </div>
+                <div class="story-step">
+                    <div class="story-card">
+                        <p class="stat-label mb-2">Pointe de consommation historique</p>
+                        <p class="stat-value mb-2">{{ peak_all_value }} <span class="stat-unit">MW</span></p>
+                        <p class="story-text">
+                            Le {{ peak_all_date }} à {{ peak_all_time }} : la plus forte demande
+                            mesurée depuis le début de l'historique.
+                        </p>
+                    </div>
+                </div>
+                <div class="story-step story-step-link">
+                    <a href="{% url 'consommation:index' %}" class="btn btn-outline-primary">
+                        Explorer la consommation<i class="ti ti-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="story-chapter" aria-label="Production">
+    <div class="row">
+        <div class="col-lg-8 order-lg-2">
+            <div class="story-visual">
+                <div class="card">
+                    <div class="card-body p-2">
+                        <div id="chart-production-jour" class="story-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 order-lg-1">
+            <div class="story-steps">
+                <div class="story-step">
+                    <div class="story-card">
+                        <p class="story-kicker">Production</p>
+                        <h2 class="story-heading">D'où vient l'électricité ?</h2>
+                        <p class="story-text">
+                            Chaque couche empilée est une filière de production : nucléaire,
+                            hydraulique, éolien, solaire… Voici le mix électrique du jour — le
+                            {{ dashboard_date|date:"l j F Y" }}.
+                        </p>
+                    </div>
+                </div>
+                <div class="story-step">
+                    <div class="story-card">
+                        <p class="stat-label mb-2">Production décarbonée {{ current_year }}</p>
+                        <p class="stat-value mb-2">{{ pct_decarbonee }} <span class="stat-unit">%</span></p>
+                        <p class="story-text">
+                            Soit {{ decarbonees_twh }} TWh produits depuis le 1ᵉʳ janvier à partir de
+                            sources décarbonées (nucléaire, hydraulique, éolien, solaire, bioénergies).
+                        </p>
+                    </div>
+                </div>
+                {% if parc_eolien_delta %}
+                <div class="story-step">
+                    <div class="story-card">
+                        <p class="stat-label mb-2">Le parc renouvelable grandit</p>
+                        <div class="d-flex justify-content-between align-items-baseline mb-1">
+                            <span class="story-text"><i class="ti ti-wind me-1"></i>Éolien</span>
+                            <span><span class="stat-value-sm">{{ parc_eolien_gw }}</span> <span class="stat-unit">GW</span> <small class="text-muted ms-1">{{ parc_eolien_delta }} %</small></span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-baseline mb-2">
+                            <span class="story-text"><i class="ti ti-sun me-1"></i>Solaire</span>
+                            <span><span class="stat-value-sm">{{ parc_solaire_gw }}</span> <span class="stat-unit">GW</span> <small class="text-muted ms-1">{{ parc_solaire_delta }} %</small></span>
+                        </div>
+                        <p class="story-text">Capacités installées, variation sur un an.</p>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="story-step story-step-link">
+                    <a href="{% url 'consommation:production' %}" class="btn btn-outline-primary">
+                        Explorer la production<i class="ti ti-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% if echanges_flux_svg %}
+<section class="story-chapter" aria-label="Échanges commerciaux">
+    <div class="row">
+        <div class="col-lg-8 order-lg-2">
+            <div class="story-visual">
+                <div class="card">
+                    <div class="card-body">
+                        {{ echanges_flux_svg|safe }}
+                        <div class="d-flex justify-content-center gap-4 mt-2 text-sm text-muted">
+                            <span><i class="ti ti-arrow-down-right" style="color:#FBBF24;"></i> Import (vers la France)</span>
+                            <span><i class="ti ti-arrow-up-right" style="color:#22D3EE;"></i> Export (depuis la France)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 order-lg-1">
+            <div class="story-steps">
+                <div class="story-step">
+                    <div class="story-card">
+                        <p class="story-kicker">Échanges</p>
+                        <h2 class="story-heading">Un réseau connecté à ses voisins</h2>
+                        <p class="story-text">
+                            Depuis le 1ᵉʳ janvier {{ current_year }}, la France échange de
+                            l'électricité avec cinq voisins. À chaque frontière, un flux d'import
+                            et un flux d'export.
+                        </p>
+                    </div>
+                </div>
+                {% if solde_echanges_twh %}
+                <div class="story-step">
+                    <div class="story-card">
+                        <p class="stat-label mb-2">Solde des échanges {{ current_year }}</p>
+                        <p class="stat-value mb-2">{{ solde_echanges_twh }} <span class="stat-unit">TWh</span></p>
+                        <p class="story-text">
+                            {% if solde_exportateur %}Exportateur net{% else %}Importateur net{% endif %}
+                            depuis le 1ᵉʳ janvier — la France
+                            {% if solde_exportateur %}vend plus d'électricité à ses voisins qu'elle ne
+                            leur en achète.{% else %}achète plus d'électricité à ses voisins qu'elle
+                            ne leur en vend.{% endif %}
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="story-step story-step-link">
+                    <a href="{% url 'consommation:echanges' %}" class="btn btn-outline-primary">
+                        Explorer les échanges<i class="ti ti-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{% else %}
+<div class="row"><div class="col-12">
+    <div class="card"><div class="card-body text-center py-5">
+        <i class="ti ti-database-off mb-3" style="font-size: 2rem; color: var(--text-muted);"></i>
+        <p class="text-muted mb-0">Les données du tableau de bord sont momentanément indisponibles. Réessayez dans quelques minutes.</p>
+    </div></div>
+</div></div>
+{% endif %}
+
+{% if has_dashboard_data %}
+<script>
+ElecStat.renderChart('chart-conso-jour', '{{ graph_conso_jour|escapejs }}');
+ElecStat.renderChart('chart-production-jour', '{{ graph_production_jour|escapejs }}');
+(function () {
+    var steps = document.querySelectorAll('.story-step');
+    if (!steps.length) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // Mobile (< 992 px) : flux statique sans épinglage ni atténuation.
+    if (window.matchMedia('(max-width: 991.98px)').matches) return;
+    document.documentElement.classList.add('js-scrolly');
+    var ticking = false;
+    var current = null;
+
+    function updateActive() {
+        ticking = false;
+        var line = window.innerHeight * 0.55;
+        var best = null;
+        var bestDist = Infinity;
+        steps.forEach(function (step) {
+            var r = step.getBoundingClientRect();
+            var d = Math.abs((r.top + r.bottom) / 2 - line);
+            if (d < bestDist) { bestDist = d; best = step; }
+        });
+        // Ce callback tourne à chaque frame de scroll alors que l'étape active
+        // ne change qu'occasionnellement : inutile de repasser sur toutes les
+        // classes tant qu'elle est la même.
+        if (best === current) return;
+        current = best;
+        steps.forEach(function (step) {
+            step.classList.toggle('active', step === best);
+        });
+    }
+    function onScroll() {
+        if (!ticking) {
+            ticking = true;
+            window.requestAnimationFrame(updateActive);
+        }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    window.addEventListener('load', updateActive);
+    updateActive();
+})();
+</script>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+
+{% block head_scripts %}{% include "partials/_plotly.html" %}{% endblock %}
+
+{% block title %}Production - ElecStat{% endblock %}
+
+{% block page_title %}
+    <i class="ti ti-building-factory me-2"></i>
+    Production Électrique
+{% endblock %}
+
+{% block content %}
+<div class="row">
+
+    <!-- Main content -->
+    <div class="col-12 col-lg-11">
+        <!-- Courbe de production -->
+        <div class="row mb-4" id="section-courbe">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Courbe de Production France (MW)</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-muted mb-3">
+                            Le graphique ci-dessous affiche la courbe de production électrique par filière, en MW.
+                            Sélectionnez une ou plusieurs filières pour comparer leurs données de production.
+                        </div>
+
+                        {% include 'partials/_date_filter_form.html' with extra_filter_label="Filières" extra_filter_name="filiere" extra_filter_options=filieres extra_filter_selected=filieres_selected extra_filter_multiple=True %}
+
+                        <div class="chart-container">
+                            <div id="chart-production"></div>
+                        </div>
+
+                        <div class="mt-3 text-end">
+                            <a href="{% url 'consommation:export_production' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}{% for f in filieres_selected %}&filiere={{ f|urlencode }}{% endfor %}" class="btn btn-outline-primary btn-sm">
+                                <i class="ti ti-download me-1"></i>
+                                Télécharger CSV
+                            </a>
+                        </div>
+
+                        {% include 'partials/_data_source.html' with collapse_id="src-production" source="<a href='https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr' class='text-muted' target='_blank'>https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr</a><br><a href='https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/' class='text-muted' target='_blank'>https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/</a>" methodologie="Les données de production par filière (nucléaire, gaz, charbon, fioul, hydraulique, éolien, solaire, bioénergies…) sont récupérées des 2 fichiers éco2mix mentionnés plus haut. La granularité temporelle peut varier entre ces fichiers (pas 30 min pour le fichier « Définitif », pas 15 min pour le fichier « Temps réel »). Les puissances de production (MW) sont affichées telles quelles, sans aucune modification." %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Énergie produite par filière -->
+        <div class="row mb-4" id="section-energie">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Énergie Produite par Filière</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-muted mb-3">
+                            Production annuelle et mensuelle par filière.
+                        </div>
+
+                        <ul class="nav nav-tabs mb-3" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="production-annuel-tab" data-bs-toggle="tab" data-bs-target="#production-annuel" type="button" role="tab" aria-controls="production-annuel" aria-selected="true">
+                                    <i class="ti ti-calendar-stats me-2"></i>
+                                    Annuel
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="production-mensuel-tab" data-bs-toggle="tab" data-bs-target="#production-mensuel" type="button" role="tab" aria-controls="production-mensuel" aria-selected="false">
+                                    <i class="ti ti-calendar-month me-2"></i>
+                                    Mensuel
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="production-annuel" role="tabpanel" aria-labelledby="production-annuel-tab">
+                                <div class="chart-container">
+                                    <div id="chart-production-annuel" data-chart-static></div>
+                                </div>
+                                <div class="mt-3 text-end">
+                                    <a href="{% url 'consommation:export_production_annuel' %}" class="btn btn-outline-primary btn-sm">
+                                        <i class="ti ti-download me-1"></i>
+                                        Télécharger CSV
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade" id="production-mensuel" role="tabpanel" aria-labelledby="production-mensuel-tab">
+                                <div class="chart-container">
+                                    <div id="chart-production-mensuel" data-chart-static></div>
+                                </div>
+                                <div class="mt-3 text-end">
+                                    <a href="{% url 'consommation:export_production_mensuel' %}" class="btn btn-outline-primary btn-sm">
+                                        <i class="ti ti-download me-1"></i>
+                                        Télécharger CSV
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% include 'partials/_data_source.html' with collapse_id="src-production-energie" source="<a href='https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr' class='text-muted' target='_blank'>https://odre.opendatasoft.com/explore/dataset/eco2mix-national-tr</a><br><a href='https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/' class='text-muted' target='_blank'>https://odre.opendatasoft.com/explore/dataset/eco2mix-national-cons-def/</a>" methodologie="L'énergie produite par filière est calculée à partir des puissances des 2 fichiers éco2mix. Le passage de puissance (MW) à énergie (MWh) se fait en sommant les puissances et en divisant par 4 (données du fichier « Temps réel », pas 15 min) ou par 2 (données du fichier « Définitif », pas 30 min). Les valeurs sont ensuite agrégées par mois et par année, puis exprimées en TWh." %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Parc installé -->
+        <div class="row mb-4" id="section-parc">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Parc Installé Éolien et Solaire (GW)</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <div id="chart-parc-installe" data-chart-static></div>
+                        </div>
+                        <div class="mt-3 text-end">
+                            <a href="{% url 'consommation:export_parc_installe' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="ti ti-download me-1"></i>
+                                Télécharger CSV
+                            </a>
+                        </div>
+                        {% include 'partials/_data_source.html' with collapse_id="src-parc-installe" source="<a href='https://analysesetdonnees.rte-france.com/production/eolien' class='text-muted' target='_blank'>https://analysesetdonnees.rte-france.com/production/eolien</a><br><a href='https://analysesetdonnees.rte-france.com/production/solaire' class='text-muted' target='_blank'>https://analysesetdonnees.rte-france.com/production/solaire</a>" methodologie="RTE ne publie pas directement le parc installé mensuel ; il est déduit de la production mensuelle (MWh) et du facteur de charge moyen (%) publiés sur le portail Analyses et Données de RTE, selon la formule : Parc installé (MW) = Production (MWh) / (Facteur de charge × Nombre de jours du mois × 24 h). Le résultat est ensuite exprimé en GW." %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Sticky sidebar nav -->
+    <div class="col-lg-1 d-none d-lg-block">
+        <nav id="page-nav" class="page-nav-sidebar">
+            <p class="page-nav-label">Sur cette page</p>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#section-courbe">
+                        <i class="ti ti-chart-line me-2"></i>Courbe de production
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#section-energie">
+                        <i class="ti ti-stack-2 me-2"></i>Énergie par filière
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#section-parc">
+                        <i class="ti ti-wind me-2"></i>Parc installé
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+</div>
+
+<script>
+{# Chargement AJAX des graphiques au DOMContentLoaded ; resize/scrollspy gérés par charts.js #}
+document.addEventListener('DOMContentLoaded', function() {
+    ElecStat.loadCharts(
+        window.location.pathname + window.location.search,
+        ['chart-production', 'chart-production-annuel', 'chart-production-mensuel', 'chart-parc-installe']
+    );
+});
+</script>
+{% endblock %}

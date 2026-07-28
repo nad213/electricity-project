@@ -1,0 +1,3 @@
+# ElecStat — Énergie France
+
+WIP

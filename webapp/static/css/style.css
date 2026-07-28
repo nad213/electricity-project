@@ -1,0 +1,1000 @@
+/*
+ * ElecStat — thème nuit (bleu nuit RTE + ambre étincelle)
+ */
+
+/* Fonts chargées via <link> non bloquant dans base.html :
+   Inter (corps), Space Grotesk (KPI, chasse tabulaire). */
+
+/* ========== CSS Variables ========== */
+:root {
+    --bg: #0A1A2F;
+    --surface: #1E293B;
+    --surface-hover: #334155;
+    --border: #334155;
+    --border-light: #475569;
+    --accent: #F5B700;
+    --accent-hover: #FFCB2D;
+    /* Teinte fonctionnelle (badges/hover/code) + anneau de focus —
+       pas un glow décoratif. */
+    --accent-soft: rgba(245, 183, 0, 0.12);
+    --focus-ring: rgba(245, 183, 0, 0.4);
+    /* Halo décoratif (hero, visuels sticky) — plus saturé que --accent-soft,
+       pensé pour être vu, pas juste pour teinter un fond. */
+    --accent-glow: rgba(245, 183, 0, 0.28);
+    --text: #F1F5F9;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+    --shadow: rgba(0, 0, 0, 0.3);
+
+    /* Remap des variables Tabler/Bootstrap vers le thème dark.
+       Tous les composants (listes, cards, tableaux, badges…) qui
+       référencent ces variables deviennent ainsi lisibles d'un coup,
+       au lieu de tomber sur les couleurs claires par défaut de Tabler. */
+    --tblr-body-color: #F1F5F9;
+    --tblr-body-color-rgb: 241, 245, 249;
+    --tblr-body-bg: #0A1A2F;
+    --tblr-body-bg-rgb: 10, 26, 47;
+    --tblr-emphasis-color: #F1F5F9;
+    --tblr-secondary-color: #94A3B8;
+    --tblr-tertiary-color: #64748B;
+    --tblr-heading-color: #F1F5F9;
+    --tblr-border-color: #334155;
+    --tblr-border-color-translucent: rgba(255, 255, 255, 0.08);
+    --tblr-secondary-bg: #1E293B;
+    --tblr-tertiary-bg: #334155;
+    --tblr-link-color: #F5B700;
+    --tblr-link-hover-color: #FFCB2D;
+}
+
+/* ========== Global Styles ========== */
+/* Pas de !important : nos règles ont même spécificité que celles de Tabler
+   mais chargent après → elles gagnent par ordre source. Les variables
+   --tblr-* (voir :root) portent déjà le thème dark. */
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+}
+
+.page,
+.page-wrapper,
+.page-body {
+    background-color: var(--bg);
+}
+
+/* ========== Navbar ========== */
+.navbar-pastel {
+    background-color: rgba(10, 26, 47, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    box-shadow: none;
+}
+
+.navbar-pastel .navbar-brand {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+/* Le texte est dans un <a> enfant : c'est lui qu'il faut colorer, sinon
+   il prend la couleur de lien par défaut. */
+.navbar-pastel .navbar-brand a {
+    color: var(--text);
+}
+
+.navbar-pastel .navbar-brand a:hover {
+    color: var(--accent);
+}
+
+.navbar-pastel .nav-link {
+    color: var(--text-secondary);
+    padding: 0.5rem 0.875rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.navbar-pastel .nav-link:hover {
+    color: var(--text);
+    background-color: var(--surface-hover);
+}
+
+.navbar-pastel .nav-link.active,
+.navbar-pastel .nav-item.active .nav-link {
+    color: var(--accent);
+    background-color: transparent;
+    position: relative;
+}
+
+.navbar-pastel .nav-link.active::after,
+.navbar-pastel .nav-item.active .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0.875rem;
+    right: 0.875rem;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 1px;
+}
+
+.navbar-pastel .nav-link.active i,
+.navbar-pastel .nav-item.active .nav-link i {
+    color: var(--accent);
+}
+
+/* Dropdown menu */
+.dropdown-menu {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 30px var(--shadow);
+}
+
+.dropdown-menu .dropdown-item {
+    color: var(--text-secondary);
+}
+
+.dropdown-menu .dropdown-item:hover {
+    color: var(--text);
+    background-color: var(--surface-hover);
+}
+
+.dropdown-menu .dropdown-header {
+    color: var(--text-muted);
+}
+
+.dropdown-menu .dropdown-divider {
+    border-top-color: var(--border);
+}
+
+/* ========== Cards ========== */
+.card {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    box-shadow: none;
+    transition: border-color 0.2s ease;
+}
+
+.card:hover {
+    background-color: var(--surface);
+    border-color: var(--border-light);
+}
+
+.card-header {
+    background-color: transparent;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+}
+
+.card-title {
+    color: var(--text);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+/* ========== Buttons ========== */
+.btn-primary {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+    font-weight: 600;
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-hover);
+    border-color: var(--accent-hover);
+    color: var(--bg);
+}
+
+.btn-outline-primary {
+    color: var(--accent);
+    border-color: var(--border-light);
+    background-color: transparent;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* Pastilles filtre (input .btn-check + label) : le hover Tabler
+   (.btn-check + .btn:hover) applique le même bleu plein que l'état coché,
+   ce qui masque la désélection tant que la souris reste sur la pastille. */
+.btn-check + .btn-outline-primary {
+    --tblr-btn-hover-color: var(--accent);
+    --tblr-btn-hover-bg: var(--accent-soft);
+    --tblr-btn-hover-border-color: var(--accent);
+}
+
+/* …mais une pastille cochée survolée doit garder son style « actif ». */
+.btn-check:checked + .btn-outline-primary:hover {
+    color: var(--tblr-btn-active-color);
+    background-color: var(--tblr-btn-active-bg);
+    border-color: var(--tblr-btn-active-border-color);
+}
+
+.btn-outline-secondary {
+    color: var(--text-secondary);
+    border-color: var(--border-light);
+    background-color: transparent;
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--surface-hover);
+    border-color: var(--border-light);
+    color: var(--text);
+}
+
+/* ========== Tabs ========== */
+.nav-tabs {
+    border-bottom-color: var(--border);
+}
+
+.nav-tabs .nav-link {
+    color: var(--text-muted);
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.nav-tabs .nav-link:hover {
+    color: var(--text-secondary);
+    border-bottom-color: var(--border-light);
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    background-color: transparent;
+}
+
+/* ========== Forms ========== */
+.form-control, .form-select {
+    border-color: var(--border);
+    border-radius: 0.375rem;
+    background-color: var(--surface);
+    color: var(--text);
+    font-size: 0.875rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--focus-ring);
+    background-color: var(--surface);
+    color: var(--text);
+}
+
+/* Préfixe des champs (ex. « Du / Au » des filtres de dates) */
+.input-group-text {
+    background-color: var(--surface-hover);
+    border-color: var(--border);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+/* Champs date : widgets natifs (icône + popup) sombres, texte un peu plus
+   grand et largeur confortable (les colonnes col-md-auto suivent) */
+.form-control[type="date"] {
+    color-scheme: dark;
+    font-size: 1rem;
+    width: 14rem;
+}
+
+.form-label {
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 500;
+}
+
+/* ========== Charts ========== */
+/* Compense la navbar sticky lors du saut vers une ancre (#section-*) */
+[id^="section-"] {
+    scroll-margin-top: 80px;
+}
+
+.chart-container {
+    width: 100%;
+    min-height: 400px;
+    background-color: transparent;
+    border-radius: 0.5rem;
+    position: relative;
+}
+
+/* Overlay de chargement : div réel injecté dans .chart-container par JS,
+   par-dessus le div Plotly (pseudo-éléments sur le div Plotly sont écrasés
+   par son contexte de stacking interne). */
+.chart-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    background: rgba(10, 26, 47, 0.55);
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.chart-overlay::after {
+    content: '';
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-top-color: var(--text-muted, #94a3b8);
+    border-right-color: var(--text-muted, #94a3b8);
+    animation: chart-spin 0.7s linear infinite;
+}
+@keyframes chart-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* État d'erreur des charts */
+.chart-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    color: var(--text-secondary);
+}
+
+.chart-error-msg {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.plotly {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* ========== Page Header ========== */
+.page-header {
+    background-color: transparent;
+}
+
+.page-title {
+    color: var(--text);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+/* ========== Stat Cards (homepage dashboard) ========== */
+.stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    transition: border-color 0.2s ease;
+}
+
+.stat-card:hover {
+    border-color: var(--border-light);
+}
+
+.stat-label {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.stat-value {
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
+.stat-value-sm {
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
+.stat-unit {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.stat-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.125rem;
+    flex-shrink: 0;
+}
+
+.stat-icon-blue {
+    background-color: var(--accent-soft);
+    color: var(--accent);
+}
+
+/* ========== Icon Box ========== */
+.icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 0.625rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    background-color: var(--surface-hover);
+    color: var(--text-secondary);
+}
+
+/* ========== Navbar Brand ========== */
+.navbar-brand-icon {
+    font-size: 1.5rem;
+    color: var(--accent);
+}
+
+/* ========== Typographie utilitaire ========== */
+.text-sm {
+    font-size: 0.875rem;
+}
+
+.text-xs {
+    font-size: 0.8125rem;
+}
+
+.text-bright {
+    color: var(--text) !important;
+}
+
+/* ========== Section Titles ========== */
+.section-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+    border-left: 3px solid var(--accent);
+    padding-left: 0.75rem;
+}
+
+/* ========== Scrollytelling (accueil) ========== */
+.story-chapter {
+    margin-bottom: 4rem;
+    scroll-margin-top: 72px;
+}
+
+.story-chapter + .story-chapter {
+    border-top: 1px solid var(--border);
+    padding-top: 4rem;
+}
+
+.story-visual {
+    position: sticky;
+    top: 88px;
+    z-index: 5;
+}
+
+/* Hauteur des graphiques pilotée ici plutôt que dans layout.height côté vue :
+   Plotly (responsive: true) dimensionne sur le conteneur quand layout.height
+   est absent, ce qui permet un palier mobile. flex: 0 0 auto parce que la
+   card-body est une flexbox colonne : sans lui, un viewport court écrase le
+   graphique au lieu de le laisser déborder. */
+.story-chart {
+    height: 440px;
+    flex: 0 0 auto;
+}
+
+.story-chart.js-plotly-plot .nsewdrag,
+.story-chart.js-plotly-plot .cursor-pointer {
+    cursor: default !important;
+}
+
+@media (min-width: 992px) {
+    .story-visual .card {
+        min-height: 56vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    /* Tabler donne à .card-body un flex: 1 1 auto qui la fait remplir toute
+       la carte : le justify-content:center ci-dessus n'a alors plus rien à
+       centrer. Le centrage doit donc s'appliquer ici, sur le contenu de la
+       card-body elle-même (le graphique Plotly, de hauteur fixe). */
+    .story-visual .card-body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+}
+
+.story-visual::before {
+    content: "";
+    position: absolute;
+    left: -10%;
+    right: -10%;
+    top: -10%;
+    height: 640px;
+    background: radial-gradient(ellipse 60% 45% at 50% 20%, var(--accent-soft) 0%, transparent 70%);
+    z-index: -1;
+    pointer-events: none;
+}
+
+.story-step {
+    min-height: 24vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 1rem 0;
+}
+
+/* Le premier step de chaque chapitre doit être calé en haut : le visuel
+   sticky en face n'a lui aucun centrage vertical à l'ouverture, un premier
+   step centré dans sa boîte de 24vh créerait un décalage visible. */
+.story-step:first-child {
+    justify-content: flex-start;
+    padding-top: 0;
+}
+
+.story-step-link {
+    min-height: 12vh;
+    align-items: flex-start;
+}
+
+.story-card {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid transparent;
+    border-radius: 0.625rem;
+    padding: 1.25rem 1.375rem;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease,
+                transform 0.35s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.story-card .stat-value {
+    font-size: clamp(2.5rem, 7vw, 3.75rem);
+    letter-spacing: -0.03em;
+    transition: color 0.3s ease;
+}
+
+.story-card .stat-unit {
+    font-size: 1.125rem;
+}
+
+.js-scrolly .story-step {
+    opacity: 0.45;
+    transition: opacity 0.3s ease;
+}
+
+/* Le CTA de fin de chapitre est un .story-step comme les autres : le laisser
+   suivre le dimming donnerait un bouton à 45 % d'opacité en permanence.
+   :focus-within rallume par ailleurs n'importe quelle étape atteinte au
+   clavier, que le scroll l'ait désignée active ou non. */
+.js-scrolly .story-step.active,
+.js-scrolly .story-step:focus-within,
+.js-scrolly .story-step-link {
+    opacity: 1;
+}
+
+.js-scrolly .story-step .story-card {
+    transform: translateY(6px);
+}
+
+.js-scrolly .story-step.active .story-card,
+.js-scrolly .story-step:focus-within .story-card {
+    transform: translateY(0);
+    border-color: var(--border-light);
+    border-left-color: var(--accent);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+}
+
+.js-scrolly .story-step.active .stat-value {
+    color: var(--accent);
+}
+
+.story-kicker {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+}
+
+.story-heading {
+    font-size: 1.375rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+}
+
+.story-text {
+    color: var(--text-secondary);
+    font-size: 0.9375rem;
+    margin-bottom: 0;
+}
+
+.hero-story {
+    position: relative;
+    isolation: isolate;
+}
+
+.hero-story::before {
+    content: "";
+    position: absolute;
+    inset: -10px -55% auto -55%;
+    height: 180px;
+    background: radial-gradient(ellipse 45% 100% at 50% 50%, var(--accent-glow) 0%, rgba(245, 183, 0, 0.1) 45%, transparent 80%);
+    filter: blur(24px);
+    z-index: -1;
+    pointer-events: none;
+}
+
+/* Tabler pose display:flex sur .page-title : le texte devient un élément flex
+   calé en flex-start, et le text-center du hero reste sans effet. */
+.hero-story .page-title {
+    display: block;
+    font-size: clamp(2rem, 5vw, 2.75rem);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+}
+
+.scroll-hint {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    border: 1px solid var(--border-light);
+    color: var(--text-secondary);
+    font-size: 1.25rem;
+    transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.scroll-hint:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+@keyframes scroll-hint-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(5px); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    html {
+        scroll-behavior: smooth;
+    }
+
+    .scroll-hint i {
+        animation: scroll-hint-bounce 1.8s ease-in-out infinite;
+    }
+}
+
+/* Mobile : pas de scrollytelling — le visuel n'est pas épinglé (le JS du
+   template n'active .js-scrolly qu'à partir de 992 px) et les hauteurs en vh
+   qui servaient de course au sticky sont neutralisées. Flux statique : le
+   graphique puis les cartes d'étape empilées. */
+@media (max-width: 991.98px) {
+    .story-visual {
+        position: static;
+        margin-bottom: 1rem;
+    }
+
+    .story-chart {
+        height: 320px;
+    }
+
+    .story-step {
+        min-height: 0;
+    }
+
+    .story-step-link {
+        min-height: 0;
+    }
+
+    .story-step-link .btn {
+        width: 100%;
+    }
+}
+
+/* ========== Login Invite ========== */
+.login-invite-text {
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* ========== Tables ========== */
+.table {
+    --tblr-table-color: var(--text);
+    --tblr-table-bg: transparent;
+    --tblr-table-border-color: var(--border);
+    --tblr-table-striped-color: var(--text);
+    --tblr-table-hover-color: var(--text);
+    --tblr-table-hover-bg: var(--surface-hover);
+    color: var(--text);
+}
+
+.table thead th {
+    color: var(--text-secondary);
+    background-color: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid var(--border-light);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.table td,
+.table th {
+    color: var(--text);
+    border-top-color: var(--border);
+    border-bottom-color: var(--border);
+}
+
+/* ========== Text Utilities ========== */
+.text-muted {
+    color: var(--text-secondary) !important;
+}
+
+/* ========== Modales ========== */
+/* Tabler pose le fond des modales sur --tblr-bg-surface (non remappé en
+   :root) : sans ces règles, la modale reste blanche avec du texte clair. */
+.modal-content {
+    background-color: var(--surface);
+    border: 1px solid var(--border-light);
+    color: var(--text);
+}
+
+.modal-header,
+.modal-footer {
+    background-color: transparent;
+    border-color: var(--border);
+}
+
+.modal-title {
+    color: var(--text);
+}
+
+/* Le gris link-secondary de Tabler (posé en !important) est illisible
+   sur --surface : on le surcharge au même niveau, ciblé aux modales. */
+.modal .btn-link.link-secondary {
+    color: var(--text-secondary) !important;
+}
+
+.modal .btn-link.link-secondary:hover {
+    color: var(--text) !important;
+}
+
+/* ========== Alerts ========== */
+.alert {
+    background-color: var(--surface);
+    border-color: var(--border);
+    color: var(--text);
+}
+
+/* ========== Scrollbar ========== */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-light);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+/* ========== Page Navigation Sidebar ========== */
+.page-nav-sidebar {
+    position: sticky;
+    top: 80px;
+    width: 110px;
+    padding-left: 1rem;
+    border-left: 1px solid var(--border);
+}
+
+.page-nav-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.page-nav-sidebar .nav-link {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    padding: 0.3rem 0.5rem;
+    border-radius: 0.25rem;
+    transition: color 0.15s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.page-nav-sidebar .nav-link:hover {
+    color: var(--text-secondary);
+    background-color: transparent;
+}
+
+.page-nav-sidebar .nav-link.active {
+    color: var(--accent);
+    background-color: transparent;
+}
+
+.page-nav-sidebar .nav-link i {
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 768px) {
+    .navbar-pastel .nav-link {
+        padding: 0.75rem 1rem;
+    }
+
+    .navbar-pastel .nav-link.active::after,
+    .navbar-pastel .nav-item.active .nav-link::after {
+        display: none;
+    }
+
+    .navbar-pastel .nav-link.active,
+    .navbar-pastel .nav-item.active .nav-link {
+        background-color: var(--accent-soft);
+    }
+}
+
+/* ========== Chat ========== */
+.chat-card-body {
+    height: calc(100vh - 220px);
+    min-height: 480px;
+}
+
+.chat-history {
+    background-color: var(--bg);
+}
+
+.chat-bubble {
+    max-width: 85%;
+}
+
+.chat-bubble-user {
+    background-color: var(--accent);
+    color: var(--bg);
+    /* Message brut (textContent) : on préserve les retours à la ligne. */
+    white-space: pre-wrap;
+}
+
+.chat-bubble-assistant {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
+/* Indicateur « l'assistant tape… » (trois points animés) */
+.chat-typing {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.55rem 0.85rem !important;
+}
+
+.chat-typing-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--text-muted);
+    animation: chat-typing-bounce 1.2s infinite ease-in-out;
+}
+
+.chat-typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.chat-typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes chat-typing-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30%           { transform: translateY(-4px); opacity: 1; }
+}
+
+/* Markdown rendu côté assistant : on resserre les marges des blocs et on
+   donne un vrai rendu de tableau (sinon les colonnes se chevauchent). */
+.chat-bubble-assistant > :first-child { margin-top: 0; }
+.chat-bubble-assistant > :last-child { margin-bottom: 0; }
+.chat-bubble-assistant p { margin-bottom: 0.5rem; }
+
+.chat-bubble-assistant table {
+    border-collapse: collapse;
+    margin: 0.5rem 0;
+    font-size: 0.875em;
+    /* Tableau large = défilement horizontal plutôt que débordement. */
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.chat-bubble-assistant th,
+.chat-bubble-assistant td {
+    border: 1px solid var(--border);
+    padding: 0.3rem 0.6rem;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.chat-bubble-assistant thead th {
+    background-color: var(--bg);
+    font-weight: 600;
+}
+
+/* Les nombres se lisent mieux alignés à droite. */
+.chat-bubble-assistant td:not(:first-child) { text-align: right; }
+
+/* ========== Code & blocs préformatés (page API) ========== */
+code {
+    color: var(--accent-hover);
+    background-color: var(--accent-soft);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    font-size: 0.875em;
+}
+
+pre {
+    background-color: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    color: var(--text);
+    overflow-x: auto;
+    line-height: 1.55;
+}
+
+/* Rendu « terminal » sobre : texte neutre clair plutôt que tout le bloc en
+   couleur d'accent (illisible et criard sur un long curl). */
+pre code {
+    color: var(--text);
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0;
+    font-size: 0.85rem;
+}
+
+/* Bouton « copier » sur les blocs <pre> de la page API */
+.pre-with-copy {
+    padding-right: 3rem;
+}
+
+.copy-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(10, 26, 47, 0.72);
+    border: none;
+    color: #fff;
+}
+
+.copy-btn:hover {
+    color: #fff;
+    background: rgba(10, 26, 47, 0.9);
+}
+
+.copy-btn-done {
+    background: rgba(47, 179, 68, 0.9) !important;
+}

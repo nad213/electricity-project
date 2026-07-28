@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block head_scripts %}{% include "partials/_plotly.html" %}{% endblock %}
+
+{% block title %}Échanges - ElecStat{% endblock %}
+
+{% block page_title %}
+    <i class="ti ti-arrow-exchange me-2"></i>
+    Échanges Commerciaux
+{% endblock %}
+
+{% block content %}
+<div class="row">
+
+    <!-- Main content -->
+    <div class="col-12 col-lg-11">
+
+<!-- Section: Courbe de charge des échanges -->
+<div class="row mb-4" id="section-courbe">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Courbe de charge des échanges</h3>
+            </div>
+            <div class="card-body">
+                {% include 'partials/_date_filter_form.html' with extra_filter_label="Pays" extra_filter_name="pays" extra_filter_options=pays_options extra_filter_selected=selected_pays extra_filter_multiple=True %}
+
+                <!-- Graphique -->
+                <div class="chart-container">
+                    <div id="chart-echanges"></div>
+                </div>
+
+                <!-- Download button -->
+                <div class="mt-3 text-end">
+                    <a href="{% url 'consommation:export_echanges' %}?{% for p in selected_pays %}pays={{ p|urlencode }}&{% endfor %}start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}" class="btn btn-outline-primary btn-sm">
+                        <i class="ti ti-download me-1"></i>
+                        Télécharger CSV
+                    </a>
+                </div>
+
+                {% include 'partials/_data_source.html' with collapse_id="src-echanges" source="ODRE – Données éco2mix RTE, échanges commerciaux aux frontières" calcul="Flux physiques d'échanges commerciaux par pas de 30 minutes (MW). Valeurs positives = import, négatives = export." %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section: Import / Export annuels (sélecteur de pays indépendant) -->
+<div class="row mb-4" id="section-annuel">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Import / Export annuels</h3>
+            </div>
+            <div class="card-body">
+                <!-- Sélecteur de pays propre à ce graphique, indépendant des filtres du haut -->
+                <form id="echanges-annuel-form" class="mb-3">
+                    <fieldset>
+                        <legend class="form-label fs-6 mb-1">Pays</legend>
+                        <div class="d-flex flex-wrap gap-2" role="group" aria-label="Pays">
+                            {% for key, label in pays_annuel_options.items %}
+                            <input type="radio" class="btn-check" name="pays_annuel"
+                                   value="{{ key }}" id="annuel-pays-{{ key }}" autocomplete="off"
+                                   {% if key == selected_pays_annuel %}checked{% endif %}>
+                            <label class="btn btn-sm btn-outline-primary" for="annuel-pays-{{ key }}">
+                                {{ label }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </fieldset>
+                </form>
+
+                <!-- Graphique : indépendant des dates/pays du haut, d'où data-chart-static
+                     (sinon date-filter.js lui pose un overlay spinner jamais retiré). -->
+                <div class="chart-container">
+                    <div id="chart-echanges-annuel" data-chart-static></div>
+                </div>
+
+                <!-- Download button : CSV détaillé (tous les pays, toutes les années) -->
+                <div class="mt-3 text-end">
+                    <a id="export-echanges-annuel" data-static-export
+                       href="{% url 'consommation:export_echanges_annuel' %}"
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="ti ti-download me-1"></i>
+                        Télécharger CSV
+                    </a>
+                </div>
+
+                {% include 'partials/_data_source.html' with collapse_id="src-echanges-annuel" source="ODRE – Données éco2mix RTE, échanges commerciaux aux frontières" calcul="Volumes annuels (TWh) pour le pays sélectionné ci-dessus : import et export sommés séparément à partir des flux par pas de temps, l'énergie de chaque pas étant sa puissance × sa durée réelle. Export tracé en positif, import en négatif. Indépendant des filtres de dates/pays du graphique du haut." %}
+            </div>
+        </div>
+    </div>
+</div>
+
+    </div>
+
+    <!-- Sticky sidebar nav -->
+    <div class="col-lg-1 d-none d-lg-block">
+        <nav id="page-nav" class="page-nav-sidebar">
+            <p class="page-nav-label">Sur cette page</p>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#section-courbe">
+                        <i class="ti ti-chart-line me-2"></i>Courbe de charge
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#section-annuel">
+                        <i class="ti ti-arrows-exchange me-2"></i>Import / Export annuels
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+</div>
+
+<script>
+{# Chargement AJAX des graphiques au DOMContentLoaded ; resize/scrollspy gérés par charts.js #}
+document.addEventListener('DOMContentLoaded', function() {
+    // Courbe de charge : dépend des dates et du pays sélectionné (top form)
+    ElecStat.loadCharts(
+        window.location.pathname + window.location.search,
+        ['chart-echanges']
+    );
+    // Graphe annuel : dépend uniquement de pays_annuel (bottom form), fetch indépendant
+    var paysAnnuel = '{{ selected_pays_annuel|escapejs }}';
+    ElecStat.loadCharts(
+        window.location.pathname + '?pays_annuel=' + encodeURIComponent(paysAnnuel),
+        ['chart-echanges-annuel']
+    );
+});
+
+// Le sélecteur de pays du graphe annuel ne rafraîchit QUE ce graphe,
+// via le paramètre `pays_annuel` (le formulaire du haut ne l'envoie jamais).
+(function() {
+    var annuelForm = document.getElementById('echanges-annuel-form');
+    if (!annuelForm) return;
+    annuelForm.addEventListener('change', function() {
+        var checked = annuelForm.querySelector('input[name="pays_annuel"]:checked');
+        if (!checked) return;
+        ElecStat._showOverlay('chart-echanges-annuel');
+        var url = window.location.pathname + '?pays_annuel=' + encodeURIComponent(checked.value);
+        requestAnimationFrame(function() {
+            requestAnimationFrame(function() {
+                fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        Object.keys(data.charts).forEach(function(id) {
+                            ElecStat._hideOverlay(id);
+                            var c = data.charts[id];
+                            Plotly.react(id, c.data, c.layout, ElecStat.PLOT_CONFIG);
+                        });
+                    })
+                    .catch(function() { ElecStat._hideOverlay('chart-echanges-annuel'); });
+            });
+        });
+    });
+})();
+</script>
+{% endblock %}

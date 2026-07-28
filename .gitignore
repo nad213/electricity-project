@@ -1,0 +1,100 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+/static_collected/
+/media/
+staticfiles/
+webapp/staticfiles/
+
+# Environment variables
+.env
+*.env
+!.env.example
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform.lock.hcl
+terraform.tfstate.backup
+tfplan
+*.tfplan
+
+# Lambda packages
+*.zip
+!lambdas/**/*.zip
+
+# AWS
+.aws/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data files
+*.csv
+*.parquet
+data/
+
+# Migration docs (local only)
+MIGRATION.md
+DEPLOY.md
+
+# Claude Code documentation (local only)
+CLAUDE.md
+**/CLAUDE.md
+AGENTS.md
+**/AGENTS.md
+
+# Wiki local (non versionné)
+wiki/
+
+# Logs
+*.log
+logs/
+
+# Local test scripts
+run_lambdas_local.py
+
+# Claude Code spec
+spec
+spec.md
+
+# Notes et analyses locales (non versionnées)
+notes/
+*_REVIEW.md
+
+# Docs, plans et scripts d'exploration (locaux, non versionnés)
+docs/
+plans/
+scripts/
+
+# Brouillons de travail
+Untitled-*
+Sans titre*
+evol_accueil.jpg
+
+# Articles de blog (locaux, non versionnés)
+blog/

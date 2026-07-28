@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+{% block title %}API - ElecStat{% endblock %}
+{% block page_title %}API{% endblock %}
+{% block content %}
+{% if is_authenticated %}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h3 class="mb-1">API publique ElecStat <span class="badge bg-blue-lt">v1</span></h3>
+                <p class="text-muted mb-0">
+                    Accès en lecture seule, au format JSON, aux données de l'application.
+                    Puissance en <strong>MW</strong>, énergie agrégée en <strong>GWh</strong>.
+                    La liste complète des endpoints, leurs paramètres et un bac à sable
+                    pour les essayer sont dans la documentation interactive.
+                </p>
+            </div>
+            <a href="{{ api_base }}/docs" target="_blank" rel="noopener" class="btn btn-primary">
+                <i class="ti ti-api me-2"></i>Documentation interactive (Swagger)
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h4 class="card-title mb-0">Vos clés d'API</h4>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">
+            Authentifiez vos requêtes avec l'en-tête
+            <code>Authorization: Bearer &lt;clé&gt;</code>.
+            Une clé n'est affichée qu'une seule fois, à sa création.
+        </p>
+
+        {% if new_api_key %}
+        <div class="alert alert-success" role="alert">
+            <h4 class="alert-title">Votre nouvelle clé</h4>
+            <p class="text-secondary mb-2">
+                Copiez-la maintenant : elle ne sera plus jamais affichée.
+            </p>
+            <pre class="mb-0"><code>{{ new_api_key }}</code></pre>
+        </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'consommation:generate_api_key' %}"
+              class="row g-2 align-items-end mb-3">
+            {% csrf_token %}
+            <div class="col-sm">
+                <label class="form-label">Libellé</label>
+                <input type="text" name="label" class="form-control" maxlength="100"
+                       placeholder="ex. notebook perso" required>
+            </div>
+            <div class="col-sm-auto">
+                <button type="submit" class="btn btn-primary">
+                    <i class="ti ti-plus me-2"></i>Générer une clé
+                </button>
+            </div>
+        </form>
+        <p class="text-muted small mb-3">
+            Maximum {{ max_active_keys }} clé{{ max_active_keys|pluralize }} active{{ max_active_keys|pluralize }} par compte.
+            Le débit est partagé entre toutes vos clés (créer plusieurs clés n'augmente pas vos quotas).
+        </p>
+
+        {% if api_keys %}
+        <div class="table-responsive">
+            <table class="table card-table table-vcenter">
+                <thead>
+                    <tr>
+                        <th>Libellé</th>
+                        <th>Préfixe</th>
+                        <th>Créée le</th>
+                        <th>Dernière utilisation</th>
+                        <th>Statut</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for key in api_keys %}
+                    <tr>
+                        <td>{{ key.label }}</td>
+                        <td><code>{{ key.prefix }}…</code></td>
+                        <td>{{ key.created_at|date:"d/m/Y H:i" }}</td>
+                        <td>{{ key.last_used_at|date:"d/m/Y H:i"|default:"—" }}</td>
+                        <td>
+                            {% if key.is_active %}
+                            <span class="badge bg-green-lt">Active</span>
+                            {% else %}
+                            <span class="badge bg-red-lt">Révoquée</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if key.is_active %}
+                            <form method="post"
+                                  action="{% url 'consommation:revoke_api_key' key.id %}"
+                                  data-key-label="{{ key.label }}">
+                                {% csrf_token %}
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        data-bs-toggle="modal" data-bs-target="#revoke-key-modal">
+                                    Révoquer
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">Vous n'avez pas encore de clé.</p>
+        {% endif %}
+        {% if account_deletion_enabled %}
+        <p class="text-muted small mt-3 mb-0">
+            Vous pouvez aussi <a href="{% url 'consommation:delete_account' %}">supprimer votre compte</a>
+            à tout moment — vos clés seront révoquées et votre adresse email effacée.
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="modal" id="revoke-key-modal" tabindex="-1" aria-labelledby="revoke-key-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-body">
+                <div class="modal-title" id="revoke-key-modal-title">
+                    Révoquer la clé « <span id="revoke-key-label"></span> » ?
+                </div>
+                <div class="text-muted">Cette action est définitive.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button id="revoke-key-confirm" type="button" class="btn btn-outline-danger ms-auto">Révoquer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header"><h4 class="card-title mb-0">Endpoints</h4></div>
+    <div class="table-responsive">
+        <table class="table card-table table-vcenter">
+            <thead>
+                <tr>
+                    <th>Endpoint</th>
+                    <th>Description</th>
+                    <th>Paramètres</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>/meta</code></td>
+                    <td>Plages de dates et listes de référence (filières, pays).</td>
+                    <td class="text-muted">—</td>
+                </tr>
+                <tr>
+                    <td><code>/courbe_conso</code></td>
+                    <td>Courbe de consommation (MW).</td>
+                    <td><code>debut</code>, <code>fin</code></td>
+                </tr>
+                <tr>
+                    <td><code>/energie_conso</code></td>
+                    <td>Énergie consommée par mois (GWh).</td>
+                    <td><code>debut</code>, <code>fin</code></td>
+                </tr>
+                <tr>
+                    <td><code>/courbe_prod</code></td>
+                    <td>Courbe de production par filière (MW).</td>
+                    <td><code>debut</code>, <code>fin</code>, <code>filiere</code></td>
+                </tr>
+                <tr>
+                    <td><code>/energie_prod</code></td>
+                    <td>Énergie produite par mois (GWh).</td>
+                    <td><code>debut</code>, <code>fin</code>, <code>filiere</code></td>
+                </tr>
+                <tr>
+                    <td><code>/echange</code></td>
+                    <td>Courbe d'échanges (MW).</td>
+                    <td><code>debut</code>, <code>fin</code>, <code>pays</code></td>
+                </tr>
+                <tr>
+                    <td><code>/energie_echange</code></td>
+                    <td>Énergie import/export par mois (GWh).</td>
+                    <td><code>debut</code>, <code>fin</code>, <code>pays</code></td>
+                </tr>
+                <tr>
+                    <td><code>/parc</code></td>
+                    <td>Parc installé mensuel éolien/solaire (MW).</td>
+                    <td class="text-muted">—</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="card-body">
+        <div class="text-muted small ps-1 border-start border-2">
+            Préfixe commun <code>{{ api_base }}</code>. Dates au format <code>AAAA-MM-JJ</code> ;
+            <code>filiere</code> / <code>pays</code> (dont <code>total</code>) listés dans <code>/meta</code>.
+            Détail des réponses dans la
+            <a href="{{ api_base }}/docs" target="_blank" rel="noopener">documentation interactive</a>.
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h4 class="card-title mb-0">Démarrage rapide</h4></div>
+    <div class="card-body">
+        <p class="text-muted mb-2">
+            Chaque requête porte l'en-tête <code>Authorization: Bearer &lt;clé&gt;</code>.
+            Exportez votre clé une fois, puis appelez un endpoint :
+        </p>
+        <pre class="mb-3"><code>export ELF_KEY="votre_clé"
+
+curl -H "Authorization: Bearer $ELF_KEY" \
+  "{{ api_base }}/courbe_prod?debut=2024-06-01&fin=2024-06-07&filiere=solaire"</code></pre>
+
+        <p class="text-muted mb-2">… ou une agrégation d'énergie par mois (GWh) :</p>
+        <pre class="mb-3"><code>curl -H "Authorization: Bearer $ELF_KEY" \
+  "{{ api_base }}/energie_echange?debut=2024-01-01&fin=2024-12-31&pays=total"</code></pre>
+
+        <p class="text-muted mb-0">
+            Limites de débit par clé : <strong>{{ throttle_burst }}</strong> en rafale,
+            <strong>{{ throttle_sustained }}</strong> sur la durée — au-delà, l'API répond
+            <code>429 Too Many Requests</code>.
+        </p>
+    </div>
+</div>
+
+<script>
+// Modale de confirmation de révocation, partagée entre toutes les clés :
+// à l'ouverture, on retrouve le formulaire de la ligne cliquée (relatedTarget)
+// pour afficher son libellé et le soumettre si l'utilisateur confirme.
+(function () {
+    var modal = document.getElementById('revoke-key-modal');
+    if (!modal) return;
+
+    var pendingForm = null;
+
+    modal.addEventListener('show.bs.modal', function (event) {
+        pendingForm = event.relatedTarget.closest('form');
+        document.getElementById('revoke-key-label').textContent = pendingForm.dataset.keyLabel;
+    });
+
+    document.getElementById('revoke-key-confirm').addEventListener('click', function () {
+        if (pendingForm) pendingForm.submit();
+    });
+})();
+
+// Ajoute un bouton « copier » sur chaque bloc <pre><code> de la page API.
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.page-body pre').forEach(function (pre) {
+        var code = pre.querySelector('code');
+        if (!code) return;
+
+        pre.classList.add('position-relative', 'pre-with-copy');
+
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-sm btn-icon copy-btn';
+        btn.title = 'Copier';
+        btn.setAttribute('aria-label', 'Copier');
+        btn.innerHTML = '<i class="ti ti-copy"></i>';
+
+        btn.addEventListener('click', function () {
+            navigator.clipboard.writeText(code.innerText).then(function () {
+                var icon = btn.querySelector('i');
+                icon.className = 'ti ti-check';
+                btn.classList.add('copy-btn-done');
+                btn.title = 'Copié !';
+                setTimeout(function () {
+                    icon.className = 'ti ti-copy';
+                    btn.classList.remove('copy-btn-done');
+                    btn.title = 'Copier';
+                }, 1500);
+            });
+        });
+
+        pre.appendChild(btn);
+    });
+});
+</script>
+
+{% else %}
+{% include "partials/_login_invite.html" %}
+{% endif %}
+{% endblock %}
